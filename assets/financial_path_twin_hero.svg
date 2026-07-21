@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 300" role="img" aria-labelledby="fpt-hero-title fpt-hero-desc">
+  <title id="fpt-hero-title">Financial path branching illustration</title>
+  <desc id="fpt-hero-desc">A current financial path moves toward a decision point, then branches into stable, recovered, and stressed future trajectories with small metric cards.</desc>
+  <rect width="960" height="300" rx="26" fill="#f8fafc"/>
+  <rect x="28" y="28" width="904" height="244" rx="22" fill="#ffffff" stroke="#d6dee8" stroke-width="2"/>
+  <rect x="80" y="58" width="150" height="58" rx="10" fill="#f8fafc" stroke="#d6dee8"/>
+  <rect x="95" y="76" width="64" height="8" rx="4" fill="#9fb0c5"/>
+  <rect x="95" y="94" width="112" height="8" rx="4" fill="#c8d3df"/>
+  <rect x="405" y="52" width="158" height="66" rx="10" fill="#eef6ff" stroke="#b9d5f7"/>
+  <rect x="424" y="72" width="52" height="8" rx="4" fill="#1f5f8b"/>
+  <rect x="424" y="92" width="112" height="8" rx="4" fill="#9fbfe5"/>
+  <rect x="720" y="42" width="130" height="52" rx="10" fill="#f1fbf7" stroke="#b9e3d4"/>
+  <circle cx="742" cy="68" r="7" fill="#1b9e77"/>
+  <rect x="760" y="61" width="58" height="8" rx="4" fill="#7fc3a8"/>
+  <rect x="720" y="122" width="130" height="52" rx="10" fill="#f5fbf3" stroke="#c9e7c5"/>
+  <circle cx="742" cy="148" r="7" fill="#4daf4a"/>
+  <rect x="760" y="141" width="70" height="8" rx="4" fill="#97cf91"/>
+  <rect x="720" y="202" width="130" height="52" rx="10" fill="#fff7ed" stroke="#f5cda8"/>
+  <circle cx="742" cy="228" r="7" fill="#d95f02"/>
+  <rect x="760" y="221" width="62" height="8" rx="4" fill="#e6a267"/>
+  <path d="M116 172 C210 171 289 153 399 153" fill="none" stroke="#1f5f8b" stroke-width="9" stroke-linecap="round"/>
+  <path d="M399 153 C510 132 606 78 697 69" fill="none" stroke="#1b9e77" stroke-width="8" stroke-linecap="round"/>
+  <path d="M399 153 C507 154 600 149 697 148" fill="none" stroke="#4daf4a" stroke-width="8" stroke-linecap="round" stroke-dasharray="18 14"/>
+  <path d="M399 153 C505 181 610 220 697 228" fill="none" stroke="#d95f02" stroke-width="8" stroke-linecap="round" stroke-dasharray="4 15"/>
+  <circle cx="399" cy="153" r="16" fill="#ffffff" stroke="#d95f02" stroke-width="5"/>
+  <circle cx="116" cy="172" r="8" fill="#1f5f8b"/>
+  <circle cx="697" cy="69" r="8" fill="#1b9e77"/>
+  <circle cx="697" cy="148" r="8" fill="#4daf4a"/>
+  <circle cx="697" cy="228" r="8" fill="#d95f02"/>
+  <line x1="624" y1="28" x2="624" y2="272" stroke="#e2e8f0" stroke-width="2" stroke-dasharray="6 10"/>
+  <line x1="340" y1="28" x2="340" y2="272" stroke="#e2e8f0" stroke-width="2" stroke-dasharray="6 10"/>
+</svg>

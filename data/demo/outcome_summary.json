@@ -1,0 +1,24 @@
+{
+  "target_customer_id": "C002608",
+  "matched_count": 200,
+  "outcomes": {
+    "healthy": {
+      "count": 87,
+      "ratio": 0.435
+    },
+    "recovered": {
+      "count": 41,
+      "ratio": 0.205
+    },
+    "stress": {
+      "count": 66,
+      "ratio": 0.33
+    },
+    "delinquent": {
+      "count": 6,
+      "ratio": 0.03
+    }
+  },
+  "first_stress_month_median": 22,
+  "first_delinquency_month_median": 36
+}

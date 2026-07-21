@@ -1,0 +1,71 @@
+check_name,status,actual_value,expected_value,message
+customer_master_required_columns,pass,none,"customer_id,persona,age_group,household_type,initial_income,initial_cash_balance,initial_loan_balance,base_fixed_expense,base_variable_expense,base_debt_payment,primary_event_type,primary_event_month,random_seed",Required columns must be present.
+customer_monthly_required_columns,pass,none,"customer_id,month,persona,income,fixed_expense,variable_expense,debt_payment,event_expense,total_expense,savings_amount,savings_rate,fixed_expense_ratio,variable_expense_ratio,dsr,cash_balance,loan_balance,debt_to_income_ratio,emergency_months,income_change_rate,expense_change_rate,balance_change_rate,event_type,delinquency_flag,monthly_status,final_outcome",Required columns must be present.
+customer_master_integer_types_initial_income,pass,int64,integer-like numeric,initial_income must contain integer-like numeric values.
+customer_master_integer_types_initial_cash_balance,pass,int64,integer-like numeric,initial_cash_balance must contain integer-like numeric values.
+customer_master_integer_types_initial_loan_balance,pass,int64,integer-like numeric,initial_loan_balance must contain integer-like numeric values.
+customer_master_integer_types_base_fixed_expense,pass,int64,integer-like numeric,base_fixed_expense must contain integer-like numeric values.
+customer_master_integer_types_base_variable_expense,pass,int64,integer-like numeric,base_variable_expense must contain integer-like numeric values.
+customer_master_integer_types_base_debt_payment,pass,int64,integer-like numeric,base_debt_payment must contain integer-like numeric values.
+customer_master_integer_types_primary_event_month,pass,int64,integer-like numeric,primary_event_month must contain integer-like numeric values.
+customer_master_integer_types_random_seed,pass,int64,integer-like numeric,random_seed must contain integer-like numeric values.
+customer_monthly_integer_types_month,pass,int64,integer-like numeric,month must contain integer-like numeric values.
+customer_monthly_integer_types_income,pass,int64,integer-like numeric,income must contain integer-like numeric values.
+customer_monthly_integer_types_fixed_expense,pass,int64,integer-like numeric,fixed_expense must contain integer-like numeric values.
+customer_monthly_integer_types_variable_expense,pass,int64,integer-like numeric,variable_expense must contain integer-like numeric values.
+customer_monthly_integer_types_debt_payment,pass,int64,integer-like numeric,debt_payment must contain integer-like numeric values.
+customer_monthly_integer_types_event_expense,pass,int64,integer-like numeric,event_expense must contain integer-like numeric values.
+customer_monthly_integer_types_total_expense,pass,int64,integer-like numeric,total_expense must contain integer-like numeric values.
+customer_monthly_integer_types_savings_amount,pass,int64,integer-like numeric,savings_amount must contain integer-like numeric values.
+customer_monthly_integer_types_cash_balance,pass,int64,integer-like numeric,cash_balance must contain integer-like numeric values.
+customer_monthly_integer_types_loan_balance,pass,int64,integer-like numeric,loan_balance must contain integer-like numeric values.
+customer_monthly_integer_types_delinquency_flag,pass,int64,integer-like numeric,delinquency_flag must contain integer-like numeric values.
+customer_monthly_float_types_savings_rate,pass,float64,numeric,savings_rate must contain numeric values.
+customer_monthly_float_types_fixed_expense_ratio,pass,float64,numeric,fixed_expense_ratio must contain numeric values.
+customer_monthly_float_types_variable_expense_ratio,pass,float64,numeric,variable_expense_ratio must contain numeric values.
+customer_monthly_float_types_dsr,pass,float64,numeric,dsr must contain numeric values.
+customer_monthly_float_types_debt_to_income_ratio,pass,float64,numeric,debt_to_income_ratio must contain numeric values.
+customer_monthly_float_types_emergency_months,pass,float64,numeric,emergency_months must contain numeric values.
+customer_monthly_float_types_income_change_rate,pass,float64,numeric,income_change_rate must contain numeric values.
+customer_monthly_float_types_expense_change_rate,pass,float64,numeric,expense_change_rate must contain numeric values.
+customer_monthly_float_types_balance_change_rate,pass,float64,numeric,balance_change_rate must contain numeric values.
+customer_master_text_types_customer_id,pass,object,string/category,customer_id must contain string/category values.
+customer_master_text_types_persona,pass,object,string/category,persona must contain string/category values.
+customer_master_text_types_age_group,pass,object,string/category,age_group must contain string/category values.
+customer_master_text_types_household_type,pass,object,string/category,household_type must contain string/category values.
+customer_master_text_types_primary_event_type,pass,object,string/category,primary_event_type must contain string/category values.
+customer_monthly_text_types_customer_id,pass,object,string/category,customer_id must contain string/category values.
+customer_monthly_text_types_persona,pass,object,string/category,persona must contain string/category values.
+customer_monthly_text_types_event_type,pass,object,string/category,event_type must contain string/category values.
+customer_monthly_text_types_monthly_status,pass,object,string/category,monthly_status must contain string/category values.
+customer_monthly_text_types_final_outcome,pass,object,string/category,final_outcome must contain string/category values.
+customer_master_row_count,pass,5000,5000,"customer_master must contain exactly 5,000 customers."
+customer_monthly_row_count,pass,180000,180000,"monthly data must contain 5,000 customers x 36 months."
+customer_months_per_customer,pass,0,0,Each customer must have exactly 36 distinct months.
+customer_month_unique_key,pass,0,0,customer_id + month must be unique.
+month_range,pass,0,1..36,month must be between 1 and 36.
+customer_master_missing_required_values,pass,0,0,Required columns must not contain missing values.
+customer_monthly_missing_required_values,pass,0,0,Required columns must not contain missing values.
+customer_master_numeric_finite,pass,0,0,Numeric columns must not contain NaN or infinite values.
+customer_monthly_numeric_finite,pass,0,0,Numeric columns must not contain NaN or infinite values.
+master_amount_non_negative,pass,0,>= 0,"Columns initial_income,initial_cash_balance,initial_loan_balance,base_fixed_expense,base_variable_expense,base_debt_payment must stay within allowed range."
+monthly_income_non_negative,pass,0,>= 0,Columns income must stay within allowed range.
+monthly_expense_non_negative,pass,0,>= 0,"Columns fixed_expense,variable_expense,debt_payment,event_expense,total_expense must stay within allowed range."
+monthly_loan_balance_non_negative,pass,0,>= 0,Columns loan_balance must stay within allowed range.
+monthly_ratio_reasonable_range,pass,0,>= 0 and <= 1,"Columns fixed_expense_ratio,variable_expense_ratio,dsr must stay within allowed range."
+total_expense_formula,pass,0,0,total_expense = fixed_expense + variable_expense + debt_payment + event_expense
+savings_amount_formula,pass,0,0,savings_amount = income - total_expense
+cash_balance_continuity,pass,0,0,cash_balance(t) = previous cash_balance + savings_amount(t)
+loan_balance_non_negative,pass,0,0,loan_balance must never be below zero.
+savings_rate_formula,pass,0,0,savings_rate follows income > 0 and income = 0 rules.
+fixed_expense_ratio_formula,pass,0,0,fixed_expense_ratio follows income > 0 and income = 0 rules.
+variable_expense_ratio_formula,pass,0,0,variable_expense_ratio follows income > 0 and income = 0 rules.
+dsr_formula,pass,0,0,dsr follows income > 0 and income = 0 rules.
+master_persona_values,pass,none,"stable,gradual_deterioration,event_shock,recovery,overspending",persona must only contain documented values.
+monthly_persona_values,pass,none,"stable,gradual_deterioration,event_shock,recovery,overspending",persona must only contain documented values.
+event_type_values,pass,none,"none,job_loss,job_change,childbirth,medical_cost,housing_cost_increase,interest_rate_shock,income_recovery,expense_reduction,new_loan",event_type must only contain documented values.
+primary_event_type_values,pass,none,"none,job_loss,job_change,childbirth,medical_cost,housing_cost_increase,interest_rate_shock,income_recovery,expense_reduction,new_loan",primary_event_type must only contain documented values.
+monthly_status_values,pass,none,"healthy,watch,stress,delinquent",monthly_status must only contain documented values.
+final_outcome_values,pass,none,"healthy,recovered,stress,delinquent",final_outcome must only contain documented values.
+persona_distribution,pass,0.0,<= 0.015,Persona ratios should stay close to PERSONA_DISTRIBUTION.
+final_outcome_distribution,pass,within_target,BUSINESS_RULES target ranges,"Final outcome range departures are warnings, not failures."

@@ -1,0 +1,456 @@
+{
+  "generated_at": "2026-07-18T01:51:36.657962+00:00",
+  "customer_id": "C002608",
+  "current_metrics": {
+    "current_status": "healthy",
+    "recent_savings_rate": 0.136633,
+    "recent_dsr": 0.2576,
+    "recent_fixed_expense_ratio": 0.368136,
+    "savings_rate_slope_6m": -0.002945,
+    "balance_decline_run_6m": 0
+  },
+  "match_summary": {
+    "matched_count": 200,
+    "top_10": [
+      {
+        "target_customer_id": "C002608",
+        "matched_customer_id": "C002736",
+        "rank": 1,
+        "distance": 0.3619012397172667,
+        "similarity_score": 0.7342676332445383
+      },
+      {
+        "target_customer_id": "C002608",
+        "matched_customer_id": "C002670",
+        "rank": 2,
+        "distance": 0.37132743113249317,
+        "similarity_score": 0.7292204453127309
+      },
+      {
+        "target_customer_id": "C002608",
+        "matched_customer_id": "C002934",
+        "rank": 3,
+        "distance": 0.3787674167568139,
+        "similarity_score": 0.7252854889421712
+      },
+      {
+        "target_customer_id": "C002608",
+        "matched_customer_id": "C002458",
+        "rank": 4,
+        "distance": 0.4066657259337888,
+        "similarity_score": 0.7109009493610634
+      },
+      {
+        "target_customer_id": "C002608",
+        "matched_customer_id": "C000735",
+        "rank": 5,
+        "distance": 0.4099913101804097,
+        "similarity_score": 0.7092242290997164
+      },
+      {
+        "target_customer_id": "C002608",
+        "matched_customer_id": "C000818",
+        "rank": 6,
+        "distance": 0.41404678628308145,
+        "similarity_score": 0.7071901790665416
+      },
+      {
+        "target_customer_id": "C002608",
+        "matched_customer_id": "C003116",
+        "rank": 7,
+        "distance": 0.43146283036776945,
+        "similarity_score": 0.6985860748777398
+      },
+      {
+        "target_customer_id": "C002608",
+        "matched_customer_id": "C002071",
+        "rank": 8,
+        "distance": 0.44220030812432254,
+        "similarity_score": 0.6933849579470458
+      },
+      {
+        "target_customer_id": "C002608",
+        "matched_customer_id": "C000507",
+        "rank": 9,
+        "distance": 0.4538379711836959,
+        "similarity_score": 0.6878345591605459
+      },
+      {
+        "target_customer_id": "C002608",
+        "matched_customer_id": "C002693",
+        "rank": 10,
+        "distance": 0.49135856324410904,
+        "similarity_score": 0.6705295591857728
+      }
+    ]
+  },
+  "outcome_summary": {
+    "target_customer_id": "C002608",
+    "matched_count": 200,
+    "outcomes": {
+      "healthy": {
+        "count": 87,
+        "ratio": 0.435
+      },
+      "recovered": {
+        "count": 41,
+        "ratio": 0.205
+      },
+      "stress": {
+        "count": 66,
+        "ratio": 0.33
+      },
+      "delinquent": {
+        "count": 6,
+        "ratio": 0.03
+      }
+    },
+    "first_stress_month_median": 22,
+    "first_delinquency_month_median": 36
+  },
+  "breakpoint_result": {
+    "status": "found",
+    "breakpoint_month": 13,
+    "months_from_current": 1,
+    "primary_factor": "cash_balance_ratio",
+    "risk_group_mean": 3.4329698218288542,
+    "avoidance_group_mean": 5.494472234166576,
+    "standardized_difference": -1.2672623851125968,
+    "persistence_months": 24,
+    "secondary_factors": [
+      {
+        "factor": "variable_expense_ratio",
+        "risk_group_mean": 0.34825975000000003,
+        "avoidance_group_mean": 0.2576694140625,
+        "standardized_difference": 1.1934261570731688,
+        "persistence_months": 4
+      }
+    ],
+    "interpretation": "Risk and avoidance groups first show a sustained standardized difference in cash_balance_ratio at month 13. This describes an association within the matched synthetic customers and is not a causal estimate."
+  },
+  "best_whatif_scenario": {
+    "scenario_id": 4,
+    "scenario_name": "debt_payment_cut_20",
+    "ending_cash_balance": 59617377.04,
+    "minimum_cash_balance": 30202818.13,
+    "average_savings_rate": 0.17627,
+    "cash_depletion_month": null,
+    "improvement_vs_baseline": 8994667.2,
+    "total_saved_expense": 8994667.2,
+    "months_with_negative_savings": 0,
+    "monthly_data": [
+      {
+        "scenario_id": 4,
+        "scenario_name": "debt_payment_cut_20",
+        "month": 1,
+        "income": 7276793.33,
+        "fixed_expense": 2677592.67,
+        "variable_expense": 1730321.33,
+        "debt_payment": 1499111.2,
+        "total_expense": 5907025.2,
+        "savings_amount": 1369768.13,
+        "savings_rate": 0.188238,
+        "cash_balance": 30202818.13
+      },
+      {
+        "scenario_id": 4,
+        "scenario_name": "debt_payment_cut_20",
+        "month": 2,
+        "income": 7276793.33,
+        "fixed_expense": 2681609.06,
+        "variable_expense": 1733781.98,
+        "debt_payment": 1499111.2,
+        "total_expense": 5914502.24,
+        "savings_amount": 1362291.0899999999,
+        "savings_rate": 0.18721,
+        "cash_balance": 31565109.22
+      },
+      {
+        "scenario_id": 4,
+        "scenario_name": "debt_payment_cut_20",
+        "month": 3,
+        "income": 7276793.33,
+        "fixed_expense": 2685631.47,
+        "variable_expense": 1737249.54,
+        "debt_payment": 1499111.2,
+        "total_expense": 5921992.21,
+        "savings_amount": 1354801.12,
+        "savings_rate": 0.186181,
+        "cash_balance": 32919910.34
+      },
+      {
+        "scenario_id": 4,
+        "scenario_name": "debt_payment_cut_20",
+        "month": 4,
+        "income": 7276793.33,
+        "fixed_expense": 2689659.92,
+        "variable_expense": 1740724.04,
+        "debt_payment": 1499111.2,
+        "total_expense": 5929495.16,
+        "savings_amount": 1347298.17,
+        "savings_rate": 0.18515,
+        "cash_balance": 34267208.51
+      },
+      {
+        "scenario_id": 4,
+        "scenario_name": "debt_payment_cut_20",
+        "month": 5,
+        "income": 7276793.33,
+        "fixed_expense": 2693694.41,
+        "variable_expense": 1744205.49,
+        "debt_payment": 1499111.2,
+        "total_expense": 5937011.100000001,
+        "savings_amount": 1339782.2299999995,
+        "savings_rate": 0.184117,
+        "cash_balance": 35606990.739999995
+      },
+      {
+        "scenario_id": 4,
+        "scenario_name": "debt_payment_cut_20",
+        "month": 6,
+        "income": 7276793.33,
+        "fixed_expense": 2697734.95,
+        "variable_expense": 1747693.9,
+        "debt_payment": 1499111.2,
+        "total_expense": 5944540.05,
+        "savings_amount": 1332253.2800000003,
+        "savings_rate": 0.183082,
+        "cash_balance": 36939244.019999996
+      },
+      {
+        "scenario_id": 4,
+        "scenario_name": "debt_payment_cut_20",
+        "month": 7,
+        "income": 7276793.33,
+        "fixed_expense": 2701781.55,
+        "variable_expense": 1751189.29,
+        "debt_payment": 1499111.2,
+        "total_expense": 5952082.04,
+        "savings_amount": 1324711.29,
+        "savings_rate": 0.182046,
+        "cash_balance": 38263955.309999995
+      },
+      {
+        "scenario_id": 4,
+        "scenario_name": "debt_payment_cut_20",
+        "month": 8,
+        "income": 7276793.33,
+        "fixed_expense": 2705834.22,
+        "variable_expense": 1754691.66,
+        "debt_payment": 1499111.2,
+        "total_expense": 5959637.08,
+        "savings_amount": 1317156.25,
+        "savings_rate": 0.181008,
+        "cash_balance": 39581111.559999995
+      },
+      {
+        "scenario_id": 4,
+        "scenario_name": "debt_payment_cut_20",
+        "month": 9,
+        "income": 7276793.33,
+        "fixed_expense": 2709892.97,
+        "variable_expense": 1758201.05,
+        "debt_payment": 1499111.2,
+        "total_expense": 5967205.220000001,
+        "savings_amount": 1309588.1099999994,
+        "savings_rate": 0.179968,
+        "cash_balance": 40890699.669999994
+      },
+      {
+        "scenario_id": 4,
+        "scenario_name": "debt_payment_cut_20",
+        "month": 10,
+        "income": 7276793.33,
+        "fixed_expense": 2713957.81,
+        "variable_expense": 1761717.45,
+        "debt_payment": 1499111.2,
+        "total_expense": 5974786.46,
+        "savings_amount": 1302006.87,
+        "savings_rate": 0.178926,
+        "cash_balance": 42192706.53999999
+      },
+      {
+        "scenario_id": 4,
+        "scenario_name": "debt_payment_cut_20",
+        "month": 11,
+        "income": 7276793.33,
+        "fixed_expense": 2718028.75,
+        "variable_expense": 1765240.88,
+        "debt_payment": 1499111.2,
+        "total_expense": 5982380.83,
+        "savings_amount": 1294412.5,
+        "savings_rate": 0.177882,
+        "cash_balance": 43487119.03999999
+      },
+      {
+        "scenario_id": 4,
+        "scenario_name": "debt_payment_cut_20",
+        "month": 12,
+        "income": 7276793.33,
+        "fixed_expense": 2722105.79,
+        "variable_expense": 1768771.37,
+        "debt_payment": 1499111.2,
+        "total_expense": 5989988.36,
+        "savings_amount": 1286804.9699999997,
+        "savings_rate": 0.176837,
+        "cash_balance": 44773924.00999999
+      },
+      {
+        "scenario_id": 4,
+        "scenario_name": "debt_payment_cut_20",
+        "month": 13,
+        "income": 7276793.33,
+        "fixed_expense": 2726188.95,
+        "variable_expense": 1772308.91,
+        "debt_payment": 1499111.2,
+        "total_expense": 5997609.0600000005,
+        "savings_amount": 1279184.2699999996,
+        "savings_rate": 0.17579,
+        "cash_balance": 46053108.27999999
+      },
+      {
+        "scenario_id": 4,
+        "scenario_name": "debt_payment_cut_20",
+        "month": 14,
+        "income": 7276793.33,
+        "fixed_expense": 2730278.24,
+        "variable_expense": 1775853.53,
+        "debt_payment": 1499111.2,
+        "total_expense": 6005242.970000001,
+        "savings_amount": 1271550.3599999994,
+        "savings_rate": 0.17474,
+        "cash_balance": 47324658.639999986
+      },
+      {
+        "scenario_id": 4,
+        "scenario_name": "debt_payment_cut_20",
+        "month": 15,
+        "income": 7276793.33,
+        "fixed_expense": 2734373.65,
+        "variable_expense": 1779405.23,
+        "debt_payment": 1499111.2,
+        "total_expense": 6012890.08,
+        "savings_amount": 1263903.25,
+        "savings_rate": 0.17369,
+        "cash_balance": 48588561.889999986
+      },
+      {
+        "scenario_id": 4,
+        "scenario_name": "debt_payment_cut_20",
+        "month": 16,
+        "income": 7276793.33,
+        "fixed_expense": 2738475.21,
+        "variable_expense": 1782964.04,
+        "debt_payment": 1499111.2,
+        "total_expense": 6020550.45,
+        "savings_amount": 1256242.88,
+        "savings_rate": 0.172637,
+        "cash_balance": 49844804.76999999
+      },
+      {
+        "scenario_id": 4,
+        "scenario_name": "debt_payment_cut_20",
+        "month": 17,
+        "income": 7276793.33,
+        "fixed_expense": 2742582.93,
+        "variable_expense": 1786529.97,
+        "debt_payment": 1499111.2,
+        "total_expense": 6028224.100000001,
+        "savings_amount": 1248569.2299999995,
+        "savings_rate": 0.171582,
+        "cash_balance": 51093373.999999985
+      },
+      {
+        "scenario_id": 4,
+        "scenario_name": "debt_payment_cut_20",
+        "month": 18,
+        "income": 7276793.33,
+        "fixed_expense": 2746696.8,
+        "variable_expense": 1790103.03,
+        "debt_payment": 1499111.2,
+        "total_expense": 6035911.03,
+        "savings_amount": 1240882.2999999998,
+        "savings_rate": 0.170526,
+        "cash_balance": 52334256.29999998
+      },
+      {
+        "scenario_id": 4,
+        "scenario_name": "debt_payment_cut_20",
+        "month": 19,
+        "income": 7276793.33,
+        "fixed_expense": 2750816.85,
+        "variable_expense": 1793683.24,
+        "debt_payment": 1499111.2,
+        "total_expense": 6043611.29,
+        "savings_amount": 1233182.04,
+        "savings_rate": 0.169468,
+        "cash_balance": 53567438.33999998
+      },
+      {
+        "scenario_id": 4,
+        "scenario_name": "debt_payment_cut_20",
+        "month": 20,
+        "income": 7276793.33,
+        "fixed_expense": 2754943.07,
+        "variable_expense": 1797270.61,
+        "debt_payment": 1499111.2,
+        "total_expense": 6051324.88,
+        "savings_amount": 1225468.4500000002,
+        "savings_rate": 0.168408,
+        "cash_balance": 54792906.789999984
+      },
+      {
+        "scenario_id": 4,
+        "scenario_name": "debt_payment_cut_20",
+        "month": 21,
+        "income": 7276793.33,
+        "fixed_expense": 2759075.49,
+        "variable_expense": 1800865.15,
+        "debt_payment": 1499111.2,
+        "total_expense": 6059051.840000001,
+        "savings_amount": 1217741.4899999993,
+        "savings_rate": 0.167346,
+        "cash_balance": 56010648.27999999
+      },
+      {
+        "scenario_id": 4,
+        "scenario_name": "debt_payment_cut_20",
+        "month": 22,
+        "income": 7276793.33,
+        "fixed_expense": 2763214.1,
+        "variable_expense": 1804466.88,
+        "debt_payment": 1499111.2,
+        "total_expense": 6066792.180000001,
+        "savings_amount": 1210001.1499999994,
+        "savings_rate": 0.166282,
+        "cash_balance": 57220649.429999985
+      },
+      {
+        "scenario_id": 4,
+        "scenario_name": "debt_payment_cut_20",
+        "month": 23,
+        "income": 7276793.33,
+        "fixed_expense": 2767358.92,
+        "variable_expense": 1808075.81,
+        "debt_payment": 1499111.2,
+        "total_expense": 6074545.930000001,
+        "savings_amount": 1202247.3999999994,
+        "savings_rate": 0.165217,
+        "cash_balance": 58422896.82999998
+      },
+      {
+        "scenario_id": 4,
+        "scenario_name": "debt_payment_cut_20",
+        "month": 24,
+        "income": 7276793.33,
+        "fixed_expense": 2771509.96,
+        "variable_expense": 1811691.96,
+        "debt_payment": 1499111.2,
+        "total_expense": 6082313.12,
+        "savings_amount": 1194480.21,
+        "savings_rate": 0.164149,
+        "cash_balance": 59617377.039999984
+      }
+    ]
+  }
+}

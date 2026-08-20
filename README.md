@@ -84,6 +84,25 @@ Data Generator
 
 ## 7. 설치 방법
 
+### Windows 빠른 시작
+
+일반 사용자는 프로젝트 루트에서 아래 배치 파일을 순서대로 실행합니다.
+
+1. `01_install_requirements.bat`
+2. `02_run_pipeline.bat`
+3. `03_run_app.bat`
+
+세 번째 파일은 Streamlit 서버가 실행되는 동안 콘솔 창을 유지합니다. 콘솔에 표시된 `http://localhost:8501` 주소를 브라우저에서 열고, 종료할 때는 같은 창에서 `Ctrl+C`를 누릅니다.
+
+8501 포트가 이미 사용 중이면 Windows CMD에서 아래처럼 다른 포트를 지정한 뒤 세 번째 파일을 실행합니다.
+
+```bat
+set DEMO_PORT=8502
+03_run_app.bat
+```
+
+### 수동 설치
+
 Windows PowerShell:
 
 ```powershell
@@ -200,16 +219,20 @@ python scripts/run_pipeline.py --customer-count 100 --top-k 20 --force
 
 ## 11. Streamlit 실행
 
+### 사용자용 수동 실행
+
+Windows 사용자에게는 위의 `03_run_app.bat` 실행을 권장합니다. 직접 실행해야 할 때는 다음 명령을 사용합니다.
+
 Windows:
 
 ```bat
-python scripts\start_streamlit.py --keep-running
+python -m streamlit run app.py --server.port=8501 --server.headless=true
 ```
 
 macOS/Linux:
 
 ```bash
-python scripts/start_streamlit.py --keep-running
+python -m streamlit run app.py --server.port=8501 --server.headless=true
 ```
 
 브라우저 주소:
@@ -218,34 +241,25 @@ python scripts/start_streamlit.py --keep-running
 http://localhost:8501
 ```
 
-데모용 실행 스크립트:
+`run_demo.bat`와 `run_demo.sh`는 readiness를 먼저 점검하는 보조 스크립트입니다. 일반 사용자가 화면을 안정적으로 유지하며 실행할 때는 `03_run_app.bat`을 사용합니다.
+
+### Codex 및 자동 점검용 제한시간 실행
+
+`streamlit run app.py`는 서버가 살아 있는 동안 종료되지 않는 정상 동작입니다. 자동 점검에서는 아래 제한시간 런처를 사용해 HTTP 응답을 확인한 뒤 임시 서버를 종료합니다.
 
 Windows:
 
 ```bat
-run_demo.bat
+python scripts\start_streamlit.py --port 8519 --timeout 60
 ```
 
 macOS/Linux:
 
 ```bash
-sh run_demo.sh
+python scripts/start_streamlit.py --port 8519 --timeout 60
 ```
 
-포트 변경:
-
-Windows:
-
-```bat
-set DEMO_PORT=8502
-run_demo.bat
-```
-
-macOS/Linux:
-
-```bash
-DEMO_PORT=8502 sh run_demo.sh
-```
+자동 점검에서 `--keep-running` 또는 일반 `streamlit run app.py`를 사용하면 명령이 끝나지 않아 대기 상태처럼 보일 수 있습니다.
 
 ## 12. 테스트
 
@@ -312,18 +326,11 @@ python scripts/check_demo_readiness.py
 - `Cached calculation`
 - `Demo fallback`
 
-## 15. LLM 선택 설정
+## 15. 브리핑 및 선택 설정
 
-현재 MVP는 외부 LLM API 없이 템플릿 설명으로 동작합니다.
+현재 MVP는 외부 LLM API를 호출하지 않고 템플릿 설명으로 동작합니다. 따라서 API 키나 `.env` 파일은 실행에 필요하지 않습니다.
 
-선택적으로 `.env`에 API 키를 둘 수 있지만 필수는 아닙니다.
-
-```text
-OPENAI_API_KEY=
-OPENAI_MODEL=
-```
-
-LLM 호출 실패, API 키 없음, 타임아웃 상황에서는 템플릿 설명을 사용합니다.
+`.env.example`은 향후 외부 서비스 연동 시 사용할 수 있는 설정 예시입니다. 현재 `OPENAI_API_KEY` 환경변수는 readiness 점검에 상태로만 표시되며, 브리핑 결과나 앱 실행 방식은 바꾸지 않습니다.
 
 ## 16. 합성 데이터 고지
 

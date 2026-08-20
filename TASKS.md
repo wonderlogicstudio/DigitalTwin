@@ -6,188 +6,24 @@
 - `[x]` 완료
 - `[!]` 차단
 
-## M0 초기화
+## 완료된 기반 작업 (M0~M11)
 
-- [ ] MD 문서 배치
-- [ ] Python 3.11 가상환경
-- [ ] requirements.txt
-- [ ] 폴더 구조
-- [ ] settings.py
-- [ ] 빈 app.py
-- [ ] pytest 기본 실행
-- [ ] Streamlit 기본 실행
+초기 작업 목록은 아래의 상세 완료 이력과 중복되어 있었으므로 미완료 체크박스를 제거했다. M0~M11의 구현 범위는 현재 코드와 테스트에 반영되어 있다.
 
-## M1 합성 데이터
+- [x] 프로젝트 초기화, 설정, 테스트 및 Streamlit 기본 실행
+- [x] 합성 데이터 생성, CSV 저장, 재현성 검증
+- [x] 데이터 검증과 검증 보고서 생성
+- [x] 관측 구간 특징 생성 및 미래 데이터 누수 방지
+- [x] 유사 고객 매칭과 결과 분포 집계
+- [x] 위험 분기점 분석과 미발견/표본 부족 처리
+- [x] What-if 현금흐름 시나리오 비교
+- [x] 메인, 안정 비교, 고위험 데모 고객 및 fallback 산출물
+- [x] Streamlit 일반 모드, 발표 모드, Plotly 시각화, 브리핑
+- [x] 공통 표시 포맷, 한국어/영어 전환, 자체 SVG/CSS 에셋
+- [x] 전체 pytest, readiness, 제한시간 Streamlit 헬스체크 기반 데모 점검
 
-- [ ] GeneratorConfig
-- [ ] customer_master
-- [ ] 페르소나 할당
-- [ ] 초기 재무값
-- [ ] 월별 36개월
-- [ ] 이벤트
-- [ ] 월별 지표
-- [ ] monthly_status
-- [ ] final_outcome
-- [ ] CSV 저장
-- [ ] 재현성 테스트
-- [ ] 성능 확인
+상세 구현과 검증 이력은 아래 상태 섹션을 유지한다.
 
-산출물:
-- data/raw/customer_master.csv
-- data/raw/customer_monthly_5000.csv
-
-## M2 검증
-
-- [ ] 스키마
-- [ ] 고객별 36개월
-- [ ] 중복
-- [ ] 결측/inf
-- [ ] 값 범위
-- [ ] 총지출
-- [ ] 저축
-- [ ] 잔액 연속성
-- [ ] 대출 음수
-- [ ] 페르소나 분포
-- [ ] 결과 분포
-- [ ] 실패 시 종료
-
-산출물:
-- reports/data_validation_report.csv
-- reports/persona_summary.csv
-- reports/outcome_distribution.csv
-
-## M3 특징
-
-- [ ] month <= 12
-- [ ] 최근 3개월 평균
-- [ ] 12개월 기울기
-- [ ] 지출 증가율
-- [ ] DSR 변화
-- [ ] 잔액 변화율
-- [ ] CV
-- [ ] 연속 감소
-- [ ] 음수 저축 월
-- [ ] 대형 지출
-- [ ] 고객당 1행
-- [ ] 누수 테스트
-
-산출물:
-- data/processed/trajectory_features.csv
-
-## M4 매칭
-
-- [ ] StandardScaler
-- [ ] 가중치
-- [ ] 유클리드 거리
-- [ ] 자기 제외
-- [ ] TOP 200
-- [ ] 유사도
-- [ ] 저장
-- [ ] 속도
-- [ ] 인공 테스트
-
-산출물:
-- data/processed/matched_customers.csv
-
-## M5 결과
-
-- [ ] 13~36월
-- [ ] 결과 분포
-- [ ] 최초 stress
-- [ ] 최초 delinquent
-- [ ] 미래 평균 잔액
-- [ ] 미래 평균 DSR
-- [ ] 궤적
-- [ ] JSON
-
-산출물:
-- data/processed/outcome_summary.json
-- data/processed/matched_future_trajectory.csv
-
-## M6 분기점
-
-- [ ] 위험/회피 분리
-- [ ] 그룹 크기
-- [ ] 월별 평균
-- [ ] pooled std
-- [ ] SMD
-- [ ] 2개월 지속
-- [ ] 최초 시점
-- [ ] 주요 변수
-- [ ] 미발견 처리
-
-산출물:
-- data/processed/breakpoint_result.json
-
-## M7 What-if
-
-- [ ] 최근 3개월 프로필
-- [ ] baseline
-- [ ] 변동비 -15%
-- [ ] 고정비 -300,000
-- [ ] 상환액 -20%
-- [ ] 24개월
-- [ ] 고갈 월
-- [ ] 최소 잔액
-- [ ] 평균 저축률
-- [ ] 개선액
-
-산출물:
-- data/processed/whatif_results.json
-
-## M8 데모 고객
-
-- [ ] 메인 후보 검색
-- [ ] 안정 고객
-- [ ] 고위험 고객
-- [ ] 결과 수동 검토
-- [ ] ID 고정
-- [ ] 스크린샷
-
-산출물:
-- data/demo/demo_customers.csv
-- data/demo/main_demo_customer.json
-
-## M9 UI
-
-- [ ] 제목/컨셉
-- [ ] 고객 선택
-- [ ] 지표 카드
-- [ ] 현재 궤적
-- [ ] 유사 고객
-- [ ] 미래 궤적
-- [ ] 결과 막대
-- [ ] 분기점
-- [ ] 그룹 비교
-- [ ] What-if 표
-- [ ] 잔액 그래프
-- [ ] 고객용 설명
-- [ ] 직원용 설명
-- [ ] 합성 데이터 고지
-- [ ] 캐시
-- [ ] 오류 처리
-
-## M10 AI 선택 기능
-
-- [ ] 템플릿
-- [ ] JSON 입력
-- [ ] 프롬프트
-- [ ] 숫자 생성 금지
-- [ ] 확정 예측 금지
-- [ ] API 실패 fallback
-- [ ] 끄기 옵션
-
-## M11 최종
-
-- [ ] pytest
-- [ ] 3분 리허설
-- [ ] 화면 크기
-- [ ] 오프라인 핵심 기능
-- [ ] API 실패 대비
-- [ ] 데이터 백업
-- [ ] 영상 백업
-- [ ] Q&A
-- [ ] Git tag
 ## M1 Synthetic Data Generator Status
 - [x] GeneratorConfig
 - [x] customer_master.csv generation
@@ -415,3 +251,15 @@
 - [x] 영어 유사 고객 궤적 범례를 `Similar Median`, `Risk Median`, `Avoid Median`, `10-90% Range`로 축약했다.
 - [x] 결과 분포와 저축률/DSR 제목을 더 짧게 바꾸고 Plotly top margin/title 위치를 보수적으로 조정했다.
 - [ ] 실제 1366x768 및 1920x1080 브라우저 픽셀 스크린샷은 발표 전 사람이 최종 확인한다.
+
+## 다음 단계: DB 연결 설계 및 의사결정
+
+- [ ] DB 종류와 로컬/배포 실행 환경을 결정한다.
+- [ ] CSV/JSON과 DB의 역할, 읽기/쓰기 책임, 호환 범위를 정한다.
+- [ ] 초기 적재, 마이그레이션, 백필, 롤백 계획을 작성한다.
+- [ ] 환경변수, 비밀값, 샘플 설정, 배포 방식을 결정한다.
+- [ ] Streamlit 캐시, 사전 계산 demo cache, fallback과의 관계를 설계한다.
+- [ ] 실제 금융 데이터 도입 전 개인정보, 인증/권한, 감사 로그 요구사항을 확인한다.
+- [ ] `DECISIONS.md`에 위 선택을 기록한 뒤에만 DB 구현 범위를 시작한다.
+
+이 섹션은 설계 전제 조건이며, 데이터베이스 구현이 완료되었음을 의미하지 않는다.

@@ -194,12 +194,13 @@ def test_presentation_view_model_has_four_scenes_with_actual_values() -> None:
         source=PRESENTATION_SOURCE_MAIN_DEMO,
     )
 
-    assert [scene["label"] for scene in model["scenes"]] == ["장면 1", "장면 2", "장면 3", "장면 4"]
+    assert [scene["label"] for scene in model["scenes"]] == ["장면 1", "장면 2", "장면 3", "장면 4", "장면 5"]
     assert "최근 저축 여력이 감소" in model["scenes"][0]["message"]
     assert "200명 중 36.0%" in model["scenes"][1]["message"]
     assert "13개월 차" in model["scenes"][2]["message"]
     assert "대출상환액 20% 감소" in model["scenes"][3]["message"]
     assert "899만원" in model["scenes"][3]["message"]
+    assert "고객용 설명" in model["scenes"][4]["message"]
 
 
 def test_scene_messages_handle_breakpoint_states_and_empty_whatif() -> None:
@@ -291,6 +292,27 @@ def test_load_presentation_payload_falls_back_to_live_calculation(tmp_path: Path
     assert payload.is_ready
     assert payload.source == PRESENTATION_SOURCE_LIVE
     assert payload.summary["customer_id"] == "C000001"
+
+
+def test_non_main_presentation_customer_uses_live_result_without_reusing_main_cache(tmp_path: Path) -> None:
+    demo_dir = tmp_path / "demo"
+    _write_json(demo_dir / settings.MAIN_DEMO_CUSTOMER_FILENAME, _main_demo_customer())
+    monthly = _monthly_df().copy()
+    monthly["customer_id"] = "C000002"
+
+    payload = load_presentation_payload(
+        demo_dir=demo_dir,
+        processed_dir=tmp_path / "processed",
+        monthly_df=monthly,
+        features_df=pd.DataFrame({"customer_id": ["C000002"]}),
+        matcher=object(),
+        customer_id="C000002",
+        live_runner=lambda customer_id, *_: {**_analysis(), "customer_id": customer_id},
+    )
+
+    assert payload.is_ready
+    assert payload.customer_id == "C000002"
+    assert payload.source == PRESENTATION_SOURCE_LIVE
 
 
 def test_load_presentation_payload_handles_bad_json_with_friendly_error(tmp_path: Path) -> None:

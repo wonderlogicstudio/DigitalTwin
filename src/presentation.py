@@ -41,6 +41,13 @@ PRESENTATION_SOURCE_MAIN_DEMO = "main_demo_customer.json"
 PRESENTATION_SOURCE_PROCESSED = "processed 결과 JSON"
 PRESENTATION_SOURCE_LIVE = "실시간 계산"
 PRESENTATION_SOURCE_FAILED = "표시 가능한 데이터 없음"
+PRESENTATION_TAB_KEYS = (
+    "presentation.tab.current",
+    "presentation.tab.similar",
+    "presentation.tab.breakpoint",
+    "presentation.tab.actions",
+    "presentation.tab.summary",
+)
 
 
 @dataclass(frozen=True)
@@ -98,23 +105,26 @@ def load_presentation_payload(
 
     try:
         main_demo_customer = _read_json(demo_dir / settings.MAIN_DEMO_CUSTOMER_FILENAME)
-        resolved_customer_id = resolve_presentation_customer_id(
-            main_demo_customer=main_demo_customer,
-            fallback_customer_id=resolved_customer_id,
-        )
-        analysis = _analysis_from_main_demo_customer(main_demo_customer)
-        analysis = _merge_cached_chart_data(analysis, resolved_customer_id, demo_dir)
-        return PresentationLoadResult(
-            customer_id=resolved_customer_id,
-            summary=_presentation_summary_from_main(main_demo_customer),
-            analysis=analysis,
-            source=PRESENTATION_SOURCE_MAIN_DEMO,
-            fallback_steps=(PRESENTATION_SOURCE_MAIN_DEMO,),
-        )
+        main_customer_id = resolve_presentation_customer_id(main_demo_customer=main_demo_customer)
+        if not resolved_customer_id:
+            resolved_customer_id = main_customer_id
+        if resolved_customer_id == main_customer_id:
+            analysis = _analysis_from_main_demo_customer(main_demo_customer)
+            analysis = _merge_cached_chart_data(analysis, resolved_customer_id, demo_dir)
+            return PresentationLoadResult(
+                customer_id=resolved_customer_id,
+                summary=_presentation_summary_from_main(main_demo_customer),
+                analysis=analysis,
+                source=PRESENTATION_SOURCE_MAIN_DEMO,
+                fallback_steps=(PRESENTATION_SOURCE_MAIN_DEMO,),
+            )
+        fallback_steps.append(f"{PRESENTATION_SOURCE_MAIN_DEMO}: selected customer differs")
     except Exception as exc:  # noqa: BLE001
         fallback_steps.append(f"{PRESENTATION_SOURCE_MAIN_DEMO}: {exc.__class__.__name__}")
 
     try:
+        if main_demo_customer is not None:
+            raise ValueError("processed presentation artifacts are available only for the fixed main customer")
         processed_analysis = _analysis_from_processed_json(resolved_customer_id, processed_dir)
         summary = _summary_from_monthly_or_main(monthly_df, resolved_customer_id, main_demo_customer)
         return PresentationLoadResult(
@@ -165,13 +175,14 @@ def build_presentation_view_model(
     source: str,
     language: str = "ko",
 ) -> dict[str, Any]:
-    """Build the four-scene presentation script from existing values."""
+    """Build the five-scene presentation script from existing values."""
 
     scenes = [
         _scene("current", build_current_scene_message(summary, language=language), language),
         _scene("peers", build_peer_scene_message(analysis.get("outcome_summary"), language=language), language),
         _scene("breakpoint", build_breakpoint_scene_message(analysis.get("breakpoint_result"), language=language), language),
         _scene("whatif", build_whatif_scene_message(analysis.get("whatif_results"), language=language), language),
+        _scene("summary", t("presentation.summary.message", language), language),
     ]
     return {
         "customer_id": str(customer_id),
@@ -185,6 +196,12 @@ def build_presentation_view_model(
         ],
         "current_metric": select_current_focus_metric(summary),
     }
+
+
+def get_presentation_tab_labels(language: str = "ko") -> list[str]:
+    """Return the short, localized labels used by presentation-mode tabs."""
+
+    return [t(key, language) for key in PRESENTATION_TAB_KEYS]
 
 
 def build_current_scene_message(summary: Mapping[str, Any], language: str = "ko") -> str:

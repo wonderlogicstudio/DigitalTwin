@@ -382,12 +382,13 @@
 
 ## Presentation Mode Status
 - [x] 사이드바에 `일반 모드`와 `발표 모드` 선택을 추가했다.
-- [x] 발표 모드 기본 고객을 `data/demo/main_demo_customer.json`의 메인 고객으로 고정했다.
+- [x] 발표 모드는 `data/demo/main_demo_customer.json`의 메인 고객으로 시작하고, 데모 고객 선택값을 유지한다.
 - [x] 발표 모드에서 세부 raw 궤적, 내부 기술 설정, 파일 경로, JSON 원문, 개발자용 상세 정보를 기본 화면에서 숨겼다.
-- [x] 발표 모드를 4개 장면 흐름으로 구성했다: 현재 상태, 유사 고객 이후 결과, 위험 분기점, 대응 시나리오.
+- [x] 발표 모드를 5개 탭 흐름으로 구성했다: 현재 상태, 유사 경로, 위험 분기점, 대응 시나리오, 분석 요약.
 - [x] 발표 모드 fallback 순서를 `main_demo_customer.json` → processed JSON → 실시간 계산 → 친절한 오류 메시지로 정리했다.
 - [x] 발표 모드 문구와 view model을 `src/presentation.py`에서 관리해 `app.py`에 계산 로직을 복제하지 않았다.
 - [x] 발표 모드 회귀 테스트를 `tests/test_presentation_mode.py`에 추가했다.
+- [x] `tests/test_presentation_tabs.py`에서 5개 탭, 한국어/영어 라벨, Summary 장면, 탭 렌더링 중 분석 재실행 방지를 검증했다.
 
 ## Internationalization Status
 

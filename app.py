@@ -59,6 +59,7 @@ from src.presentation import (  # noqa: E402
     PRESENTATION_MODE,
     build_presentation_metric_cards,
     build_presentation_view_model,
+    get_presentation_tab_labels,
     load_presentation_payload,
     resolve_presentation_customer_id,
 )
@@ -151,7 +152,7 @@ def main() -> None:
     matcher = load_matcher(features_df) if not features_df.empty else None
 
     if selection.presentation_mode:
-        presentation_payload = load_presentation_payload(
+        presentation_payload = load_presentation_payload_for_customer(
             demo_dir=settings.DATA_DEMO_DIR,
             processed_dir=settings.DATA_PROCESSED_DIR,
             monthly_df=monthly_df,
@@ -298,6 +299,36 @@ def load_precomputed_demo_safely() -> Any | None:
         return None
 
 
+def load_presentation_payload_for_customer(
+    *,
+    demo_dir: Path,
+    processed_dir: Path,
+    monthly_df: pd.DataFrame,
+    features_df: pd.DataFrame,
+    matcher: Any,
+    customer_id: str,
+    language: str,
+) -> Any:
+    """Cache each prepared presentation payload across tab and language reruns."""
+
+    payloads = st.session_state.setdefault("presentation_payloads", {})
+    cached = payloads.get(str(customer_id))
+    if cached is not None:
+        return cached
+    payload = load_presentation_payload(
+        demo_dir=demo_dir,
+        processed_dir=processed_dir,
+        monthly_df=monthly_df,
+        features_df=features_df,
+        matcher=matcher,
+        customer_id=customer_id,
+        language=language,
+    )
+    if payload.is_ready:
+        payloads[str(customer_id)] = payload
+    return payload
+
+
 def build_summary_safely(
     monthly_df: pd.DataFrame,
     customer_id: str,
@@ -358,13 +389,27 @@ def render_sidebar(demo_df: pd.DataFrame, cache_payload: Any | None, language: s
         )
 
     if presentation_mode:
-        customer_id = resolve_presentation_customer_id(
+        default_customer_id = resolve_presentation_customer_id(
             demo_df=demo_df,
             main_demo_customer=cache_payload.main_demo_customer if cache_payload is not None else None,
         )
-        st.sidebar.caption(t("ui.presentation_main_customer", language))
-        if customer_id:
-            st.sidebar.caption(t("customer.main_id", language, customer_id=customer_id))
+        customer_options = [option["customer_id"] for option in demo_options]
+        option_by_id = {option["customer_id"]: option for option in demo_options}
+        st.sidebar.caption(t("ui.presentation_main_default", language))
+        if customer_options:
+            default_index = customer_options.index(default_customer_id) if default_customer_id in customer_options else 0
+            customer_id = st.sidebar.selectbox(
+                t("customer.selector", language),
+                customer_options,
+                index=default_index,
+                format_func=lambda option_id: option_by_id.get(option_id, {"label": option_id})["label"],
+                key="presentation_customer_selector",
+            )
+            selected_option = option_by_id[customer_id]
+            st.session_state["selected_demo_role"] = selected_option["role"]
+            st.sidebar.caption(t("customer.demo_role_caption", language, role=selected_option["label"].split(" (")[0]))
+        else:
+            customer_id = default_customer_id
     else:
         manual_option = "__manual_customer_id__"
         customer_options = [option["customer_id"] for option in demo_options]
@@ -387,6 +432,7 @@ def render_sidebar(demo_df: pd.DataFrame, cache_payload: Any | None, language: s
         else:
             selected_option = option_by_id[selected_customer_option]
             customer_id = selected_option["customer_id"]
+            st.session_state["selected_demo_role"] = selected_option["role"]
             st.sidebar.caption(t("customer.demo_role_caption", language, role=selected_option["label"].split(" (")[0]))
 
     analysis_metric_options = get_analysis_metric_options(language)
@@ -423,7 +469,7 @@ def render_presentation_mode(
     selection: SidebarSelection,
     language: str = "ko",
 ) -> None:
-    """Render the four-scene hackathon presentation mode."""
+    """Render prepared presentation results in five non-calculating tabs."""
 
     customer_id = payload.customer_id
     summary = payload.summary
@@ -441,56 +487,6 @@ def render_presentation_mode(
         whatif_results=analysis.get("whatif_results"),
         language=language,
     )
-
-    render_presentation_current_scene(
-        monthly_df=monthly_df,
-        demo_df=demo_df,
-        customer_id=customer_id,
-        summary=summary,
-        analysis=analysis,
-        scene=scenes["current"],
-        current_metric=str(view_model["current_metric"]),
-        language=language,
-    )
-    render_presentation_peer_scene(
-        monthly_df=monthly_df,
-        demo_df=demo_df,
-        customer_id=customer_id,
-        summary=summary,
-        analysis=analysis,
-        scene=scenes["peers"],
-        selection=selection,
-        language=language,
-    )
-    render_presentation_breakpoint_scene(
-        analysis=analysis,
-        scene=scenes["breakpoint"],
-        breakpoint_cards=presentation_cards["breakpoint"],
-        language=language,
-    )
-    render_presentation_whatif_scene(
-        analysis=analysis,
-        scene=scenes["whatif"],
-        whatif_cards=presentation_cards["whatif"],
-        language=language,
-    )
-    st.markdown(render_presentation_notice_html(view_model["notices"]), unsafe_allow_html=True)
-
-
-def render_presentation_current_scene(
-    *,
-    monthly_df: pd.DataFrame,
-    demo_df: pd.DataFrame,
-    customer_id: str,
-    summary: dict[str, Any],
-    analysis: dict[str, Any],
-    scene: dict[str, str],
-    current_metric: str,
-    language: str = "ko",
-) -> None:
-    """Render presentation scene 1."""
-
-    st.markdown(render_presentation_scene_heading_html(scene), unsafe_allow_html=True)
     first_screen = build_first_screen_view_model(
         customer_id=customer_id,
         summary=summary,
@@ -498,47 +494,7 @@ def render_presentation_current_scene(
         analysis=analysis,
         language=language,
     )
-    st.markdown(render_customer_identity_html(first_screen["customer_identity"], language=language), unsafe_allow_html=True)
-    st.markdown(render_kpi_cards_html(first_screen["kpi_cards"], language=language), unsafe_allow_html=True)
-    st.markdown(render_status_summary_html(first_screen["status_sentence"]), unsafe_allow_html=True)
-
-    target_history = build_target_history(monthly_df, customer_id)
-    if target_history.empty:
-        st.info(t("ui.current_data_missing", language))
-        return
-
-    chart_cols = st.columns([1.15, 0.85])
-    with chart_cols[0]:
-        render_chart_or_table(
-            lambda: create_income_expense_chart(target_history, language=language),
-            target_history.loc[:, ["month", "income", "total_expense"]],
-            presentation_mode=True,
-            language=language,
-        )
-    with chart_cols[1]:
-        render_chart_or_table(
-            lambda: create_current_trajectory_chart(target_history, current_metric, language=language),
-            target_history.loc[:, ["month", current_metric]],
-            presentation_mode=True,
-            language=language,
-        )
-
-
-def render_presentation_peer_scene(
-    *,
-    monthly_df: pd.DataFrame,
-    demo_df: pd.DataFrame,
-    customer_id: str,
-    summary: dict[str, Any],
-    analysis: dict[str, Any],
-    scene: dict[str, str],
-    selection: SidebarSelection,
-    language: str = "ko",
-) -> None:
-    """Render presentation scene 2."""
-
-    st.markdown(render_presentation_scene_heading_html(scene), unsafe_allow_html=True)
-    view_model = build_judge_flow_view_model(
+    peer_view_model = build_judge_flow_view_model(
         customer_id=customer_id,
         summary=summary,
         demo_df=demo_df,
@@ -546,20 +502,134 @@ def render_presentation_peer_scene(
         selected_metric=selection.selected_metric,
         language=language,
     )
-    st.markdown(render_info_cards_html(view_model["similarity_cards"], t("card.similar_summary", language)), unsafe_allow_html=True)
-    target_history, twin_trajectory = build_twin_trajectory_frames(
+    current_history = build_target_history(monthly_df, customer_id)
+    twin_history, twin_trajectory = build_twin_trajectory_frames(
         monthly_df,
         customer_id,
         selection.selected_metric,
         analysis,
     )
+    customer_brief = build_brief_with_fallback(
+        "customer",
+        summary,
+        analysis["outcome_summary"],
+        analysis["breakpoint_result"],
+        analysis["whatif_results"],
+        language=language,
+    )
+    staff_brief = build_brief_with_fallback(
+        "staff",
+        summary,
+        analysis["outcome_summary"],
+        analysis["breakpoint_result"],
+        analysis["whatif_results"],
+        language=language,
+    )
+    tabs = st.tabs(get_presentation_tab_labels(language))
+
+    with tabs[0]:
+        render_presentation_current_scene(
+            first_screen=first_screen,
+            target_history=current_history,
+            scene=scenes["current"],
+            language=language,
+        )
+    with tabs[1]:
+        render_presentation_peer_scene(
+            analysis=analysis,
+            scene=scenes["peers"],
+            view_model=peer_view_model,
+            target_history=twin_history,
+            twin_trajectory=twin_trajectory,
+            selected_metric=selection.selected_metric,
+            language=language,
+        )
+    with tabs[2]:
+        render_presentation_breakpoint_scene(
+            analysis=analysis,
+            scene=scenes["breakpoint"],
+            breakpoint_cards=presentation_cards["breakpoint"],
+            language=language,
+        )
+    with tabs[3]:
+        render_presentation_whatif_scene(
+            analysis=analysis,
+            scene=scenes["whatif"],
+            whatif_cards=presentation_cards["whatif"],
+            language=language,
+        )
+    with tabs[4]:
+        render_presentation_summary_scene(
+            scene=scenes["summary"],
+            customer_brief=customer_brief,
+            staff_brief=staff_brief,
+            notices=view_model["notices"],
+            language=language,
+        )
+
+
+def render_presentation_current_scene(
+    *,
+    first_screen: dict[str, Any],
+    target_history: pd.DataFrame,
+    scene: dict[str, str],
+    language: str = "ko",
+) -> None:
+    """Render presentation tab 1 from prepared display values."""
+
+    st.markdown(render_presentation_scene_heading_html(scene), unsafe_allow_html=True)
+    st.markdown(render_customer_identity_html(first_screen["customer_identity"], language=language), unsafe_allow_html=True)
+    st.markdown(render_kpi_cards_html(first_screen["kpi_cards"], language=language), unsafe_allow_html=True)
+    st.markdown(render_status_summary_html(first_screen["status_sentence"]), unsafe_allow_html=True)
+
+    if target_history.empty:
+        st.info(t("ui.current_data_missing", language))
+        return
+
+    render_chart_or_table(
+        lambda: create_income_expense_chart(target_history, language=language),
+        target_history.loc[:, ["month", "income", "total_expense"]],
+        presentation_mode=True,
+        language=language,
+    )
+    chart_cols = st.columns(2)
+    with chart_cols[0]:
+        render_chart_or_table(
+            lambda: create_current_trajectory_chart(target_history, "savings_rate", language=language),
+            target_history.loc[:, ["month", "savings_rate"]],
+            presentation_mode=True,
+            language=language,
+        )
+    with chart_cols[1]:
+        render_chart_or_table(
+            lambda: create_current_trajectory_chart(target_history, "dsr", language=language),
+            target_history.loc[:, ["month", "dsr"]],
+            presentation_mode=True,
+            language=language,
+        )
+
+
+def render_presentation_peer_scene(
+    *,
+    analysis: dict[str, Any],
+    scene: dict[str, str],
+    view_model: dict[str, Any],
+    target_history: pd.DataFrame,
+    twin_trajectory: pd.DataFrame,
+    selected_metric: str,
+    language: str = "ko",
+) -> None:
+    """Render presentation tab 2 from prepared display values."""
+
+    st.markdown(render_presentation_scene_heading_html(scene), unsafe_allow_html=True)
+    st.markdown(render_info_cards_html(view_model["similarity_cards"], t("card.similar_summary", language)), unsafe_allow_html=True)
     chart_cols = st.columns([1.35, 1.0])
     with chart_cols[0]:
         render_chart_or_table(
             lambda: create_twin_trajectory_chart(
                 target_history,
                 twin_trajectory,
-                metric=selection.selected_metric,
+                metric=selected_metric,
                 breakpoint_result=analysis.get("breakpoint_result"),
                 show_raw_samples=False,
                 language=language,
@@ -638,6 +708,25 @@ def render_presentation_whatif_scene(
             language=language,
         )
     st.caption(t("ui.loan_scenario_notice", language))
+
+
+def render_presentation_summary_scene(
+    *,
+    scene: dict[str, str],
+    customer_brief: str,
+    staff_brief: str,
+    notices: list[str],
+    language: str = "ko",
+) -> None:
+    """Render presentation tab 5 from prepared briefing text."""
+
+    st.markdown(render_presentation_scene_heading_html(scene), unsafe_allow_html=True)
+    brief_cols = st.columns(2)
+    with brief_cols[0]:
+        st.markdown(render_brief_panel_html(t("brief.customer.title", language), customer_brief), unsafe_allow_html=True)
+    with brief_cols[1]:
+        st.markdown(render_brief_panel_html(t("brief.staff.title", language), staff_brief), unsafe_allow_html=True)
+    st.markdown(render_presentation_notice_html(notices), unsafe_allow_html=True)
 
 
 def render_section_current_flow(

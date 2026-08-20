@@ -388,9 +388,9 @@ div[data-testid="stSidebar"] [data-testid="stCaptionContainer"] {
 }
 
 .fpt-presentation-scene-heading {
-  border-top: 1px solid var(--fpt-border);
-  margin: 22px 0 10px;
-  padding-top: 14px;
+  border-top: 0;
+  margin: 8px 0 10px;
+  padding-top: 0;
 }
 
 .fpt-presentation-step {
@@ -539,10 +539,22 @@ div[data-testid="stExpander"] {
 div[data-testid="stTabs"] button {
   color: var(--fpt-muted-text);
   font-weight: 800;
+  min-height: 38px;
+  padding: 0.35rem 0.7rem;
+  white-space: nowrap;
 }
 
 div[data-testid="stTabs"] button[aria-selected="true"] {
   color: var(--fpt-primary);
+}
+
+div[data-testid="stTabs"] [role="tablist"] {
+  gap: 0.15rem;
+  margin-bottom: 0.35rem;
+}
+
+div[data-testid="stTabs"] [role="tabpanel"] {
+  padding-top: 0.15rem;
 }
 
 div[data-testid="stDataFrame"],

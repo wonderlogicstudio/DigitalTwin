@@ -179,6 +179,30 @@
 - “유사한 재무 궤적을 보였던 고객 중 31%가 이후 24개월 내 스트레스 상태에 진입했습니다.”
 - “본 결과는 합성 데이터 기반 PoC이며 실제 신용평가 결과가 아닙니다.”
 
+## P0 extension: RM operational prototype
+
+The original customer-analysis specification remains in force. The following
+implemented prototype scope is additive and synthetic-only:
+
+1. Analyze the exact 5,000-customer population into a separate result
+   contract and export reconciled detail/summary/manifest artifacts.
+2. Validate methodology with negative-control and multi-seed/TOP_K reports
+   without changing canonical seed-42 inputs or production `TOP_K=200`.
+3. Produce prospective as-of signals with cross-fit evaluator separation;
+   distinguish prospective timing from a historical similar-path landmark.
+4. Apply a versioned demo policy, then a transparent deterministic triage
+   decision/rank/capacity process for all customers. A representative demo
+   cohort is deterministic and non-operational.
+5. Create file-backed Alert/Case work only for selected/routed triage records;
+   provide human Recommended Follow-up, Banker-service state changes, and
+   append-only audit records.
+6. Provide an RM Workspace mode separate from General and the five-tab
+   Presentation mode.
+
+Out of scope: DB/ORM/migration, real customer data, actual external
+notification delivery, provider SDKs/credentials, automated financial
+decisions, and production threshold/capacity approval.
+
 ## 10. 제외 범위
 
 - 실제 은행 API

@@ -4,12 +4,15 @@ from __future__ import annotations
 
 from contextlib import nullcontext
 from copy import deepcopy
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
 import app as app_module
+from streamlit.testing.v1 import AppTest
 
-from src.presentation import build_presentation_view_model, get_presentation_tab_labels
+from src.presentation import GENERAL_MODE, PRESENTATION_MODE, build_presentation_view_model, get_presentation_tab_labels
+from src.rm_workspace import RM_WORKSPACE_MODE, get_rm_workspace_tab_labels
 from src.ui_components import load_css
 
 
@@ -67,14 +70,14 @@ def test_presentation_tabs_are_short_and_localized() -> None:
     assert get_presentation_tab_labels("ko") == [
         "① 현재 상태",
         "② 유사 경로",
-        "③ 위험 분기점",
+        "③ 유사 경로 근거",
         "④ 대응 시나리오",
         "⑤ 분석 요약",
     ]
     assert get_presentation_tab_labels("en") == [
         "① Current",
         "② Similar Paths",
-        "③ Turning Point",
+        "③ Similar-path Evidence",
         "④ Action Scenarios",
         "⑤ Summary",
     ]
@@ -86,6 +89,33 @@ def test_presentation_tab_css_preserves_single_line_labels() -> None:
     assert 'div[data-testid="stTabs"] button' in css
     assert "white-space: nowrap;" in css
     assert '[role="tabpanel"]' in css
+
+
+def test_rm_queue_table_uses_localized_reason_copy_not_raw_codes() -> None:
+    table = app_module._rm_queue_table_rows(
+        [
+            {
+                "customer_id": "C000001",
+                "selection_rank": 1,
+                "priority": "Priority Review",
+                "case_state": "NO_OPEN_ALERT",
+                "selection_reason_codes": ("PRIORITY_BAND_PRIORITY_REVIEW",),
+                "why_now_reason_codes": ("CURRENT_STATUS_CONCERNING",),
+                "timing_evidence_reference": {"source": "prospective_signal"},
+                "due_at": None,
+                "owner_reference": None,
+                "updated_at": None,
+            }
+        ],
+        language="en",
+    )
+
+    rendered_values = " ".join(str(value) for value in table.iloc[0].tolist())
+    assert "PRIORITY_BAND_PRIORITY_REVIEW" not in rendered_values
+    assert "CURRENT_STATUS_CONCERNING" not in rendered_values
+    assert "Priority Review tier" in rendered_values
+    assert "Current status condition" in rendered_values
+    assert "Customer ID" in table.columns
 
 
 def test_presentation_view_model_includes_summary_scene_for_all_breakpoint_states() -> None:
@@ -164,3 +194,39 @@ def test_tab_renderer_uses_prepared_values_without_repeating_analysis(monkeypatc
     ]
     assert summary == before_summary
     assert analysis == before_analysis
+
+
+def test_presentation_app_shows_population_strip_without_adding_a_sixth_tab() -> None:
+    at = AppTest.from_file(Path(app_module.__file__))
+    at.run(timeout=45)
+
+    assert not at.exception
+    assert [tab.label for tab in at.tabs] == get_presentation_tab_labels("ko")
+    assert len(at.tabs) == 5
+    assert any("5,000" in markdown.value for markdown in at.markdown)
+
+    at.selectbox(key="ui_language").set_value("en").run(timeout=45)
+    assert not at.exception
+    assert [tab.label for tab in at.tabs] == get_presentation_tab_labels("en")
+    assert any(caption.value == "Population evidence" for caption in at.caption)
+
+
+def test_app_test_all_modes_keep_their_own_tab_and_language_contracts() -> None:
+    at = AppTest.from_file(Path(app_module.__file__))
+    at.run(timeout=45)
+
+    assert not at.exception
+    assert [tab.label for tab in at.tabs] == get_presentation_tab_labels("ko")
+
+    at.sidebar.selectbox(key="app_mode").set_value(GENERAL_MODE).run(timeout=45)
+    assert not at.exception
+    assert list(at.tabs) == []
+
+    at.selectbox(key="ui_language").set_value("en").run(timeout=45)
+    at.sidebar.selectbox(key="app_mode").set_value(PRESENTATION_MODE).run(timeout=45)
+    assert not at.exception
+    assert [tab.label for tab in at.tabs] == get_presentation_tab_labels("en")
+
+    at.sidebar.selectbox(key="app_mode").set_value(RM_WORKSPACE_MODE).run(timeout=45)
+    assert not at.exception
+    assert [tab.label for tab in at.tabs] == get_rm_workspace_tab_labels("en")

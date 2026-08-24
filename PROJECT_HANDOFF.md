@@ -1,5 +1,55 @@
 # Financial Path Twin Project Handoff
 
+## 0. Current implementation snapshot (2026-08-24)
+
+The tracked `main` baseline is `bfc8d81`; the active working tree contains the
+post-baseline P0 implementation described below and must be validated as a
+whole before commit. `HEAD...origin/main` is currently `0/0`.
+
+The dated verification record later in this handoff documents the original
+baseline only. Use the current commands in `README.md` and `TEST_PLAN.md` for
+the P0 implementation rather than treating those earlier test counts as the
+latest regression result.
+
+### Implemented after the original handoff
+
+- Separate full-population result contract, deterministic batch engine, and
+  atomic export: `artifacts/population/seed42_full_run/` contains 5,000
+  success results, zero failures, 200 matches per customer, and exact ID
+  reconciliation.
+- Validation-only circularity mapping/negative-control and multi-seed/TOP_K
+  sensitivity reports under `artifacts/validation/`. They leave canonical
+  seed-42 files unchanged; `TOP_K_MATCHES=200` remains production invariant.
+- Leakage-controlled prospective path: as-of features, reference-only matcher,
+  sequential signal history, deterministic cross-fit scoring, and a separate
+  evaluator. Timing evidence is prospective; a breakpoint stays a historical
+  matched-cohort landmark and is never a live trigger.
+- Versioned demo policy, complete 5,000-customer Triage Universe,
+  deterministic transparent ranking/capacity selection, exact funnel
+  reconciliation, and deterministic representative cohort without future
+  labels or manual cherry-picking. The current selection export is
+  `artifacts/triage/seed42_crossfit_5fold_asof12_unbounded/`.
+- File-backed Alert/Case lifecycle, episode dedupe/cooldown/snooze, Banker
+  application service, recommended-follow-up contracts, and append-only audit.
+  DB remains unapproved and unimplemented.
+- Provider-neutral notification Preview/Null services only; no external SDK,
+  credential, provider, webhook, SMTP, Graph, or network delivery exists.
+- A separate RM Workspace mode with Portfolio, Review Queue, Customer Review,
+  and Activity/Audit tabs. General remains vertical and Presentation remains
+  five tabs.
+
+### Current operational cautions
+
+- All data, validation results, timing evidence, policies, triage outputs, and
+  workflow examples are synthetic demo material—not bank accuracy, outcome,
+  intervention-efficacy, or production-policy evidence.
+- Triage does not use target future months, `final_outcome`, or persona.
+  Policy eligibility, triage selection, and Alert creation have separate
+  responsibilities.
+- The only supported user startup is still
+  `01_install_requirements.bat`, `02_run_pipeline.bat`, then
+  `03_run_app.bat`. Automated checks must use the bounded launcher below.
+
 ## 1. 문서 목적과 기준
 
 이 문서는 다음 작업자가 현재 프로젝트의 동작 범위, 검증 상태, 변경 금지 조건을 빠르게 확인할 수 있도록 정리한 인수인계 문서입니다.

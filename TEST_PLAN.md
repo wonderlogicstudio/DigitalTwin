@@ -204,6 +204,37 @@ generate
 - AI 미연결 동작
 - 3분 데모 가능
 
+## P0 regression extensions
+
+The active suite additionally locks these contracts:
+
+- population result serialization/single-customer parity, deterministic exact
+  batch input, duplicate rejection, failure isolation, atomic export, and
+  5,000-ID reconciliation;
+- validation-only negative-control reproducibility and canonical-input
+  integrity; isolated multi-seed/TOP_K sensitivity with production K unchanged;
+- month-12 as-of parity, future-mutation invariance, reference-only scaler
+  fitting, target exclusion, deterministic folds, scorer/evaluator separation,
+  and customer-month reconciliation;
+- prospective timing edge cases, policy version/status/why-now fields, and no
+  historical-landmark live-trigger behavior;
+- complete triage universe, deterministic transparent capacity ranking,
+  selection manifest reconciliation, no future-label/persona selection, and
+  representative-cohort non-cherry-picking rules;
+- Alert state machine/repository/dedupe/cooldown/snooze, selected-to-Alert
+  idempotency, Banker-service guards, append-only audit consistency, and
+  Preview/Null notification no-network behavior;
+- General/Presentation/RM mode isolation, Presentation five-tab preservation,
+  RM four-tab portfolio/queue/customer-review/audit contracts, KR/EN AppTest,
+  and bounded Streamlit health checks.
+
+Focused test modules include `test_population_*.py`,
+`test_circularity_validation.py`, `test_sensitivity_validation.py`,
+`test_as_of_features.py`, `test_reference_matcher.py`,
+`test_prospective_signals.py`, `test_crossfit_backtest.py`,
+`test_demo_policy.py`, `test_triage_*.py`, `test_alert_*.py`,
+`test_banker_*.py`, `test_notifications.py`, and `test_rm_*.py`.
+
 ## 13. 완료 기준
 
 ```bash

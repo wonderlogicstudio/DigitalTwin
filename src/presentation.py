@@ -24,9 +24,15 @@ from src.copy import (
     UI_MESSAGES,
 )
 from src.demo_cache import build_fallback_customer_summary
-from src.formatters import format_krw_compact, format_metric_value, format_month_label, format_percent
+from src.formatters import format_krw_compact, format_metric_value, format_percent
 from src.i18n import t
 from src.labels import label_metric, label_scenario, label_status
+from src.presentation_population import (
+    build_presentation_current_review_signal,
+    build_presentation_customer_options,
+    build_presentation_population_strip,
+    load_presentation_population_evidence,
+)
 from src.ui_components import (
     best_whatif_scenario,
     build_customer_summary,
@@ -48,8 +54,6 @@ PRESENTATION_TAB_KEYS = (
     "presentation.tab.actions",
     "presentation.tab.summary",
 )
-
-
 @dataclass(frozen=True)
 class PresentationLoadResult:
     """Loaded presentation data and the fallback source that supplied it."""
@@ -245,16 +249,16 @@ def build_breakpoint_scene_message(breakpoint_result: Any, language: str = "ko")
     """Describe breakpoint status for the presentation story."""
 
     if not breakpoint_result:
-        return t("breakpoint.not_found", language)
+        return t("presentation.breakpoint.not_found", language)
     status = str(breakpoint_result.get("status", "not_found"))
     if status == "insufficient_group_size":
-        return t("breakpoint.insufficient_group_size", language)
+        return t("presentation.breakpoint.insufficient", language)
     if status != "found":
-        return t("breakpoint.not_found", language)
+        return t("presentation.breakpoint.not_found", language)
     month = breakpoint_result.get("breakpoint_month")
     metric = breakpoint_result.get("primary_factor")
     if month is None or not metric:
-        return t("breakpoint.not_found", language)
+        return t("presentation.breakpoint.not_found", language)
     return t("presentation.breakpoint.message", language, month=int(month), metric=label_metric(metric, language))
 
 
@@ -287,29 +291,30 @@ def build_presentation_metric_cards(
     breakpoint_cards: list[dict[str, str]] = []
     if breakpoint_result and breakpoint_result.get("status") == "found":
         metric = str(breakpoint_result.get("primary_factor"))
+        month = int(breakpoint_result["breakpoint_month"])
         breakpoint_cards = [
             {
-                "title": "Turning-Point Month" if language == "en" else "분기점 월",
-                "value": format_month_label(int(breakpoint_result["breakpoint_month"]), language=language),
-                "detail": "Based on current Month 12" if language == "en" else "현재 12개월 차 기준",
+                "title": t("presentation.card.landmark_month", language),
+                "value": t("presentation.card.historical_month", language, month=month),
+                "detail": t("presentation.card.historical_landmark", language),
                 "tone": "neutral",
             },
             {
-                "title": "Key Difference Metric" if language == "en" else "주요 차이 지표",
+                "title": t("presentation.card.difference_metric", language),
                 "value": label_metric(metric, language),
-                "detail": "Based on group-average difference" if language == "en" else "두 집단 평균 차이 기준",
+                "detail": t("presentation.card.group_average", language),
                 "tone": "watch",
             },
             {
                 "title": t("chart.risk_path_mean", language),
                 "value": format_metric_value(breakpoint_result.get("risk_group_mean"), metric, language=language),
-                "detail": "At the turning-point month" if language == "en" else "분기점 월 기준",
+                "detail": t("presentation.card.historical_month", language, month=month),
                 "tone": "danger",
             },
             {
                 "title": t("chart.avoidance_path_mean", language),
                 "value": format_metric_value(breakpoint_result.get("avoidance_group_mean"), metric, language=language),
-                "detail": "At the turning-point month" if language == "en" else "분기점 월 기준",
+                "detail": t("presentation.card.historical_month", language, month=month),
                 "tone": "stable",
             },
         ]
@@ -319,21 +324,21 @@ def build_presentation_metric_cards(
     if best is not None:
         whatif_cards = [
             {
-                "title": "Most Effective Action" if language == "en" else "가장 효과적인 대응안",
+                "title": t("presentation.card.scenario_comparison", language),
                 "value": label_scenario(best.get("scenario_name"), language),
-                "detail": "Based on improvement vs no action" if language == "en" else "기준 대비 개선액 기준",
+                "detail": t("presentation.card.simulated_vs_baseline", language),
                 "tone": "stable",
             },
             {
                 "title": t("chart.whatif.improvement", language),
                 "value": format_krw_compact(best.get("improvement_vs_baseline"), language=language),
-                "detail": "Based on 24-month ending balance" if language == "en" else "24개월 후 잔액 기준",
+                "detail": t("presentation.card.simulated_ending_balance", language),
                 "tone": "stable",
             },
             {
                 "title": t("chart.whatif.ending_balance", language),
                 "value": format_krw_compact(best.get("ending_cash_balance"), language=language),
-                "detail": "Action-scenario result" if language == "en" else "대응 시나리오 계산 결과",
+                "detail": t("presentation.card.rule_based_result", language),
                 "tone": "neutral",
             },
         ]

@@ -24,6 +24,35 @@
 
 상세 구현과 검증 이력은 아래 상태 섹션을 유지한다.
 
+## P0 Population, Early Warning, Triage, RM Workflow, and UI Status
+
+- [x] PopulationCustomerResult parity contract, deterministic exact-set batch,
+  atomic detail/summary/manifest export, and completed 5,000-customer
+  reconciliation under `artifacts/population/seed42_full_run/`.
+- [x] Validation-only synthetic circularity map, label-permutation negative
+  control, isolated multi-seed/TOP_K sensitivity report, and explicit
+  synthetic-methodology limitations.
+- [x] Rolling as-of feature builder with month-12 legacy parity,
+  reference-only matcher, sequential SignalSnapshot history, deterministic
+  cross-fit scoring, and evaluator-only target-future access.
+- [x] Prospective timing evidence, workload trade-off metrics, and a versioned
+  demo policy. Historical breakpoint remains separate historical-landmark
+  evidence and is not a policy trigger.
+- [x] Complete 5,000-customer triage universe, deterministic transparent
+  ranking/capacity selection, exact funnel/manifest reconciliation, and
+  non-operational representative cohort without future-label cherry-picking.
+- [x] File-backed Alert/Case state machine, episode dedupe/cooldown/snooze,
+  idempotent selected-decision cycle, Banker service, Recommended Follow-up,
+  append-only audit, and offline Preview/Null notification contracts.
+- [x] Separate RM Workspace mode with Portfolio, Review Queue, Customer Review,
+  and Activity/Audit tabs; General remains vertical and Presentation retains
+  exactly five tabs.
+- [x] 1366x768 and 1920x1080 browser visual review of Presentation/RM layouts;
+  1366 RM queue uses horizontal scrolling and localized readable labels.
+- [ ] DB/ORM/migrations, external notification providers/channels/credentials,
+  real customer data, and automated financial decisions. These are explicitly
+  out of P0 scope, not completed work.
+
 ## M1 Synthetic Data Generator Status
 - [x] GeneratorConfig
 - [x] customer_master.csv generation
@@ -250,7 +279,7 @@
 - [x] 단일 지표 그래프의 중복 범례와 현재 시점 annotation을 줄여 제목/선/라벨 겹침을 완화했다.
 - [x] 영어 유사 고객 궤적 범례를 `Similar Median`, `Risk Median`, `Avoid Median`, `10-90% Range`로 축약했다.
 - [x] 결과 분포와 저축률/DSR 제목을 더 짧게 바꾸고 Plotly top margin/title 위치를 보수적으로 조정했다.
-- [ ] 실제 1366x768 및 1920x1080 브라우저 픽셀 스크린샷은 발표 전 사람이 최종 확인한다.
+- [x] 실제 1366x768 및 1920x1080 브라우저 픽셀 스크린샷을 Presentation/RM 모드에서 확인했다. RM queue의 1366 폭은 가로 스크롤을 사용한다.
 
 ## 다음 단계: DB 연결 설계 및 의사결정
 

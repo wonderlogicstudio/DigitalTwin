@@ -1,0 +1,98 @@
+{
+  "code_ref": "bfc8d81ed7a1585c3001704559ffc2f9859f05b3",
+  "counters": {
+    "expected": 5000,
+    "failed": 0,
+    "hard_failure": 0,
+    "partial_failure": 0,
+    "processed": 5000,
+    "succeeded": 5000
+  },
+  "created_at": "2026-08-23T09:00:17.649233+00:00",
+  "output_paths": {
+    "detail_csv": "C:\\Users\\JinwonLee\\project\\DigitalTwin\\artifacts\\population\\seed42_full_run\\population_detail.csv",
+    "detail_json": "C:\\Users\\JinwonLee\\project\\DigitalTwin\\artifacts\\population\\seed42_full_run\\population_detail.json",
+    "manifest_json": "C:\\Users\\JinwonLee\\project\\DigitalTwin\\artifacts\\population\\seed42_full_run\\population_manifest.json",
+    "summary_json": "C:\\Users\\JinwonLee\\project\\DigitalTwin\\artifacts\\population\\seed42_full_run\\population_summary.json"
+  },
+  "reconciliation": {
+    "duplicate_output_ids": [],
+    "expected_id_count": 5000,
+    "expected_ids_sha256": "a501403bc78b04a6fb0f39a78488c519b650b96e68a430a221c298e011510a90",
+    "missing_ids": [],
+    "output_id_count": 5000,
+    "output_ids_sha256": "a501403bc78b04a6fb0f39a78488c519b650b96e68a430a221c298e011510a90",
+    "unexpected_ids": []
+  },
+  "run_id": "population-5000-seed42-20260823",
+  "schema_version": "population_manifest.v1",
+  "seed": 42,
+  "settings_snapshot": {
+    "breakpoint_effect_threshold": 0.5,
+    "breakpoint_min_group_size": 20,
+    "breakpoint_persistence_months": 2,
+    "customer_count": 5000,
+    "future_end_month": 36,
+    "future_start_month": 13,
+    "match_features": [
+      "avg_savings_rate_3m",
+      "avg_dsr_3m",
+      "avg_fixed_expense_ratio_3m",
+      "savings_rate_slope_12m",
+      "expense_growth_12m",
+      "dsr_change_12m",
+      "balance_change_ratio_12m",
+      "income_cv_12m",
+      "expense_cv_12m",
+      "max_consecutive_balance_decline_12m"
+    ],
+    "match_weights": {
+      "avg_dsr_3m": 1.4,
+      "avg_fixed_expense_ratio_3m": 1.2,
+      "avg_savings_rate_3m": 1.4,
+      "balance_change_ratio_12m": 1.3,
+      "dsr_change_12m": 1.2,
+      "expense_cv_12m": 0.8,
+      "expense_growth_12m": 1.1,
+      "income_cv_12m": 0.8,
+      "max_consecutive_balance_decline_12m": 1.0,
+      "savings_rate_slope_12m": 1.4
+    },
+    "observation_end_month": 12,
+    "observation_start_month": 1,
+    "random_seed": 42,
+    "top_k_matches": 200,
+    "total_months": 36,
+    "whatif_scenarios": [
+      {
+        "debt_payment_multiplier": 1.0,
+        "fixed_expense_delta": 0,
+        "scenario_id": 1,
+        "scenario_name": "baseline",
+        "variable_expense_multiplier": 1.0
+      },
+      {
+        "debt_payment_multiplier": 1.0,
+        "fixed_expense_delta": 0,
+        "scenario_id": 2,
+        "scenario_name": "variable_expense_cut_15",
+        "variable_expense_multiplier": 0.85
+      },
+      {
+        "debt_payment_multiplier": 1.0,
+        "fixed_expense_delta": -300000,
+        "scenario_id": 3,
+        "scenario_name": "fixed_expense_cut_300k",
+        "variable_expense_multiplier": 1.0
+      },
+      {
+        "debt_payment_multiplier": 0.8,
+        "fixed_expense_delta": 0,
+        "scenario_id": 4,
+        "scenario_name": "debt_payment_cut_20",
+        "variable_expense_multiplier": 1.0
+      }
+    ],
+    "whatif_simulation_months": 24
+  }
+}

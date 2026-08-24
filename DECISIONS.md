@@ -90,3 +90,55 @@
 - Reason: The project should be reproducible in a clean Python 3.11 virtual environment without hidden setup steps.
 - Impact files: README.md, requirements.txt, .gitignore, .env.example
 - Alternative: Pin exact transitive dependency versions, but the MVP keeps compatible version ranges for Python 3.11.
+
+## DEC-016 Population artifact isolation
+- Date: 2026-08-23
+- Status: accepted
+- Decision: Full-population detail, summary, and run-manifest artifacts live
+  under `artifacts/population/`, separate from canonical analytics inputs and
+  demo cache outputs.
+- Reason: Population/reconciliation artifacts must not overwrite seed-42 CSV/
+  JSON contracts used by the legacy application.
+- Impact files: `src/population_result.py`, `src/population_batch.py`,
+  `src/population_artifacts.py`.
+
+## DEC-017 Prospective scoring and evaluator separation
+- Date: 2026-08-23
+- Status: accepted
+- Decision: As-of scoring uses current/prior data and reference-only fitted
+  objects; target future labels are available only to a separate evaluator.
+- Reason: A prospective signal must be invariant to target months 13-36,
+  `final_outcome`, and persona changes before evaluation.
+- Impact files: `src/as_of_features.py`, `src/reference_matcher.py`,
+  `src/prospective_signals.py`, `src/crossfit_backtest.py`,
+  `src/prospective_evaluator.py`.
+
+## DEC-018 Policy, triage, and Alert responsibility split
+- Date: 2026-08-23
+- Status: accepted
+- Decision: Demo-policy eligibility is only a triage input. Triage produces
+  complete dispositions and deterministic rank/capacity decisions. Alert
+  creation consumes selected/routed decisions only.
+- Reason: This prevents policy eligibility from silently becoming an RM queue
+  or an Alert, and prevents future-label/demo cherry-picking.
+- Impact files: `src/demo_policy.py`, `src/triage_universe.py`,
+  `src/triage_selector.py`, `src/selection_manifest.py`, `src/alert_cycle.py`.
+
+## DEC-019 File workflow prototype; DB remains unapproved
+- Date: 2026-08-23
+- Status: accepted
+- Decision: P0 Alert/Case state, dedupe, and audit use atomic file-backed
+  repositories under `artifacts/workflow/`; no DB/ORM/migration is added.
+- Reason: A DB choice, data migration, recovery, access control, and retention
+  plan require an explicit later decision.
+- Impact files: `src/alert_case.py`, `src/alert_repository.py`,
+  `src/audit_trail.py`, `src/banker_service.py`.
+
+## DEC-020 Offline notification boundary
+- Date: 2026-08-23
+- Status: accepted
+- Decision: P0 provides only provider-neutral Preview and Null notification
+  services. Preview is explicitly not sent and makes no network call.
+- Reason: External providers, credentials, channels, retries, and delivery
+  controls are not approved for this prototype.
+- Impact files: `src/notifications.py`, `NOTIFICATION_ADAPTER_CONTRACT.md`.

@@ -5,7 +5,7 @@ from __future__ import annotations
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Mapping
 
 import pandas as pd
 import streamlit as st
@@ -63,6 +63,35 @@ from src.presentation import (  # noqa: E402
     load_presentation_payload,
     resolve_presentation_customer_id,
 )
+from src.presentation_population import (  # noqa: E402
+    build_presentation_current_review_signal,
+    build_presentation_customer_options,
+    build_presentation_population_strip,
+    load_presentation_population_evidence,
+)
+from src.rm_workspace import (  # noqa: E402
+    RM_WORKSPACE_MODE,
+    build_rm_portfolio_queue_view_model,
+    build_rm_workspace_view_model,
+    customer_context_from_queue_row,
+    load_rm_alert_cases,
+    load_rm_workspace_artifacts,
+)
+from src.rm_customer_review import (  # noqa: E402
+    build_rm_customer_review_view_model,
+    load_customer_observation,
+    load_population_result_index,
+)
+from src.rm_workflow_ui import (  # noqa: E402
+    RMWorkflowUIService,
+    build_offline_notification_preview,
+    build_rm_activity_history,
+    create_file_backed_rm_workflow_ui_service,
+    load_rm_workflow_case,
+    make_submission_token,
+    perform_rm_workflow_operation,
+    utc_now,
+)
 from src.visualizations import (  # noqa: E402
     create_breakpoint_comparison_chart,
     create_current_trajectory_chart,
@@ -94,6 +123,13 @@ class SidebarSelection:
     app_mode: str
     presentation_mode: bool
     show_raw_samples: bool
+    rm_workspace_mode: bool = False
+    rm_queue_scope: str = "all"
+    rm_priority_scope: str = "all"
+    rm_owner_scope: str = "all"
+    rm_due_scope: str = "all"
+    rm_customer_context: str = ""
+    presentation_population_evidence: Mapping[str, Any] | None = None
 
 
 @st.cache_data(show_spinner=False)
@@ -138,6 +174,9 @@ def main() -> None:
     cache_payload = load_precomputed_demo_safely()
     demo_df = load_demo_data_safely(language)
     selection = render_sidebar(demo_df, cache_payload, language)
+    if selection.rm_workspace_mode:
+        render_rm_workspace_mode(selection=selection, language=language)
+        return
     missing_files = [
         path
         for path in (settings.CUSTOMER_MONTHLY_PATH, settings.TRAJECTORY_FEATURES_PATH)
@@ -257,14 +296,18 @@ def render_header() -> str:
         )
         language = str(st.session_state.get("ui_language", DEFAULT_LANGUAGE))
     with header_cols[0]:
-        st.markdown(
-            render_hero_html(
-                logo_svg=load_logo_svg(),
-                hero_svg=load_hero_svg(),
-                language=language,
-            ),
-            unsafe_allow_html=True,
-        )
+        if st.session_state.get("app_mode") == RM_WORKSPACE_MODE:
+            st.markdown(f"#### {t('rm.header.title', language)}")
+            st.caption(t("rm.header.subtitle", language))
+        else:
+            st.markdown(
+                render_hero_html(
+                    logo_svg=load_logo_svg(),
+                    hero_svg=load_hero_svg(),
+                    language=language,
+                ),
+                unsafe_allow_html=True,
+            )
     return language
 
 
@@ -366,17 +409,19 @@ def hydrate_cached_analysis(customer_id: str, cache_payload: Any | None, runtime
 
 
 def render_sidebar(demo_df: pd.DataFrame, cache_payload: Any | None, language: str = "ko") -> SidebarSelection:
-    """Render only presenter-facing controls needed for the main story."""
+    """Render mode-specific controls without sharing RM and customer-story state."""
 
     st.sidebar.header(t("mode.settings", language))
     app_mode = st.sidebar.selectbox(
         t("mode.selector", language),
         list(APP_MODE_OPTIONS),
         index=list(APP_MODE_OPTIONS).index(PRESENTATION_MODE),
-        format_func=lambda mode: t("mode.presentation" if mode == PRESENTATION_MODE else "mode.normal", language),
+        format_func=lambda mode: t(_app_mode_translation_key(mode), language),
         key="app_mode",
     )
     presentation_mode = app_mode == PRESENTATION_MODE
+    if app_mode == RM_WORKSPACE_MODE:
+        return render_rm_workspace_sidebar(app_mode=app_mode, language=language)
     demo_options = build_demo_options(demo_df, language=language)
     if cache_payload is not None and not any(option["customer_id"] == cache_payload.customer_id for option in demo_options):
         demo_options.insert(
@@ -388,26 +433,41 @@ def render_sidebar(demo_df: pd.DataFrame, cache_payload: Any | None, language: s
             },
         )
 
+    population_evidence: Mapping[str, Any] | None = None
     if presentation_mode:
+        population_evidence = load_presentation_population_evidence()
         default_customer_id = resolve_presentation_customer_id(
             demo_df=demo_df,
             main_demo_customer=cache_payload.main_demo_customer if cache_payload is not None else None,
         )
-        customer_options = [option["customer_id"] for option in demo_options]
-        option_by_id = {option["customer_id"]: option for option in demo_options}
+        presentation_options = build_presentation_customer_options(
+            demo_options=demo_options,
+            population_evidence=population_evidence,
+            language=language,
+        )
+        customer_options = [option["option_id"] for option in presentation_options]
+        option_by_id = {option["option_id"]: option for option in presentation_options}
         st.sidebar.caption(t("ui.presentation_main_default", language))
         if customer_options:
-            default_index = customer_options.index(default_customer_id) if default_customer_id in customer_options else 0
-            customer_id = st.sidebar.selectbox(
+            default_index = next(
+                (
+                    index
+                    for index, option in enumerate(presentation_options)
+                    if option["source"] == "demo" and option["customer_id"] == default_customer_id
+                ),
+                0,
+            )
+            selected_option_id = st.sidebar.selectbox(
                 t("customer.selector", language),
                 customer_options,
                 index=default_index,
                 format_func=lambda option_id: option_by_id.get(option_id, {"label": option_id})["label"],
                 key="presentation_customer_selector",
             )
-            selected_option = option_by_id[customer_id]
+            selected_option = option_by_id[selected_option_id]
+            customer_id = selected_option["customer_id"]
             st.session_state["selected_demo_role"] = selected_option["role"]
-            st.sidebar.caption(t("customer.demo_role_caption", language, role=selected_option["label"].split(" (")[0]))
+            st.sidebar.caption(t("customer.demo_role_caption", language, role=selected_option["label"]))
         else:
             customer_id = default_customer_id
     else:
@@ -459,6 +519,676 @@ def render_sidebar(demo_df: pd.DataFrame, cache_payload: Any | None, language: s
         app_mode=app_mode,
         presentation_mode=bool(presentation_mode),
         show_raw_samples=bool(show_raw_samples),
+        presentation_population_evidence=population_evidence,
+    )
+
+
+def _app_mode_translation_key(app_mode: str) -> str:
+    """Map one stable display-mode value to its localized label key."""
+
+    if app_mode == PRESENTATION_MODE:
+        return "mode.presentation"
+    if app_mode == RM_WORKSPACE_MODE:
+        return "mode.rm_workspace"
+    return "mode.normal"
+
+
+def render_rm_workspace_sidebar(*, app_mode: str, language: str) -> SidebarSelection:
+    """Render RM-only shell filters with distinct session-state keys."""
+
+    st.sidebar.caption(t("rm.sidebar.caption", language))
+    queue_scope = st.sidebar.selectbox(
+        t("rm.sidebar.queue", language),
+        ("all", "selected"),
+        format_func=lambda value: t(f"rm.filter.{value}", language),
+        key="rm_queue_scope",
+    )
+    priority_scope = st.sidebar.selectbox(
+        t("rm.sidebar.priority", language),
+        ("all", "priority", "review"),
+        format_func=lambda value: t(f"rm.filter.{value}", language),
+        key="rm_priority_scope",
+    )
+    owner_scope = st.sidebar.selectbox(
+        t("rm.sidebar.owner", language),
+        ("all", "unassigned"),
+        format_func=lambda value: t(f"rm.filter.{value}", language),
+        key="rm_owner_scope",
+    )
+    due_scope = st.sidebar.selectbox(
+        t("rm.sidebar.due", language),
+        ("all", "due_soon"),
+        format_func=lambda value: t(f"rm.filter.{value}", language),
+        key="rm_due_scope",
+    )
+    return SidebarSelection(
+        customer_id="",
+        selected_metric="",
+        app_mode=app_mode,
+        presentation_mode=False,
+        show_raw_samples=False,
+        rm_workspace_mode=True,
+        rm_queue_scope=str(queue_scope),
+        rm_priority_scope=str(priority_scope),
+        rm_owner_scope=str(owner_scope),
+        rm_due_scope=str(due_scope),
+        rm_customer_context=str(st.session_state.get("rm_customer_context", "")),
+    )
+
+
+def render_rm_workspace_mode(*, selection: SidebarSelection, language: str = "ko") -> None:
+    """Render the read-only RM portfolio and selected-only review queue."""
+
+    artifacts = load_rm_workspace_artifacts()
+    alert_snapshot = load_rm_alert_cases()
+    workflow_service = _get_rm_workflow_ui_service()
+    view_model = build_rm_workspace_view_model(
+        language=language,
+        funnel=artifacts.funnel,
+        representative_cohort=artifacts.representative_cohort,
+        customer_context=selection.rm_customer_context,
+    )
+    portfolio_model = build_rm_portfolio_queue_view_model(
+        selection_manifest=getattr(artifacts, "selection_manifest", None),
+        representative_cohort=artifacts.representative_cohort,
+        alert_cases=alert_snapshot.cases,
+        language=language,
+        priority_scope=selection.rm_priority_scope,
+        owner_scope=selection.rm_owner_scope,
+        due_scope=selection.rm_due_scope,
+        search_query=str(st.session_state.get("rm_queue_search", "")),
+        sort_by=str(st.session_state.get("rm_queue_sort", "rank")),
+    )
+    customer_target = view_model["customer_review_target"]
+    customer_review_model: dict[str, Any] | None = None
+    if customer_target:
+        population_results = load_population_result_index()
+        initial_customer_review = build_rm_customer_review_view_model(
+            customer_id=customer_target,
+            selection_manifest=getattr(artifacts, "selection_manifest", None),
+            representative_cohort=artifacts.representative_cohort,
+            population_results=population_results,
+            observation=None,
+            alert_cases=alert_snapshot.cases,
+            language=language,
+        )
+        as_of_value = initial_customer_review.get("provenance", {}).get(
+            "selection_as_of_month", settings.OBSERVATION_END_MONTH
+        )
+        as_of_month = (
+            as_of_value
+            if isinstance(as_of_value, int)
+            and not isinstance(as_of_value, bool)
+            and settings.OBSERVATION_START_MONTH <= as_of_value <= settings.OBSERVATION_END_MONTH
+            else settings.OBSERVATION_END_MONTH
+        )
+        observation = load_customer_observation(
+            customer_target,
+            as_of_month=as_of_month,
+        )
+        customer_review_model = build_rm_customer_review_view_model(
+            customer_id=customer_target,
+            selection_manifest=getattr(artifacts, "selection_manifest", None),
+            representative_cohort=artifacts.representative_cohort,
+            population_results=population_results,
+            observation=observation,
+            alert_cases=alert_snapshot.cases,
+            language=language,
+        )
+    tabs = st.tabs(view_model["tabs"])
+    with tabs[0]:
+        st.caption(t("rm.synthetic.notice", language))
+        if artifacts.load_error or artifacts.source_reference is None:
+            st.info(t("rm.artifact.unavailable", language))
+        if portfolio_model["available"]:
+            funnel_stages = portfolio_model["portfolio"]["funnel"]
+        else:
+            funnel_stages = view_model["funnel"]
+        funnel_columns = st.columns(3)
+        for index, stage in enumerate(funnel_stages):
+            column = funnel_columns[index % len(funnel_columns)]
+            with column:
+                st.metric(str(stage["label"]), str(stage["display_value"]))
+        alert_summary = portfolio_model["portfolio"]
+        alert_columns = st.columns(4)
+        for column, key, label_key in zip(
+            alert_columns,
+            ("new_alert_count", "open_alert_count", "due_alert_count", "overdue_alert_count"),
+            ("rm.alert.new", "rm.alert.open", "rm.alert.due", "rm.alert.overdue"),
+        ):
+            count = alert_summary[key]
+            with column:
+                st.metric(
+                    t(label_key, language),
+                    t("rm.value.unavailable", language) if count is None else f"{count:,}",
+                )
+        reconciliation = alert_summary["reconciliation"]
+        if reconciliation["is_exact"]:
+            st.success(t("rm.portfolio.reconciliation_exact", language))
+        else:
+            st.warning(t("rm.portfolio.reconciliation_failed", language))
+        if alert_snapshot.load_error:
+            st.warning(t("rm.repository.unavailable", language))
+
+        quick_selects = portfolio_model["representative_comparisons"] or view_model[
+            "representative_quick_selects"
+        ]
+        st.caption(t("rm.representative.comparison", language))
+        option_ids = [str(item["category_id"]) for item in quick_selects]
+        labels_by_id = {
+            str(item["category_id"]): (
+                f"{item['label']} · {item['customer_id']}"
+                if item["available"]
+                else f"{item['label']} · {t('rm.representative.unavailable', language)}"
+            )
+            for item in quick_selects
+        }
+        selected_category = st.selectbox(
+            t("rm.representative.label", language),
+            option_ids,
+            format_func=lambda category_id: labels_by_id[category_id],
+            key="rm_representative_quick_select",
+        )
+        selected_quick_select = next(
+            item for item in quick_selects if item["category_id"] == selected_category
+        )
+        last_representative_category = st.session_state.get("rm_representative_context_category")
+        if selected_quick_select["available"] and last_representative_category != selected_category:
+            st.session_state["rm_customer_context"] = str(selected_quick_select["customer_id"])
+            st.session_state["rm_workspace_requested_tab"] = "customer_review"
+            st.session_state["rm_representative_context_category"] = selected_category
+    with tabs[1]:
+        if not portfolio_model["available"]:
+            st.info(t("rm.artifact.unavailable", language))
+        else:
+            search_query = st.text_input(
+                t("rm.queue.search", language),
+                key="rm_queue_search",
+            )
+            sort_by = st.selectbox(
+                t("rm.queue.sort", language),
+                ("rank", "due", "updated"),
+                format_func=lambda value: t(f"rm.queue.sort.{value}", language),
+                key="rm_queue_sort",
+            )
+            if search_query != portfolio_model["queue"]["filters"]["search_query"] or sort_by != portfolio_model["queue"]["filters"]["sort_by"]:
+                st.rerun()
+            st.caption(
+                t(
+                    "rm.queue.source_count",
+                    language,
+                    visible=portfolio_model["queue"]["filtered_count"],
+                    selected=portfolio_model["queue"]["unfiltered_count"],
+                )
+            )
+            queue_rows = portfolio_model["queue"]["rows"]
+            if not queue_rows:
+                st.info(t("rm.queue.empty", language))
+            else:
+                event = st.dataframe(
+                    _rm_queue_table_rows(queue_rows, language=language),
+                    hide_index=True,
+                    width="stretch",
+                    on_select="rerun",
+                    selection_mode="single-row",
+                    key="rm_review_queue_table",
+                )
+                selected_indexes = getattr(getattr(event, "selection", None), "rows", [])
+                if selected_indexes:
+                    selected_index = selected_indexes[0]
+                    if isinstance(selected_index, int) and 0 <= selected_index < len(queue_rows):
+                        target = customer_context_from_queue_row(
+                            portfolio_model,
+                            str(queue_rows[selected_index]["customer_id"]),
+                        )
+                        if target:
+                            st.session_state["rm_customer_context"] = target
+                            st.session_state["rm_workspace_requested_tab"] = "customer_review"
+    with tabs[2]:
+        if customer_review_model is None:
+            st.info(t("rm.placeholder.customer_review", language))
+        elif not customer_review_model["available"]:
+            st.info(str(customer_review_model["message"]))
+        else:
+            _render_rm_customer_review(
+                customer_review_model,
+                language=language,
+                workflow_service=workflow_service,
+            )
+    with tabs[3]:
+        _render_rm_activity_audit(
+            customer_review_model,
+            language=language,
+            workflow_service=workflow_service,
+        )
+
+
+def _rm_queue_table_rows(queue_rows: Any, *, language: str = "ko") -> pd.DataFrame:
+    """Prepare readable display fields without changing triage or case state."""
+
+    return pd.DataFrame(
+        [
+            {
+                t("rm.queue.column.customer", language): row["customer_id"],
+                t("rm.queue.column.rank", language): row["selection_rank"],
+                t("rm.queue.column.priority", language): _rm_queue_priority_label(
+                    row["priority"], language
+                ),
+                t("rm.queue.column.case_state", language): _rm_queue_case_state_label(
+                    row["case_state"], language
+                ),
+                t("rm.queue.column.selection_reason", language): _rm_queue_reason_label(
+                    row["selection_reason_codes"], language
+                ),
+                t("rm.queue.column.why_now", language): _rm_queue_reason_label(
+                    row["why_now_reason_codes"], language
+                ),
+                t("rm.queue.column.timing", language): _rm_queue_timing_label(
+                    row["timing_evidence_reference"], language
+                ),
+                t("rm.queue.column.due", language): row["due_at"]
+                or t("rm.queue.value.not_scheduled", language),
+                t("rm.queue.column.owner", language): row["owner_reference"]
+                or t("rm.queue.value.unassigned", language),
+                t("rm.queue.column.updated", language): row["updated_at"]
+                or t("rm.value.unavailable", language),
+            }
+            for row in queue_rows
+        ]
+    )
+
+
+def _rm_queue_reason_label(reason_codes: Any, language: str) -> str:
+    """Show a compact localized reason, while raw codes stay in the manifest."""
+
+    if isinstance(reason_codes, (tuple, list)):
+        for code in reason_codes:
+            if not isinstance(code, str) or not code:
+                continue
+            translation_key = f"rm.queue.reason.{code}"
+            translated = t(translation_key, language)
+            if translated != translation_key:
+                return translated
+    return t("rm.queue.reason.declared", language)
+
+
+def _rm_queue_priority_label(priority: Any, language: str) -> str:
+    priority_key = {
+        "Priority Review": "priority_review",
+        "Review": "review",
+    }.get(str(priority), "unavailable")
+    return t(f"rm.queue.priority.{priority_key}", language)
+
+
+def _rm_queue_case_state_label(case_state: Any, language: str) -> str:
+    state_key = {
+        "NO_OPEN_ALERT": "no_open_alert",
+        "NEW": "new",
+        "ACKNOWLEDGED": "acknowledged",
+        "IN_REVIEW": "in_review",
+        "FOLLOW_UP": "follow_up",
+        "SNOOZED": "snoozed",
+        "ESCALATED": "escalated",
+        "CLOSED": "closed",
+    }.get(str(case_state), "unavailable")
+    return t(f"rm.queue.case_state.{state_key}", language)
+
+
+def _rm_queue_timing_label(reference: Any, language: str) -> str:
+    source = reference.get("source") if isinstance(reference, Mapping) else None
+    key = "prospective" if source == "prospective_signal" else "unavailable"
+    return t(f"rm.queue.timing.{key}", language)
+
+
+def _render_rm_customer_review(
+    review: Mapping[str, Any],
+    *,
+    language: str,
+    workflow_service: RMWorkflowUIService | None = None,
+) -> None:
+    """Render persisted RM evidence without recalculating triage or analytics."""
+
+    header = review["header"]
+    st.subheader(f"{review['customer_id']} · {header['operational_label']}")
+    header_columns = st.columns(3)
+    header_columns[0].metric(t("rm.review.header.context", language), str(header["context_label"]))
+    header_columns[1].metric(t("rm.review.header.state", language), str(header["case_state"]))
+    header_columns[2].metric(
+        t("rm.review.header.due", language),
+        t("rm.value.unavailable", language) if header["due_at"] is None else str(header["due_at"]),
+    )
+    st.markdown(f"**{t('rm.review.header.selection_reason', language)}**  {header['selection_reason']}")
+    st.markdown(f"**{t('rm.review.header.why_now', language)}**  {header['why_now']}")
+    provenance = review["provenance"]
+    st.caption(
+        t(
+            "rm.review.header.provenance",
+            language,
+            policy=f"{provenance['policy_id']} v{provenance['policy_version']}",
+            as_of=provenance["selection_as_of_month"],
+        )
+    )
+
+    st.markdown(f"#### {t('rm.review.section.current', language)}")
+    current = review["current_signals"]
+    if not current["available"]:
+        st.info(str(current["message"]))
+    else:
+        current_columns = st.columns(len(current["items"]))
+        for column, item in zip(current_columns, current["items"]):
+            with column:
+                st.metric(str(item["label"]), str(item["value"]))
+        trajectory = review["chart_trajectory"]
+        if isinstance(trajectory, pd.DataFrame) and not trajectory.empty:
+            st.plotly_chart(
+                create_current_trajectory_chart(trajectory, metric="savings_rate", language=language),
+                width="stretch",
+                key=f"rm_current_signals_chart_{review['customer_id']}",
+            )
+
+    st.markdown(f"#### {t('rm.review.section.timing', language)}")
+    timing = review["prospective_timing"]
+    if timing["available"]:
+        st.info(str(timing["message"]))
+        st.caption(str(timing["lead_time_message"]))
+    else:
+        st.info(str(timing["message"]))
+
+    st.markdown(f"#### {t('rm.review.section.twin', language)}")
+    twin = review["twin_evidence"]
+    if not twin["available"]:
+        st.info(str(twin["message"]))
+    else:
+        twin_columns = st.columns(4)
+        twin_columns[0].metric(t("rm.review.twin.matched_count", language), str(twin["matched_count"]))
+        twin_columns[1].metric(
+            t("rm.review.twin.distance_mean", language),
+            _rm_display_decimal(twin["distance_mean"], language=language),
+        )
+        twin_columns[2].metric(t("rm.review.twin.stability", language), str(twin["neighbor_stability"]))
+        twin_columns[3].metric(t("rm.review.twin.persistence", language), str(twin["signal_persistence"]))
+        st.caption(str(twin["description"]))
+        st.dataframe(
+            pd.DataFrame(twin["historical_outcome_distribution"]),
+            hide_index=True,
+            width="stretch",
+        )
+
+    st.markdown(f"#### {t('rm.review.section.landmark', language)}")
+    landmark = review["historical_landmark"]
+    if landmark["status"] == "found":
+        st.info(
+            t(
+                "rm.review.landmark.detail",
+                language,
+                month=landmark["month"],
+                factor=landmark["factor"],
+            )
+        )
+    else:
+        st.info(str(landmark["message"]))
+    if landmark.get("caption"):
+        st.caption(str(landmark["caption"]))
+
+    st.markdown(f"#### {t('rm.review.section.follow_up', language)}")
+    follow_up = review["recommended_follow_up"]
+    st.info(str(follow_up["message"]))
+    if follow_up["available"]:
+        st.caption(
+            t(
+                "rm.review.follow_up.actions",
+                language,
+                actions=", ".join(str(action) for action in follow_up["actions"]),
+            )
+        )
+    whatif = follow_up.get("whatif_supporting_evidence", {})
+    if isinstance(whatif, Mapping):
+        st.caption(str(whatif.get("message", t("rm.review.whatif.unavailable", language))))
+        st.caption(t("rm.review.whatif.disclaimer", language))
+
+    _render_rm_action_controls(
+        review,
+        language=language,
+        workflow_service=workflow_service,
+    )
+
+
+def _get_rm_workflow_ui_service() -> RMWorkflowUIService | None:
+    """Retain the service instance so a browser retry has one idempotency ledger."""
+
+    key = "rm_workflow_ui_service"
+    existing = st.session_state.get(key)
+    if isinstance(existing, RMWorkflowUIService):
+        return existing
+    try:
+        service = create_file_backed_rm_workflow_ui_service()
+    except (OSError, ValueError):
+        return None
+    st.session_state[key] = service
+    return service
+
+
+def _render_rm_action_controls(
+    review: Mapping[str, Any],
+    *,
+    language: str,
+    workflow_service: RMWorkflowUIService | None,
+) -> None:
+    """Render human RM operations without opening repository/audit files in the UI."""
+
+    st.markdown(f"#### {t('rm.review.section.actions', language)}")
+    workflow_case = review.get("workflow_case")
+    if not isinstance(workflow_case, Mapping) or not workflow_case.get("available"):
+        st.info(t("rm.action.no_case", language))
+        return
+    if workflow_service is None:
+        st.warning(t("rm.action.service_unavailable", language))
+        return
+    alert_id = str(workflow_case["alert_id"])
+    case_state = str(workflow_case["state"])
+    feedback = st.session_state.get("rm_workflow_feedback")
+    if isinstance(feedback, Mapping) and feedback.get("alert_id") == alert_id:
+        st.success(str(feedback.get("message", t("rm.action.completed", language))))
+    st.caption(t("rm.action.service_boundary", language))
+
+    state_buttons: dict[str, tuple[str, str]] = {
+        "NEW": ("ACKNOWLEDGE", "rm.action.acknowledge"),
+        "ACKNOWLEDGED": ("START_REVIEW", "rm.action.start_review"),
+        "IN_REVIEW": ("SET_FOLLOW_UP", "rm.action.follow_up"),
+        "CLOSED": ("REOPEN", "rm.action.reopen"),
+    }
+    state_button = state_buttons.get(case_state)
+    if state_button is not None:
+        operation, label_key = state_button
+        if st.button(
+            t(label_key, language),
+            key=f"rm_action_{operation.lower()}_{alert_id}_{case_state}",
+            type="primary" if operation in {"ACKNOWLEDGE", "START_REVIEW"} else "secondary",
+        ):
+            _submit_rm_action(
+                workflow_service,
+                alert_id=alert_id,
+                expected_state=case_state,
+                operation=operation,
+                language=language,
+            )
+
+    if case_state != "CLOSED":
+        action = st.selectbox(
+            t("rm.action.record_label", language),
+            (
+                "REVIEW_COMPLETED",
+                "CONTACT_PLANNED",
+                "CONTACT_COMPLETED",
+                "MONITOR_ONLY",
+                "NO_ACTION_REQUIRED",
+                "REFERRED",
+                "FOLLOW_UP_CREATED",
+            ),
+            format_func=lambda code: t(f"rm.action.code.{code}", language),
+            key=f"rm_action_record_choice_{alert_id}_{case_state}",
+        )
+        if st.button(
+            t("rm.action.record", language),
+            key=f"rm_action_record_{alert_id}_{case_state}_{action}",
+        ):
+            _submit_rm_action(
+                workflow_service,
+                alert_id=alert_id,
+                expected_state=case_state,
+                operation="RECORD_ACTION",
+                action=str(action),
+                language=language,
+            )
+        close_options: dict[str, str] = {
+            "REVIEW_DOCUMENTED": "REVIEW_COMPLETE_NO_FURTHER_ACTION",
+            "CONTACT_DOCUMENTED": "CONTACT_COMPLETED",
+            "NO_ACTION_REQUIRED": "REVIEW_COMPLETE_NO_FURTHER_ACTION",
+            "REFERRED": "REFERRED_TO_SPECIALIST",
+            "CLOSED_UNRESOLVED": "UNRESOLVED",
+        }
+        close_outcome = st.selectbox(
+            t("rm.action.close_label", language),
+            tuple(close_options),
+            format_func=lambda code: t(f"rm.action.outcome.{code}", language),
+            key=f"rm_action_close_choice_{alert_id}_{case_state}",
+        )
+        if st.button(
+            t("rm.action.close", language),
+            key=f"rm_action_close_{alert_id}_{case_state}_{close_outcome}",
+        ):
+            _submit_rm_action(
+                workflow_service,
+                alert_id=alert_id,
+                expected_state=case_state,
+                operation="CLOSE",
+                close_outcome=str(close_outcome),
+                closure_reason=close_options[str(close_outcome)],
+                language=language,
+            )
+
+    with st.expander(t("rm.notification.preview_heading", language), expanded=False):
+        st.caption(t("rm.notification.preview_not_sent", language))
+        if st.button(
+            t("rm.notification.preview_generate", language),
+            key=f"rm_notification_preview_{alert_id}_{case_state}",
+        ):
+            try:
+                case = load_rm_workflow_case(workflow_service, alert_id=alert_id)
+                if case is None:
+                    raise KeyError(alert_id)
+                st.session_state[f"rm_notification_preview_result:{alert_id}"] = (
+                    build_offline_notification_preview(workflow_service, alert_case=case)
+                )
+            except (KeyError, OSError, ValueError, RuntimeError):
+                st.warning(t("rm.notification.preview_unavailable", language))
+        preview = st.session_state.get(f"rm_notification_preview_result:{alert_id}")
+        if isinstance(preview, Mapping):
+            st.markdown(f"**{preview.get('title', '')}**")
+            st.write(str(preview.get("body", "")))
+            st.code(str(preview.get("deep_link", "")), language=None)
+            st.caption(t("rm.notification.preview_not_sent", language))
+
+
+def _submit_rm_action(
+    workflow_service: RMWorkflowUIService,
+    *,
+    alert_id: str,
+    expected_state: str,
+    operation: str,
+    language: str,
+    action: str | None = None,
+    close_outcome: str | None = None,
+    closure_reason: str | None = None,
+) -> None:
+    """Call the Banker service once; retries reuse identical token and timestamp."""
+
+    submission_key = ":".join(("rm_submission", alert_id, expected_state, operation, action or close_outcome or ""))
+    submission = st.session_state.get(submission_key)
+    if not isinstance(submission, Mapping):
+        submission = {
+            "token": make_submission_token(
+                alert_id=alert_id,
+                expected_state=expected_state,  # type: ignore[arg-type]
+                operation=operation,  # type: ignore[arg-type]
+                action=action or close_outcome,
+            ),
+            "occurred_at": utc_now(),
+        }
+        st.session_state[submission_key] = submission
+    try:
+        response = perform_rm_workflow_operation(
+            workflow_service,
+            operation=operation,  # type: ignore[arg-type]
+            alert_id=alert_id,
+            expected_state=expected_state,  # type: ignore[arg-type]
+            occurred_at=submission["occurred_at"],
+            actor_reference="rm-demo",
+            idempotency_token=str(submission["token"]),
+            action=action,  # type: ignore[arg-type]
+            close_outcome=close_outcome,  # type: ignore[arg-type]
+            closure_reason=closure_reason,  # type: ignore[arg-type]
+        )
+    except (KeyError, OSError, ValueError, RuntimeError) as error:
+        st.error(t("rm.action.failed", language, detail=str(error)))
+        return
+    st.session_state["rm_workflow_feedback"] = {
+        "alert_id": response.alert_case.alert_id,
+        "message": t(
+            "rm.action.completed_replay" if response.idempotent_replay else "rm.action.completed",
+            language,
+        ),
+    }
+    st.rerun()
+
+
+def _render_rm_activity_audit(
+    review: Mapping[str, Any] | None,
+    *,
+    language: str,
+    workflow_service: RMWorkflowUIService | None,
+) -> None:
+    """Show read-only time-ordered audit evidence for the current RM context."""
+
+    if workflow_service is None:
+        st.warning(t("rm.action.service_unavailable", language))
+        return
+    workflow_case = review.get("workflow_case") if isinstance(review, Mapping) else None
+    alert_id = workflow_case.get("alert_id") if isinstance(workflow_case, Mapping) else None
+    customer_id = review.get("customer_id") if isinstance(review, Mapping) else None
+    history = build_rm_activity_history(
+        workflow_service,
+        alert_id=str(alert_id) if alert_id else None,
+        customer_id=str(customer_id) if customer_id else None,
+    )
+    if not history["available"]:
+        st.warning(t("rm.audit.unavailable", language))
+        return
+    events = history["events"]
+    if not events:
+        st.info(t("rm.audit.empty", language))
+        return
+    st.caption(t("rm.audit.caption", language))
+    st.dataframe(pd.DataFrame(events), hide_index=True, width="stretch")
+
+
+def _rm_display_decimal(value: object, *, language: str = "ko") -> str:
+    return t("rm.value.unavailable", language) if not isinstance(value, (int, float)) else f"{float(value):.3f}"
+
+
+def render_presentation_population_evidence_strip(strip: Mapping[str, Any]) -> None:
+    """Render the prepared population context without performing UI-side analysis."""
+
+    if not strip.get("available"):
+        st.caption(str(strip.get("message", "")))
+        return
+    items = tuple(strip.get("items", ()))
+    if not items:
+        return
+    st.caption(str(strip.get("message", "")))
+    st.markdown(
+        " | ".join(f"**{label}** {value}" for label, value in items),
+        unsafe_allow_html=False,
     )
 
 
@@ -494,6 +1224,14 @@ def render_presentation_mode(
         analysis=analysis,
         language=language,
     )
+    # Presentation scene 1 is a current-state view.  Keep the established
+    # customer identity and current KPIs, but reserve historical landmark
+    # evidence for scene 3 instead of presenting it as a current-date claim.
+    first_screen = {
+        **first_screen,
+        "kpi_cards": list(first_screen["kpi_cards"][:4]),
+        "status_sentence": scenes["current"]["message"],
+    }
     peer_view_model = build_judge_flow_view_model(
         customer_id=customer_id,
         summary=summary,
@@ -525,6 +1263,17 @@ def render_presentation_mode(
         analysis["whatif_results"],
         language=language,
     )
+    population_strip = build_presentation_population_strip(
+        customer_id=customer_id,
+        population_evidence=selection.presentation_population_evidence,
+        language=language,
+    )
+    current_review_signal = build_presentation_current_review_signal(
+        customer_id=customer_id,
+        population_evidence=selection.presentation_population_evidence,
+        language=language,
+    )
+    render_presentation_population_evidence_strip(population_strip)
     tabs = st.tabs(get_presentation_tab_labels(language))
 
     with tabs[0]:
@@ -532,6 +1281,7 @@ def render_presentation_mode(
             first_screen=first_screen,
             target_history=current_history,
             scene=scenes["current"],
+            current_review_signal=current_review_signal,
             language=language,
         )
     with tabs[1]:
@@ -573,6 +1323,7 @@ def render_presentation_current_scene(
     first_screen: dict[str, Any],
     target_history: pd.DataFrame,
     scene: dict[str, str],
+    current_review_signal: Mapping[str, str] | None = None,
     language: str = "ko",
 ) -> None:
     """Render presentation tab 1 from prepared display values."""
@@ -581,6 +1332,11 @@ def render_presentation_current_scene(
     st.markdown(render_customer_identity_html(first_screen["customer_identity"], language=language), unsafe_allow_html=True)
     st.markdown(render_kpi_cards_html(first_screen["kpi_cards"], language=language), unsafe_allow_html=True)
     st.markdown(render_status_summary_html(first_screen["status_sentence"]), unsafe_allow_html=True)
+    if current_review_signal is not None:
+        st.caption(
+            f"{current_review_signal['label']}: {current_review_signal['value']} · "
+            f"{current_review_signal['detail']}"
+        )
 
     if target_history.empty:
         st.info(t("ui.current_data_missing", language))
@@ -660,6 +1416,7 @@ def render_presentation_breakpoint_scene(
     st.markdown(render_presentation_scene_heading_html(scene), unsafe_allow_html=True)
     cards = breakpoint_cards or build_breakpoint_summary_cards(analysis.get("breakpoint_result"), language=language)
     st.markdown(render_info_cards_html(cards, t("card.breakpoint_summary", language)), unsafe_allow_html=True)
+    st.caption(t("presentation.breakpoint.caption", language))
     st.caption(t("caption.non_causal", language))
     render_chart_or_table(
         lambda: create_breakpoint_comparison_chart(
@@ -707,6 +1464,7 @@ def render_presentation_whatif_scene(
             presentation_mode=True,
             language=language,
         )
+    st.caption(t("presentation.whatif.disclaimer", language))
     st.caption(t("ui.loan_scenario_notice", language))
 
 

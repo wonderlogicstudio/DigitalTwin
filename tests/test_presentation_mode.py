@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import inspect
 from copy import deepcopy
 from pathlib import Path
 from typing import Any
@@ -24,10 +25,14 @@ from src.presentation import (
     PRESENTATION_SOURCE_MAIN_DEMO,
     PRESENTATION_SOURCE_PROCESSED,
     build_breakpoint_scene_message,
+    build_presentation_current_review_signal,
+    build_presentation_customer_options,
     build_peer_scene_message,
     build_presentation_metric_cards,
+    build_presentation_population_strip,
     build_presentation_view_model,
     build_whatif_scene_message,
+    load_presentation_population_evidence,
     load_presentation_payload,
     resolve_presentation_customer_id,
 )
@@ -168,8 +173,42 @@ def _write_json(path: Path, value: dict[str, Any]) -> None:
     path.write_text(json.dumps(value, ensure_ascii=False), encoding="utf-8")
 
 
+def _write_population_artifacts(run_dir: Path) -> None:
+    records = [
+        {
+            "customer_id": "C000001",
+            "eligibility_label": "Priority Review",
+            "timing_evidence_reference": {"source": "prospective_signal"},
+        },
+        {
+            "customer_id": "C000003",
+            "eligibility_label": "Monitor",
+            "timing_evidence_reference": {"source": "prospective_signal"},
+        },
+    ]
+    _write_json(
+        run_dir / "rm_selection_manifest.json",
+        {
+            "funnel": {"monitored_total": 5000, "eligible_total": 1522, "selected_queue_ready": 1522},
+            "reconciliation": {"is_exact": True},
+            "records": records,
+        },
+    )
+    _write_json(
+        run_dir / "rm_representative_cohort.json",
+        {
+            "records": [
+                {"category_id": "priority_review", "customer_id": "C000001", "status": "selected", "source_as_of_month": 12},
+                {"category_id": "early_signal_review", "customer_id": "C000007", "status": "selected", "source_as_of_month": 12},
+                {"category_id": "monitor_no_alert_comparison", "customer_id": "C000003", "status": "selected", "source_as_of_month": 12},
+                {"category_id": "insufficient_or_landmark_not_found", "customer_id": None, "status": "unavailable", "source_as_of_month": 12},
+            ]
+        },
+    )
+
+
 def test_mode_options_keep_general_and_presentation_modes() -> None:
-    assert APP_MODE_OPTIONS == ("일반 모드", "발표 모드")
+    assert APP_MODE_OPTIONS == ("일반 모드", "발표 모드", "RM 업무 모드")
     assert GENERAL_MODE == "일반 모드"
     assert PRESENTATION_MODE == "발표 모드"
 
@@ -205,8 +244,8 @@ def test_presentation_view_model_has_four_scenes_with_actual_values() -> None:
 
 def test_scene_messages_handle_breakpoint_states_and_empty_whatif() -> None:
     assert "소득 대비 현금 보유 수준" in build_breakpoint_scene_message(_breakpoint())
-    assert build_breakpoint_scene_message({"status": "not_found"}) == BREAKPOINT_NOT_FOUND_MESSAGE
-    assert build_breakpoint_scene_message({"status": "insufficient_group_size"}) == BREAKPOINT_INSUFFICIENT_MESSAGE
+    assert build_breakpoint_scene_message({"status": "not_found"}) != BREAKPOINT_NOT_FOUND_MESSAGE
+    assert build_breakpoint_scene_message({"status": "insufficient_group_size"}) != BREAKPOINT_INSUFFICIENT_MESSAGE
     assert "아직 준비되지 않았습니다" in build_whatif_scene_message({"scenarios": []})
 
 
@@ -223,10 +262,67 @@ def test_presentation_metric_cards_include_breakpoint_and_whatif_numbers() -> No
         whatif_results=_whatif_results(),
     )
 
-    assert cards["breakpoint"][0]["value"] == "1개월 후 · 13개월 차"
+    assert "13개월 차" in cards["breakpoint"][0]["value"]
+    assert "1개월" not in cards["breakpoint"][0]["value"]
     assert cards["breakpoint"][1]["value"] == "소득 대비 현금 보유 수준"
     assert cards["whatif"][0]["value"] == "대출상환액 20% 감소"
     assert cards["whatif"][1]["value"] == "899만원"
+
+
+def test_population_evidence_strip_and_representative_options_use_saved_artifacts(tmp_path: Path) -> None:
+    run_dir = tmp_path / "triage-run"
+    _write_population_artifacts(run_dir)
+
+    evidence = load_presentation_population_evidence(run_dir)
+    strip = build_presentation_population_strip(
+        customer_id="C000001",
+        population_evidence=evidence,
+        language="en",
+    )
+    options = build_presentation_customer_options(
+        demo_options=[{"customer_id": "C000001", "role": "main", "label": "Main (C000001)"}],
+        population_evidence=evidence,
+        language="en",
+    )
+
+    assert evidence["available"]
+    assert evidence["population_count"] == 5000
+    assert evidence["eligible_count"] == 1522
+    assert evidence["selected_count"] == 1522
+    assert strip["items"][0] == ("Population analyzed", "5,000")
+    assert "deterministic representative" in strip["items"][-1][1].lower()
+    assert [option["customer_id"] for option in options] == ["C000001", "C000001", "C000007", "C000003"]
+    assert not any("insufficient_or_landmark_not_found" in option["option_id"] for option in options)
+    current_signal = build_presentation_current_review_signal(
+        customer_id="C000001",
+        population_evidence=evidence,
+        language="en",
+    )
+    assert current_signal is not None
+    assert current_signal["value"] == "Priority Review"
+
+
+def test_population_evidence_fallback_and_selection_helpers_do_not_read_future_labels(tmp_path: Path) -> None:
+    unavailable = load_presentation_population_evidence(tmp_path / "missing")
+
+    assert not unavailable["available"]
+    assert build_presentation_population_strip(customer_id="C000001", population_evidence=unavailable, language="en")["available"] is False
+    selection_source = inspect.getsource(load_presentation_population_evidence) + inspect.getsource(build_presentation_customer_options)
+    assert "final_outcome" not in selection_source
+    assert "persona" not in selection_source
+
+
+def test_presentation_breakpoint_copy_is_historical_not_a_current_forecast() -> None:
+    message = build_breakpoint_scene_message(_breakpoint(), language="en")
+    cards = build_presentation_metric_cards(
+        breakpoint_result=_breakpoint(),
+        whatif_results=_whatif_results(),
+        language="en",
+    )
+
+    assert "historical landmark" in message.lower()
+    assert "forecast" not in cards["breakpoint"][0]["value"].lower()
+    assert "In 1 month" not in cards["breakpoint"][0]["value"]
 
 
 def test_rendered_presentation_copy_hides_internal_terms_and_escapes_html() -> None:

@@ -243,3 +243,28 @@ abs(mean) < 1e-9이면 0
 - 13~36월 모든 금액·비율
 
 특징 함수 첫 단계에서 반드시 `month <= 12`를 강제한다.
+
+## 11. Separate P0 prototype artifacts
+
+The following files are additive prototype artifacts. They are not canonical
+input schemas and must not overwrite `data/raw`, `data/processed`, or
+`data/demo`.
+
+| Root / file | Schema | Purpose and minimum contract |
+|---|---|---|
+| `artifacts/population/<run>/population_detail.csv/json` | `population_detail.v1` | One result per expected customer: `customer_id`, `matched_count`, distance summary, historical outcome shares, breakpoint status/month/factor/support, `analysis_status`, and structured error fields. |
+| `artifacts/population/<run>/population_summary.json` | `population_summary.v1` | Population counts, analysis/breakpoint status distributions, matched-count and historical-outcome-share distributions. |
+| `artifacts/population/<run>/population_manifest.json` | `population_manifest.v1` | Run ID, code/settings/seed snapshot, counters, output paths, and exact expected/output-ID reconciliation. |
+| `artifacts/validation/.../*.json` | validation-specific | Synthetic circularity/negative-control and multi-seed/TOP_K sensitivity reports. Canonical seed-42 input hashes are recorded, not replaced. |
+| `artifacts/triage/<run>/rm_selection_manifest.json` | `rm_selection_manifest.v1` | All expected customer IDs, exactly one primary disposition, policy/signal references, reason codes, deterministic rank, and funnel/reconciliation. |
+| `artifacts/triage/<run>/rm_representative_cohort.json` | representative-cohort schema | Deterministic display-only comparison cases; unavailable categories remain unavailable. It does not alter operational selection. |
+| `artifacts/workflow/` | workflow schemas | File-backed Alert/Case and append-only audit prototype data. This root is independent of analytics artifacts. |
+
+Terminology restrictions:
+
+- `historical_outcome_shares` are matched synthetic-cohort shares, not target
+  probabilities.
+- `historical_landmark` and `prospective_signal` are distinct sources and must
+  remain separate in records and UI.
+- Analytical `final_outcome` and a human RM CaseOutcome/closure reason are
+  distinct fields and must not be substituted for one another.

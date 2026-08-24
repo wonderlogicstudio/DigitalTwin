@@ -9,7 +9,16 @@ import pandas as pd
 import pytest
 
 from scripts.run_pipeline import main as pipeline_cli_main
-from src.pipeline import PipelineConfig, PipelineError, run_pipeline
+from src.data_generator import generate_dataset
+from src.demo_selector import build_current_metrics
+from src.feature_engineering import build_trajectory_features
+from src.models import GeneratorConfig
+from src.pipeline import (
+    PipelineConfig,
+    PipelineError,
+    _select_observation_only_fallback_candidates,
+    run_pipeline,
+)
 
 
 def _config(
@@ -123,6 +132,26 @@ def test_unexpected_demo_selection_error_is_not_silently_fallback(
 
     assert exc_info.value.step == "demo_candidate_search"
     assert "schema bug" in exc_info.value.message
+
+
+def test_fallback_demo_selection_ignores_target_future_outcomes() -> None:
+    _, monthly_df = generate_dataset(GeneratorConfig(customer_count=100, random_seed=42))
+    features_df = build_trajectory_features(monthly_df)
+    baseline_ids = _select_observation_only_fallback_candidates(
+        build_current_metrics(monthly_df),
+        features_df,
+    )
+
+    mutated = monthly_df.copy()
+    mutated.loc[mutated["month"] >= 13, "final_outcome"] = "delinquent"
+    mutated_ids = _select_observation_only_fallback_candidates(
+        build_current_metrics(mutated),
+        build_trajectory_features(mutated),
+    )
+
+    assert baseline_ids == mutated_ids
+    assert len(baseline_ids) == 3
+    assert len(set(baseline_ids)) == 3
 
 
 def test_reused_demo_outputs_refresh_breakpoint_for_current_matches(

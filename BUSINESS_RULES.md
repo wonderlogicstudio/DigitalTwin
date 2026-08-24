@@ -273,3 +273,40 @@ What-if 결과로 위험 비율을 임의 변경하지 않는다.
 - 공포 조장
 - 상품 판매
 - 공식 신용평가 표현
+
+## P0 prospective, triage, and workflow boundaries
+
+The legacy generator, feature window, matcher, outcome aggregation,
+breakpoint, and What-if rules above remain unchanged. The P0 additions use
+these additional operational boundaries:
+
+- **Prospective/as-of inputs:** target financial observations at or before the
+  `as_of_month` only. Target months 13-36, `final_outcome`, persona, and
+  evaluator labels are forbidden in feature construction, scaler fitting,
+  matching, signal snapshots, policy input, and triage selection.
+- **Reference-only matching:** scaler fitting and neighbor search references
+  use the reference population only. An evaluation target cannot be in its
+  reference set.
+- **Historical cohort evidence:** matched-cohort outcome shares are historical
+  shares, never prediction probabilities. A historical breakpoint is a
+  retrospective landmark for similar paths, never a live alert date for the
+  target customer.
+- **Prospective timing:** lead-time evidence is calculated only after an
+  independently defined synthetic future event is opened in the evaluator. An
+  event-after alert is not counted as successful lead time.
+- **What-if:** remains a rule-based cashflow simulation. It is supporting
+  review evidence only and does not estimate intervention efficacy or adjust
+  policy/Alert risk.
+- **Demo policy:** the default policy is versioned `demo` status, not
+  `approved`. Its output is eligibility/operational label/why-now evidence;
+  it does not select the RM queue or create an Alert.
+- **Triage:** all 5,000 customers receive exactly one primary disposition.
+  Ranking is deterministic and uses only declared current/past evidence.
+  Selection or representative demo cohorts must not use target future values,
+  persona, or manual cherry-picking.
+- **Alert creation:** only `SELECTED_FOR_REVIEW` or
+  `ROUTE_EXISTING_CASE` decisions enter the Alert cycle. Deferred, monitor,
+  no-actionable-signal, and insufficient-evidence decisions do not create a
+  new Alert.
+- **RM actions:** Recommended Follow-up supports human review. It must not
+  approve/decline/restructure/sell a financial product automatically.

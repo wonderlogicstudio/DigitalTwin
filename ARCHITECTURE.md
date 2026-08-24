@@ -1,5 +1,47 @@
 # Financial Path Twin Architecture
 
+## Current extension architecture (P0)
+
+The original single-customer analytics path remains the source of truth for
+its calculations. The following additive modules reuse that path or consume
+its exports without importing Streamlit:
+
+```text
+canonical analytics
+  -> PopulationCustomerResult / batch / atomic population artifacts
+  -> validation-only circularity and sensitivity reports
+  -> as-of features -> reference-only matcher -> SignalSnapshot history
+  -> deterministic cross-fit scorer -> evaluator (future labels only here)
+  -> versioned demo policy -> complete Triage Universe -> selection manifest
+  -> selected/routed decisions -> Alert/Case cycle -> file repository
+  -> Banker application service -> append-only audit
+  -> Preview/Null notification boundary
+  -> RM Workspace display models -> Streamlit RM mode
+```
+
+Key boundaries:
+
+- `src/as_of_features.py`, `src/reference_matcher.py`,
+  `src/prospective_signals.py`, and `src/prospective_scoring.py` must not use
+  target future months, `final_outcome`, persona, or evaluator labels.
+- `src/prospective_evaluator.py` is the separate, post-scoring future-label
+  boundary. Historical matched-cohort outcome share is never a prediction
+  probability.
+- `src/demo_policy.py` returns policy eligibility only;
+  `src/triage_selector.py` decides queue disposition/rank; `src/alert_cycle.py`
+  consumes only selected or routed `TriageDecision` records.
+- `src/alert_case.py`, `src/alert_repository.py`, `src/banker_service.py`, and
+  `src/audit_trail.py` are provider-neutral and do not import notification
+  implementations. They use a file repository, not a DB.
+- `src/rm_workspace.py`, `src/rm_customer_review.py`, and
+  `src/rm_workflow_ui.py` are display/application boundaries. They do not
+  re-run analytics or mutate repository files directly from Streamlit.
+
+Separate prototype roots are `artifacts/population/`,
+`artifacts/validation/`, `artifacts/triage/`, and `artifacts/workflow/`.
+Canonical `data/raw`, `data/processed`, and `data/demo` artifacts retain their
+existing schema and ownership.
+
 ## 1. 문서 기준
 
 이 문서는 현재 `main` 브랜치의 실제 `src/`, `app.py`, `config/settings.py`, 테스트 구조를 기준으로 작성한다. 과거 계획 문서에 있더라도 현재 존재하지 않는 모듈은 현재 아키텍처 구성 요소로 취급하지 않는다.

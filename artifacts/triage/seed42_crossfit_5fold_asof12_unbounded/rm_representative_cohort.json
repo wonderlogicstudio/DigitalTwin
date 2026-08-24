@@ -1,0 +1,93 @@
+{
+  "cohort_id": "representative_seed42_crossfit_5fold_asof12_unbounded",
+  "created_at": "2026-08-23T12:06:19.426659+00:00",
+  "records": [
+    {
+      "category_id": "priority_review",
+      "customer_id": "C000001",
+      "evidence_sufficiency": "sufficient",
+      "selection_explanation": "Selected deterministically from 5000 fixed triage records for priority_review: disposition=ELIGIBLE_PRIORITY, label=Priority Review, timing=prospective_timing_not_evaluated, persistence=not_persistent, evidence=sufficient; customer_id ascending resolves any remaining tie.",
+      "selection_reason_codes": [
+        "CATEGORY_PRIORITY_REVIEW",
+        "DISPOSITION_ELIGIBLE_PRIORITY",
+        "PERSISTENCE_NOT_PERSISTENT",
+        "STABILITY_INITIAL",
+        "EVIDENCE_SUFFICIENT",
+        "TIE_BREAKER_CUSTOMER_ID_ASC"
+      ],
+      "source_as_of_month": 12,
+      "source_operational_label": "Priority Review",
+      "source_primary_disposition": "ELIGIBLE_PRIORITY",
+      "source_signal_run_id": "crossfit_seed42_5fold_asof12",
+      "status": "selected",
+      "timing_bucket": "prospective_timing_not_evaluated"
+    },
+    {
+      "category_id": "early_signal_review",
+      "customer_id": "C000007",
+      "evidence_sufficiency": "sufficient",
+      "selection_explanation": "Selected deterministically from 5000 fixed triage records for early_signal_review: disposition=ELIGIBLE_REVIEW, label=Review, timing=prospective_timing_not_evaluated, persistence=not_persistent, evidence=sufficient; customer_id ascending resolves any remaining tie.",
+      "selection_reason_codes": [
+        "CATEGORY_EARLY_SIGNAL_REVIEW",
+        "DISPOSITION_ELIGIBLE_REVIEW",
+        "PERSISTENCE_NOT_PERSISTENT",
+        "STABILITY_INITIAL",
+        "EVIDENCE_SUFFICIENT",
+        "TIE_BREAKER_CUSTOMER_ID_ASC"
+      ],
+      "source_as_of_month": 12,
+      "source_operational_label": "Review",
+      "source_primary_disposition": "ELIGIBLE_REVIEW",
+      "source_signal_run_id": "crossfit_seed42_5fold_asof12",
+      "status": "selected",
+      "timing_bucket": "prospective_timing_not_evaluated"
+    },
+    {
+      "category_id": "monitor_no_alert_comparison",
+      "customer_id": "C000003",
+      "evidence_sufficiency": "sufficient",
+      "selection_explanation": "Selected deterministically from 5000 fixed triage records for monitor_no_alert_comparison: disposition=MONITOR_ONLY, label=Monitor, timing=prospective_timing_not_evaluated, persistence=not_persistent, evidence=sufficient; customer_id ascending resolves any remaining tie.",
+      "selection_reason_codes": [
+        "CATEGORY_MONITOR_NO_ALERT",
+        "DISPOSITION_MONITOR_ONLY",
+        "PERSISTENCE_NOT_PERSISTENT",
+        "STABILITY_INITIAL",
+        "EVIDENCE_SUFFICIENT",
+        "TIE_BREAKER_CUSTOMER_ID_ASC"
+      ],
+      "source_as_of_month": 12,
+      "source_operational_label": "Monitor",
+      "source_primary_disposition": "MONITOR_ONLY",
+      "source_signal_run_id": "crossfit_seed42_5fold_asof12",
+      "status": "selected",
+      "timing_bucket": "prospective_timing_not_evaluated"
+    },
+    {
+      "category_id": "insufficient_or_landmark_not_found",
+      "customer_id": null,
+      "evidence_sufficiency": null,
+      "selection_explanation": "No customer in the fixed triage universe met the insufficient_or_landmark_not_found category rule; no customer condition was changed.",
+      "selection_reason_codes": [
+        "CATEGORY_UNAVAILABLE"
+      ],
+      "source_as_of_month": 12,
+      "source_operational_label": null,
+      "source_primary_disposition": null,
+      "source_signal_run_id": "crossfit_seed42_5fold_asof12",
+      "status": "unavailable",
+      "timing_bucket": null
+    }
+  ],
+  "run_id": "seed42_crossfit_5fold_asof12_unbounded",
+  "schema_version": "rm_representative_cohort.v1",
+  "selection_manifest_reference": "C:\\Users\\JinwonLee\\project\\DigitalTwin\\artifacts\\triage\\seed42_crossfit_5fold_asof12_unbounded\\rm_selection_manifest.json",
+  "selection_rules": {
+    "capacity_independent": true,
+    "stable_tie_breaker": "customer_id ascending after category evidence order",
+    "unavailable_category_policy": "record unavailable; do not alter customer conditions",
+    "uses_operational_selection_result": false,
+    "uses_triage_universe_only": true
+  },
+  "signal_run_id": "crossfit_seed42_5fold_asof12",
+  "triage_as_of_month": 12
+}

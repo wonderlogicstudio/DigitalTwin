@@ -64,7 +64,7 @@ SECTION_COPY = {
     },
 }
 
-APP_MODE_OPTIONS = ("일반 모드", "발표 모드")
+APP_MODE_OPTIONS = ("일반 모드", "발표 모드", "RM 업무 모드")
 
 PRESENTATION_SCENE_COPY = {
     "current": {

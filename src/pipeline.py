@@ -316,19 +316,8 @@ def _select_fallback_demo_customers(
     matcher: TrajectoryMatcher,
 ) -> tuple[pd.DataFrame, dict[str, Any]]:
     current_metrics = build_current_metrics(monthly_df)
+    candidates = _select_observation_only_fallback_candidates(current_metrics, features_df)
     outcome_lookup = build_final_outcome_lookup(monthly_df)
-    outcomes = outcome_lookup.reset_index()
-    candidates = [
-        _first_customer_for_outcome(outcomes, "stress"),
-        _first_customer_for_outcome(outcomes, "healthy"),
-        _first_customer_for_outcome(outcomes, "delinquent"),
-    ]
-    candidates = [candidate for candidate in candidates if candidate is not None]
-    for customer_id in features_df["customer_id"].astype(str).tolist():
-        if customer_id not in candidates:
-            candidates.append(customer_id)
-        if len(candidates) >= 3:
-            break
 
     roles = ("main", "stable_comparison", "high_risk")
     rows: list[dict[str, Any]] = []
@@ -396,11 +385,62 @@ def _select_fallback_demo_customers(
     return pd.DataFrame(rows).loc[:, settings.DEMO_CUSTOMER_COLUMNS], main_demo or {}
 
 
-def _first_customer_for_outcome(outcomes: pd.DataFrame, outcome: str) -> str | None:
-    rows = outcomes[outcomes["final_outcome"] == outcome]
-    if rows.empty:
-        return None
-    return str(rows.iloc[0]["customer_id"])
+def _select_observation_only_fallback_candidates(
+    current_metrics: pd.DataFrame,
+    features_df: pd.DataFrame,
+) -> list[str]:
+    """Choose deterministic fallback demos from month-12 and prior metrics only.
+
+    This path is used only when the stricter representative-demo rules have no
+    candidates (typically small test datasets).  It must not use a target
+    customer's future outcomes, persona, or months 13--36.
+    """
+
+    feature_ids = set(features_df["customer_id"].astype(str))
+    metrics = current_metrics.copy()
+    metrics["customer_id"] = metrics["customer_id"].astype(str)
+    metrics = metrics[metrics["customer_id"].isin(feature_ids)].copy()
+
+    status_risk = {"healthy": 0, "watch": 1, "stress": 2, "delinquent": 3}
+    metrics["_status_risk"] = metrics["current_status"].map(status_risk).fillna(-1)
+
+    ranked_customer_ids = [
+        metrics.sort_values(
+            [
+                "_status_risk",
+                "balance_decline_run_6m",
+                "recent_savings_rate",
+                "recent_dsr",
+                "customer_id",
+            ],
+            ascending=[False, False, True, False, True],
+        )["customer_id"].tolist(),
+        metrics.sort_values(
+            ["_status_risk", "recent_savings_rate", "recent_dsr", "customer_id"],
+            ascending=[True, False, True, True],
+        )["customer_id"].tolist(),
+        metrics.sort_values(
+            [
+                "_status_risk",
+                "balance_decline_run_6m",
+                "recent_savings_rate",
+                "recent_dsr",
+                "customer_id",
+            ],
+            ascending=[False, False, True, False, True],
+        )["customer_id"].tolist(),
+        sorted(feature_ids),
+    ]
+
+    candidates: list[str] = []
+    for customer_ids in ranked_customer_ids:
+        for customer_id in customer_ids:
+            if customer_id not in candidates:
+                candidates.append(customer_id)
+            if len(candidates) >= 3:
+                return candidates
+
+    raise PipelineError("demo_candidate_search", "at least three fallback demo customers are required")
 
 
 def _export_charts(

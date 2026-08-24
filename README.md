@@ -1,5 +1,53 @@
 # Financial Path Twin
 
+> Current implementation note (2026-08-24): this repository now includes a
+> synthetic-only Population, prospective-signal, Triage, Alert/Case, and RM
+> Workspace prototype in addition to the original customer-analysis demo.
+> These additions do not change the canonical seed-42 generator, matching,
+> outcome, breakpoint, What-if, or existing CSV/JSON contracts.
+
+## Current P0 operational prototype
+
+- Population analysis writes a separate 5,000-customer result set under
+  `artifacts/population/seed42_full_run/`. Its detail, summary, and manifest
+  reconcile exact customer IDs; it is not a replacement for canonical
+  analytics files under `data/`.
+- Synthetic validation reports are isolated under `artifacts/validation/`.
+  They include a label-permutation negative control and multi-seed / TOP_K
+  sensitivity comparisons. Production `TOP_K_MATCHES` remains 200.
+- Prospective scoring uses current-and-prior observations only, an as-of
+  feature builder, reference-only scaling/matching, and deterministic
+  cross-fit separation. Target future months, `final_outcome`, and persona
+  are opened only by the evaluator, never by the scorer or triage selection.
+- A versioned **demo** policy emits eligibility and why-now evidence. Triage,
+  not policy eligibility, creates the deterministic RM queue. The canonical
+  selection export is
+  `artifacts/triage/seed42_crossfit_5fold_asof12_unbounded/`.
+- Alert/Case storage is an atomic file repository under the separate
+  `artifacts/workflow/` root. It supports dedupe, cooldown, snooze, state
+  transitions, Banker-service actions, and append-only audit events. No DB is
+  implemented.
+- `RM Workspace` is a third app mode; it is not a Presentation tab. It keeps
+  Presentation at five tabs and shows the population funnel, selected-only
+  queue, customer review evidence, and activity/audit views.
+- In both General and Presentation mode, any breakpoint is retained only as a
+  historical matched-cohort landmark. It is not described as the current
+  customer's future risk date; prospective timing remains a separate concept.
+- Notifications are provider-neutral contracts only. P0 has Preview and Null
+  services, performs no network calls, reads no credentials, and never marks
+  preview as sent. No external notification channel is implemented.
+
+The 5,000-customer outputs and all policy/RM workflow evidence are synthetic
+demo artifacts. They are not real-bank accuracy, efficacy, performance, or
+automated-financial-decision evidence.
+
+To regenerate the checked-in demo selection artifact without changing the
+canonical seed-42 analytics inputs, run:
+
+```powershell
+python scripts\run_triage_selection_manifest.py
+```
+
 ## 1. 프로젝트 소개
 
 Financial Path Twin은 고객의 최근 12개월 재무 궤적과 유사한 합성 고객 집단을 찾아, 그 집단이 이후 24개월 동안 어떤 결과를 보였는지 보여주는 해커톤 PoC입니다.

@@ -1,0 +1,5553 @@
+{
+  "method": {
+    "effect_measure": "Maximum and mean absolute monthly SMD across the unchanged breakpoint metrics and future months; breakpoint detection uses the unchanged threshold, persistence, and group-size rules.",
+    "matching": {
+      "feature_names": [
+        "avg_savings_rate_3m",
+        "avg_dsr_3m",
+        "avg_fixed_expense_ratio_3m",
+        "savings_rate_slope_12m",
+        "expense_growth_12m",
+        "dsr_change_12m",
+        "balance_change_ratio_12m",
+        "income_cv_12m",
+        "expense_cv_12m",
+        "max_consecutive_balance_decline_12m"
+      ],
+      "feature_window": "months 1-12",
+      "top_k": 200
+    },
+    "negative_control": "For each matched cohort, final_outcome values are seed-permuted across matched IDs in an in-memory copy. Outcome counts and group sizes are preserved while the label-to-trajectory relationship is broken.",
+    "target_selection": "Seeded sample from sorted features_df.customer_id only; it does not use target final_outcome, persona, or months 13-36."
+  },
+  "negative_control_summary": {
+    "eligible_cohort_count": 61,
+    "original": {
+      "found_count": 61,
+      "found_rate": 1.0,
+      "max_absolute_smd_mean": 2.833911499355354,
+      "max_absolute_smd_median": 2.6401644616645052
+    },
+    "permuted_label_control": {
+      "found_count": 0,
+      "found_rate": 0.0,
+      "max_absolute_smd_mean": 0.37902044061529583,
+      "max_absolute_smd_median": 0.3674154984750557
+    },
+    "recommendation": "GO",
+    "recommendation_interpretation": "GO requires both lower mean maximum absolute SMD and a lower breakpoint found rate after the label-to-trajectory relationship is broken. NO-GO means this sample did not show both weakening conditions; it must not be described as evidence of a distinct synthetic signal.",
+    "risk_membership_changed_count": 118,
+    "target_count": 200,
+    "weakening": {
+      "breakpoint_found_rate_delta": 1.0,
+      "breakpoint_rate_weakened": true,
+      "effect_weakened": true,
+      "max_absolute_smd_mean_delta": 2.454891058740058
+    }
+  },
+  "schema_version": "synthetic_circularity_validation.v1",
+  "settings": {
+    "breakpoint_effect_threshold": 0.5,
+    "breakpoint_min_group_size": 20,
+    "breakpoint_persistence_months": 2,
+    "future_months": [
+      13,
+      36
+    ],
+    "random_seed": 42,
+    "sample_size_processed": 200,
+    "sample_size_requested": 200,
+    "top_k": 200
+  },
+  "signal_overlap_table": [
+    {
+      "breakpoint_or_trajectory_signal": "none directly",
+      "label_rule": "delinquent if any future delinquent status; recovered and stress rules use future status counts and terminal statuses",
+      "overlap_type": "label-only grouping input",
+      "signal": "future monthly_status",
+      "signal_family": "final_outcome",
+      "temporal_scope": "future months 13-36"
+    },
+    {
+      "breakpoint_or_trajectory_signal": "breakpoint metric; 1-12 savings-rate matcher features",
+      "label_rule": "monthly watch threshold; recovered terminal 3-month mean savings rate threshold",
+      "overlap_type": "direct metric / observation-window analogue",
+      "signal": "savings_rate",
+      "signal_family": "breakpoint",
+      "temporal_scope": "labels and breakpoint: 13-36; matcher: 1-12"
+    },
+    {
+      "breakpoint_or_trajectory_signal": "breakpoint metric; 1-12 average matcher feature",
+      "label_rule": "monthly watch and stress thresholds",
+      "overlap_type": "direct metric / observation-window analogue",
+      "signal": "fixed_expense_ratio",
+      "signal_family": "breakpoint",
+      "temporal_scope": "labels and breakpoint: 13-36; matcher: 1-12"
+    },
+    {
+      "breakpoint_or_trajectory_signal": "breakpoint metric",
+      "label_rule": "no direct threshold; affects total expense, savings, and cash balance",
+      "overlap_type": "indirect through cashflow identity",
+      "signal": "variable_expense_ratio",
+      "signal_family": "breakpoint",
+      "temporal_scope": "breakpoint: 13-36"
+    },
+    {
+      "breakpoint_or_trajectory_signal": "breakpoint metric; 1-12 average/change matcher features",
+      "label_rule": "monthly watch and stress thresholds; final stress terminal mean threshold",
+      "overlap_type": "direct metric / observation-window analogue",
+      "signal": "dsr",
+      "signal_family": "breakpoint",
+      "temporal_scope": "labels and breakpoint: 13-36; matcher: 1-12"
+    },
+    {
+      "breakpoint_or_trajectory_signal": "cash balance divided by mean month-10-12 income",
+      "label_rule": "monthly and final-outcome cash_balance thresholds",
+      "overlap_type": "derived direct metric",
+      "signal": "cash_balance_ratio",
+      "signal_family": "breakpoint",
+      "temporal_scope": "labels and breakpoint: 13-36; denominator: months 10-12"
+    },
+    {
+      "breakpoint_or_trajectory_signal": "loan balance divided by mean month-10-12 income",
+      "label_rule": "no direct monthly-status or final-outcome threshold",
+      "overlap_type": "indirect debt-path signal",
+      "signal": "loan_balance_ratio",
+      "signal_family": "breakpoint",
+      "temporal_scope": "breakpoint: 13-36; denominator: months 10-12"
+    },
+    {
+      "breakpoint_or_trajectory_signal": "observation-only weighted matching features",
+      "label_rule": "no direct final-outcome threshold; expenses drive savings and cash balance",
+      "overlap_type": "indirect trajectory analogue",
+      "signal": "expense_growth_12m and expense_cv_12m",
+      "signal_family": "trajectory_matcher",
+      "temporal_scope": "matcher: months 1-12 only"
+    },
+    {
+      "breakpoint_or_trajectory_signal": "observation-only weighted matching features",
+      "label_rule": "monthly watch/stress balance-decline rules",
+      "overlap_type": "direct rule analogue in an earlier window",
+      "signal": "balance_change_ratio_12m and consecutive balance decline",
+      "signal_family": "trajectory_matcher",
+      "temporal_scope": "matcher: months 1-12 only; labels: future months 13-36"
+    },
+    {
+      "breakpoint_or_trajectory_signal": "observation-only weighted matching feature",
+      "label_rule": "no direct final-outcome threshold; income affects ratio denominators and cashflow",
+      "overlap_type": "indirect trajectory analogue",
+      "signal": "income_cv_12m",
+      "signal_family": "trajectory_matcher",
+      "temporal_scope": "matcher: months 1-12 only"
+    }
+  ],
+  "synthetic_limitations": [
+    "This is synthetic data generated by shared rules, not observed bank data.",
+    "A detected original-versus-permuted difference demonstrates dependence within this synthetic generator; it is not model accuracy, calibration, causal effect, or intervention efficacy evidence.",
+    "Breakpoint results remain retrospective landmarks in matched synthetic cohorts; they do not state that a target customer will reach a future month or outcome.",
+    "The control permutes outcome labels for validation only. It does not change the production generator, canonical CSV/JSON artifacts, matcher, or breakpoint rule."
+  ],
+  "target_records": [
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 90,
+        "breakpoint_factor": "variable_expense_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 2.451849685539295,
+        "mean_absolute_smd": 0.9970439510094636,
+        "risk_group_count": 110,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 90,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.28656709091129356,
+        "mean_absolute_smd": 0.15675276800867896,
+        "risk_group_count": 110,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C000037"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C000113"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 171,
+        "breakpoint_factor": "variable_expense_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 2.525915717272934,
+        "mean_absolute_smd": 0.8271258559574917,
+        "risk_group_count": 29,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 171,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.4089911457353428,
+        "mean_absolute_smd": 0.10519493765203189,
+        "risk_group_count": 29,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C000153"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C000172"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C000184"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 35,
+        "breakpoint_factor": "variable_expense_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 2.3573069092105405,
+        "mean_absolute_smd": 0.7905191041525605,
+        "risk_group_count": 165,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 35,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.5980933775356378,
+        "mean_absolute_smd": 0.15133804402710002,
+        "risk_group_count": 165,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C000213"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 188,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 12,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 188,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 12,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C000289"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C000309"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 4,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 196,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 4,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 196,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C000330"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 196,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 4,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 196,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 4,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C000372"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 188,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 12,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 188,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 12,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C000391"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C000414"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 3,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 197,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 3,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 197,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C000429"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 17,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 183,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 17,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 183,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C000438"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 31,
+        "breakpoint_factor": "variable_expense_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 2.005375737464791,
+        "mean_absolute_smd": 0.5574106904800828,
+        "risk_group_count": 169,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 31,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.47994290069127343,
+        "mean_absolute_smd": 0.19732463846627413,
+        "risk_group_count": 169,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C000446"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 113,
+        "breakpoint_factor": "variable_expense_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 2.6694428378718427,
+        "mean_absolute_smd": 1.028635289412724,
+        "risk_group_count": 87,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 113,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.26914252778985986,
+        "mean_absolute_smd": 0.09166421885209267,
+        "risk_group_count": 87,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C000447"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 167,
+        "breakpoint_factor": "cash_balance_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 2.1951426881999136,
+        "mean_absolute_smd": 1.1701175480869013,
+        "risk_group_count": 33,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 167,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.32247673937063476,
+        "mean_absolute_smd": 0.15179923992855265,
+        "risk_group_count": 33,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C000448"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C000453"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C000476"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C000528"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 7,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 193,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 7,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 193,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C000564"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 173,
+        "breakpoint_factor": "variable_expense_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 4.929603142355366,
+        "mean_absolute_smd": 1.3961954957543041,
+        "risk_group_count": 27,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 173,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.55338294812816,
+        "mean_absolute_smd": 0.12625447367109993,
+        "risk_group_count": 27,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C000590"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C000618"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 0,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 200,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 0,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 200,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C000626"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 4,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 196,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 4,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 196,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C000634"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 179,
+        "breakpoint_factor": "variable_expense_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 4.775897382718857,
+        "mean_absolute_smd": 1.4831385629870744,
+        "risk_group_count": 21,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 179,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.5827924129045537,
+        "mean_absolute_smd": 0.1490634758986651,
+        "risk_group_count": 21,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C000685"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 98,
+        "breakpoint_factor": "variable_expense_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 2.3938489801950764,
+        "mean_absolute_smd": 0.6791447525464988,
+        "risk_group_count": 102,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 98,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.3440964307292761,
+        "mean_absolute_smd": 0.12256498713336218,
+        "risk_group_count": 102,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C000688"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 188,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 12,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 188,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 12,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C000750"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C000759"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 61,
+        "breakpoint_factor": "cash_balance_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 1.8268601337525532,
+        "mean_absolute_smd": 0.5662531097671815,
+        "risk_group_count": 139,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 61,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.4429676484110916,
+        "mean_absolute_smd": 0.16293627284558382,
+        "risk_group_count": 139,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C000785"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 139,
+        "breakpoint_factor": "variable_expense_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 2.8776330769198184,
+        "mean_absolute_smd": 1.1736438841030712,
+        "risk_group_count": 61,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 139,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.2521655492704286,
+        "mean_absolute_smd": 0.08749035630655973,
+        "risk_group_count": 61,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C000800"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 8,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 192,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 8,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 192,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C000803"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 0,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 200,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 0,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 200,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C000829"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 199,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 1,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 199,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 1,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C000830"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 33,
+        "breakpoint_factor": "variable_expense_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 2.3722131297663136,
+        "mean_absolute_smd": 0.8051824581170318,
+        "risk_group_count": 167,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 33,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.3824426999135547,
+        "mean_absolute_smd": 0.10551423208118577,
+        "risk_group_count": 167,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C000881"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C000924"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 4,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 196,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 4,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 196,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C000945"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 132,
+        "breakpoint_factor": "variable_expense_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 2.7762700472775785,
+        "mean_absolute_smd": 1.1227264113059998,
+        "risk_group_count": 68,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 132,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.23979823437646194,
+        "mean_absolute_smd": 0.11106865517146643,
+        "risk_group_count": 68,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C000969"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 150,
+        "breakpoint_factor": "variable_expense_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 3.6645163381040335,
+        "mean_absolute_smd": 1.1402889133138119,
+        "risk_group_count": 50,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 150,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.38867290247806274,
+        "mean_absolute_smd": 0.13397778458413928,
+        "risk_group_count": 50,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C000980"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C001061"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 12,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 188,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 12,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 188,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C001099"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 16,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 184,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 16,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 184,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C001107"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C001158"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C001174"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 187,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 13,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 187,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 13,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C001192"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 2,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 198,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 2,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 198,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C001208"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 67,
+        "breakpoint_factor": "savings_rate",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 2.5325442795459168,
+        "mean_absolute_smd": 1.0427463842294529,
+        "risk_group_count": 133,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 67,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.23945918274118644,
+        "mean_absolute_smd": 0.10375612744377263,
+        "risk_group_count": 133,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C001340"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C001361"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 0,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 200,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 0,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 200,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C001367"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 19,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 181,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 19,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 181,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C001394"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 199,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 1,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 199,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 1,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C001412"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C001455"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 178,
+        "breakpoint_factor": "variable_expense_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 2.647258984505261,
+        "mean_absolute_smd": 1.0909517298222837,
+        "risk_group_count": 22,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 178,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.6558558710019977,
+        "mean_absolute_smd": 0.1414227174999578,
+        "risk_group_count": 22,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C001501"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 110,
+        "breakpoint_factor": "cash_balance_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 2.27078306596487,
+        "mean_absolute_smd": 0.6707726006959257,
+        "risk_group_count": 90,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 110,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.3696149132635606,
+        "mean_absolute_smd": 0.1258343629468034,
+        "risk_group_count": 90,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C001505"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 33,
+        "breakpoint_factor": "variable_expense_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 2.2868936853200896,
+        "mean_absolute_smd": 0.8161785538633786,
+        "risk_group_count": 167,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 33,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.3996516482116681,
+        "mean_absolute_smd": 0.1959653603350744,
+        "risk_group_count": 167,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C001527"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 195,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 5,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 195,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 5,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C001586"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C001596"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 0,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 200,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 0,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 200,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C001611"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 195,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 5,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 195,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 5,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C001662"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C001695"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C001712"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C001717"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C001718"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C001767"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 197,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 3,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 197,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 3,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C001783"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 97,
+        "breakpoint_factor": "cash_balance_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 1.8604374723612502,
+        "mean_absolute_smd": 0.5910400812892331,
+        "risk_group_count": 103,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 97,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.41194706766441413,
+        "mean_absolute_smd": 0.11438117663979822,
+        "risk_group_count": 103,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C001788"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C001804"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 0,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 200,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 0,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 200,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C001807"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 0,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 200,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 0,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 200,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C001897"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 0,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 200,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 0,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 200,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C001901"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 66,
+        "breakpoint_factor": "variable_expense_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 2.36814366157157,
+        "mean_absolute_smd": 0.7728293168221758,
+        "risk_group_count": 134,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 66,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.34920683005709724,
+        "mean_absolute_smd": 0.14825017001527083,
+        "risk_group_count": 134,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C001943"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 199,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 1,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 199,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 1,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C001999"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C002018"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C002020"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 190,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 10,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 190,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 10,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C002031"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 18,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 182,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 18,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 182,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C002076"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 12,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 188,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 12,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 188,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C002081"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 4,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 196,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 4,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 196,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C002109"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C002129"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 167,
+        "breakpoint_factor": "variable_expense_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 3.648555082751398,
+        "mean_absolute_smd": 0.9120802695940551,
+        "risk_group_count": 33,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 167,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.4503979487349384,
+        "mean_absolute_smd": 0.12123177732316333,
+        "risk_group_count": 33,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C002135"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C002142"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 3,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 197,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 3,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 197,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C002153"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C002158"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C002161"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 166,
+        "breakpoint_factor": "variable_expense_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 3.250574065704525,
+        "mean_absolute_smd": 0.9151623612844002,
+        "risk_group_count": 34,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 166,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.3717795478009927,
+        "mean_absolute_smd": 0.14325905131143207,
+        "risk_group_count": 34,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C002164"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 34,
+        "breakpoint_factor": "variable_expense_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 1.9845835686858622,
+        "mean_absolute_smd": 0.5679920354666023,
+        "risk_group_count": 166,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 34,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.5086028029395946,
+        "mean_absolute_smd": 0.2650149021605686,
+        "risk_group_count": 166,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C002171"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C002177"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 195,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 5,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 195,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 5,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C002225"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C002256"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 4,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 196,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 4,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 196,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C002266"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C002287"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C002299"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C002315"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C002320"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 0,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 200,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 0,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 200,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C002413"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 198,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 2,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 198,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 2,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C002417"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 14,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 186,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 14,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 186,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C002471"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 191,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 9,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 191,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 9,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C002473"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 116,
+        "breakpoint_factor": "variable_expense_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 2.655609129437661,
+        "mean_absolute_smd": 0.6830142577865792,
+        "risk_group_count": 84,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 116,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.3430717185138872,
+        "mean_absolute_smd": 0.12762005788185973,
+        "risk_group_count": 84,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C002479"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 2,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 198,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 2,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 198,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C002486"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 0,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 200,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 0,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 200,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C002496"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C002505"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C002533"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 0,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 200,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 0,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 200,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C002634"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 111,
+        "breakpoint_factor": "variable_expense_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 2.949819744345563,
+        "mean_absolute_smd": 0.9276298951709249,
+        "risk_group_count": 89,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 111,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.2698056584990879,
+        "mean_absolute_smd": 0.10762722062594607,
+        "risk_group_count": 89,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C002655"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C002681"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C002730"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 198,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 2,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 198,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 2,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C002731"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C002755"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 199,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 1,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 199,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 1,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C002760"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 24,
+        "breakpoint_factor": "variable_expense_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 1.9414038108278187,
+        "mean_absolute_smd": 0.6255489066844306,
+        "risk_group_count": 176,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 24,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.5439838384802209,
+        "mean_absolute_smd": 0.1964713272607823,
+        "risk_group_count": 176,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C002762"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C002785"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C002788"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 97,
+        "breakpoint_factor": "variable_expense_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 2.2055304002061495,
+        "mean_absolute_smd": 0.6135646689978623,
+        "risk_group_count": 103,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 97,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.3674154984750557,
+        "mean_absolute_smd": 0.09571728335692495,
+        "risk_group_count": 103,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C002796"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 4,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 196,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 4,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 196,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C002833"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 0,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 200,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 0,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 200,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C002977"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C003032"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C003058"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C003077"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C003108"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C003120"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 161,
+        "breakpoint_factor": "variable_expense_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 3.6108796410693125,
+        "mean_absolute_smd": 0.8756438605621885,
+        "risk_group_count": 39,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 161,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.5068427022354605,
+        "mean_absolute_smd": 0.16421777005289012,
+        "risk_group_count": 39,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C003130"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 0,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 200,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 0,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 200,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C003144"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 110,
+        "breakpoint_factor": "variable_expense_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 3.1714872869332797,
+        "mean_absolute_smd": 0.8926666018990316,
+        "risk_group_count": 90,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 110,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.40267579530470177,
+        "mean_absolute_smd": 0.15320074349432808,
+        "risk_group_count": 90,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C003147"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 1,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 199,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 1,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 199,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C003222"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 82,
+        "breakpoint_factor": "variable_expense_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 1.8711138273918193,
+        "mean_absolute_smd": 0.5187117683571494,
+        "risk_group_count": 118,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 82,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.3828718300896457,
+        "mean_absolute_smd": 0.18082858968475865,
+        "risk_group_count": 118,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C003264"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 103,
+        "breakpoint_factor": "variable_expense_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 3.241131104772147,
+        "mean_absolute_smd": 1.0882622061849065,
+        "risk_group_count": 97,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 103,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.2526936310185902,
+        "mean_absolute_smd": 0.11782139128947211,
+        "risk_group_count": 97,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C003269"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 59,
+        "breakpoint_factor": "variable_expense_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 2.6401644616645052,
+        "mean_absolute_smd": 0.813513276153896,
+        "risk_group_count": 141,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 59,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.4107053380932255,
+        "mean_absolute_smd": 0.19128522502081402,
+        "risk_group_count": 141,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C003281"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 139,
+        "breakpoint_factor": "variable_expense_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 2.3100381895039175,
+        "mean_absolute_smd": 0.5618699800781801,
+        "risk_group_count": 61,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 139,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.30545398043018857,
+        "mean_absolute_smd": 0.1262509585420035,
+        "risk_group_count": 61,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C003288"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 0,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 200,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 0,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 200,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C003290"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C003297"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 0,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 200,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 0,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 200,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C003320"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 1,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 199,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 1,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 199,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C003343"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 195,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 5,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 195,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 5,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C003347"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 16,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 184,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 16,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 184,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C003353"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 123,
+        "breakpoint_factor": "cash_balance_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 1.8372677675268911,
+        "mean_absolute_smd": 0.6296909382251026,
+        "risk_group_count": 77,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 123,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.47691995570579143,
+        "mean_absolute_smd": 0.10192326001731283,
+        "risk_group_count": 77,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C003393"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C003413"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C003422"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 197,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 3,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 197,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 3,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C003455"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C003463"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 81,
+        "breakpoint_factor": "variable_expense_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 2.398889195539783,
+        "mean_absolute_smd": 0.6231406505657955,
+        "risk_group_count": 119,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 81,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.275900527308203,
+        "mean_absolute_smd": 0.08673082931202582,
+        "risk_group_count": 119,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C003467"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 122,
+        "breakpoint_factor": "variable_expense_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 2.9590878741941937,
+        "mean_absolute_smd": 0.8163039951766614,
+        "risk_group_count": 78,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 122,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.21124515406867003,
+        "mean_absolute_smd": 0.0769942771872935,
+        "risk_group_count": 78,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C003471"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 145,
+        "breakpoint_factor": "variable_expense_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 3.585960980962901,
+        "mean_absolute_smd": 0.9885045304056761,
+        "risk_group_count": 55,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 145,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.22156463218127145,
+        "mean_absolute_smd": 0.09571393137138155,
+        "risk_group_count": 55,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C003542"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C003569"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C003594"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 1,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 199,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 1,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 199,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C003613"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 145,
+        "breakpoint_factor": "variable_expense_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 3.096227095899415,
+        "mean_absolute_smd": 0.7291132822218391,
+        "risk_group_count": 55,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 145,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.2637412146242305,
+        "mean_absolute_smd": 0.07509828510954876,
+        "risk_group_count": 55,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C003622"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 88,
+        "breakpoint_factor": "variable_expense_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 2.0885820808037434,
+        "mean_absolute_smd": 0.7858046927586498,
+        "risk_group_count": 112,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 88,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.2591479908767195,
+        "mean_absolute_smd": 0.11980294129010943,
+        "risk_group_count": 112,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C003665"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C003671"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 199,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 1,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 199,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 1,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C003687"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 16,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 184,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 16,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 184,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C003717"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 199,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 1,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 199,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 1,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C003754"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 50,
+        "breakpoint_factor": "variable_expense_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 1.9343429425530942,
+        "mean_absolute_smd": 0.5561402009133055,
+        "risk_group_count": 150,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 50,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.5142175097357412,
+        "mean_absolute_smd": 0.11251267965347589,
+        "risk_group_count": 150,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C003770"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 180,
+        "breakpoint_factor": "variable_expense_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 4.024741659042381,
+        "mean_absolute_smd": 1.2053477353619209,
+        "risk_group_count": 20,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 180,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.7189144729158329,
+        "mean_absolute_smd": 0.20803306024823237,
+        "risk_group_count": 20,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C003772"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 1,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 199,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 1,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 199,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C003776"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 199,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 1,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 199,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 1,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C003786"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C003830"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 175,
+        "breakpoint_factor": "cash_balance_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 6.20996607962352,
+        "mean_absolute_smd": 2.4227056691166116,
+        "risk_group_count": 25,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 175,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.32074650716871395,
+        "mean_absolute_smd": 0.1598999448501578,
+        "risk_group_count": 25,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C003835"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 6,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 194,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 6,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 194,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C003837"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 198,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 2,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 198,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 2,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C003861"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 13,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 187,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 13,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 187,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C003876"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C003889"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 107,
+        "breakpoint_factor": "variable_expense_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 3.2834681427561967,
+        "mean_absolute_smd": 1.152384537439385,
+        "risk_group_count": 93,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 107,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.24829710892480142,
+        "mean_absolute_smd": 0.09062963019643905,
+        "risk_group_count": 93,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C003909"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 199,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 1,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 199,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 1,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C003923"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C003937"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 134,
+        "breakpoint_factor": "variable_expense_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 2.670450669433649,
+        "mean_absolute_smd": 0.7040608038772889,
+        "risk_group_count": 66,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 134,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.45676890892776373,
+        "mean_absolute_smd": 0.13936339573762543,
+        "risk_group_count": 66,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C003947"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 0,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 200,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 0,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 200,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C003973"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 137,
+        "breakpoint_factor": "cash_balance_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 4.342379735915947,
+        "mean_absolute_smd": 1.4578414462372038,
+        "risk_group_count": 63,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 137,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.29697991204686086,
+        "mean_absolute_smd": 0.18299086784345328,
+        "risk_group_count": 63,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C004005"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 195,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 5,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 195,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 5,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C004043"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 186,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 14,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 186,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 14,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C004047"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 101,
+        "breakpoint_factor": "variable_expense_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 3.442879663075592,
+        "mean_absolute_smd": 1.1307068029047231,
+        "risk_group_count": 99,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 101,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.28780067799539716,
+        "mean_absolute_smd": 0.13105786141896048,
+        "risk_group_count": 99,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C004067"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 118,
+        "breakpoint_factor": "variable_expense_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 2.584599620662933,
+        "mean_absolute_smd": 0.656728246953643,
+        "risk_group_count": 82,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 118,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.28313991813936723,
+        "mean_absolute_smd": 0.09815346667905812,
+        "risk_group_count": 82,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C004070"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 129,
+        "breakpoint_factor": "variable_expense_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 2.854989012657142,
+        "mean_absolute_smd": 1.2303269893353062,
+        "risk_group_count": 71,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 129,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.2773407519676333,
+        "mean_absolute_smd": 0.07851239091561979,
+        "risk_group_count": 71,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C004082"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 132,
+        "breakpoint_factor": "variable_expense_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 3.2298269014304424,
+        "mean_absolute_smd": 0.929382196046646,
+        "risk_group_count": 68,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 132,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.37574090761379014,
+        "mean_absolute_smd": 0.0954877776427703,
+        "risk_group_count": 68,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C004119"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 158,
+        "breakpoint_factor": "variable_expense_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 2.988515955106088,
+        "mean_absolute_smd": 0.9528829688886284,
+        "risk_group_count": 42,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 158,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.27478203197593504,
+        "mean_absolute_smd": 0.09059569037673014,
+        "risk_group_count": 42,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C004127"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C004152"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 135,
+        "breakpoint_factor": "variable_expense_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 3.396102522519221,
+        "mean_absolute_smd": 0.9436277004456429,
+        "risk_group_count": 65,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 135,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.41049184198336697,
+        "mean_absolute_smd": 0.20932671068743203,
+        "risk_group_count": 65,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C004212"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 48,
+        "breakpoint_factor": "cash_balance_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 2.004143018099305,
+        "mean_absolute_smd": 0.684981155563365,
+        "risk_group_count": 152,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 48,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.33906431870941495,
+        "mean_absolute_smd": 0.1522416737834843,
+        "risk_group_count": 152,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C004221"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C004237"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C004293"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C004330"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 0,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 200,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 0,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 200,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C004397"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 125,
+        "breakpoint_factor": "variable_expense_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 2.2225532295535984,
+        "mean_absolute_smd": 0.5899959767898897,
+        "risk_group_count": 75,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 125,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.3727215468048044,
+        "mean_absolute_smd": 0.12284374151577694,
+        "risk_group_count": 75,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C004408"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 199,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 1,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 199,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 1,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C004471"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 97,
+        "breakpoint_factor": "variable_expense_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 2.5073245779014703,
+        "mean_absolute_smd": 0.7752320974562394,
+        "risk_group_count": 103,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 97,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.29422321139311797,
+        "mean_absolute_smd": 0.12827380952536593,
+        "risk_group_count": 103,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C004485"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 98,
+        "breakpoint_factor": "variable_expense_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 2.823948811767412,
+        "mean_absolute_smd": 0.7363854410515335,
+        "risk_group_count": 102,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 98,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.3230806010564877,
+        "mean_absolute_smd": 0.09717606372698616,
+        "risk_group_count": 102,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C004546"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 3,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 197,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 3,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 197,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C004590"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 170,
+        "breakpoint_factor": "cash_balance_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 2.301521739941138,
+        "mean_absolute_smd": 1.2282138614351545,
+        "risk_group_count": 30,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 170,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.4848890571404408,
+        "mean_absolute_smd": 0.14956130038885437,
+        "risk_group_count": 30,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C004673"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 114,
+        "breakpoint_factor": "variable_expense_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 3.3299367310550307,
+        "mean_absolute_smd": 0.9880746228557956,
+        "risk_group_count": 86,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 114,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.3667497730584746,
+        "mean_absolute_smd": 0.11738670259348674,
+        "risk_group_count": 86,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C004695"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 4,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 196,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 4,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 196,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C004705"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 200,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 0,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C004706"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 113,
+        "breakpoint_factor": "variable_expense_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 2.5413671491977947,
+        "mean_absolute_smd": 0.7565210496809738,
+        "risk_group_count": 87,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 113,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.32149930665765675,
+        "mean_absolute_smd": 0.09705707345445862,
+        "risk_group_count": 87,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C004794"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 0,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 200,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 0,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 200,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C004810"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 121,
+        "breakpoint_factor": "variable_expense_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 2.432029865892652,
+        "mean_absolute_smd": 0.620599053212816,
+        "risk_group_count": 79,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 121,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.450756345508069,
+        "mean_absolute_smd": 0.1250927619657549,
+        "risk_group_count": 79,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C004856"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 0,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 200,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 0,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 200,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C004909"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 122,
+        "breakpoint_factor": "variable_expense_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 2.1657356797502683,
+        "mean_absolute_smd": 0.9495644039965419,
+        "risk_group_count": 78,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 122,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.306696234580592,
+        "mean_absolute_smd": 0.11680730834274734,
+        "risk_group_count": 78,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C004914"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 0,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 200,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 0,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 200,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C004924"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 0,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 200,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 0,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 200,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": false,
+      "target_customer_id": "C004942"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 167,
+        "breakpoint_factor": "variable_expense_ratio",
+        "breakpoint_month": 13,
+        "breakpoint_status": "found",
+        "eligible": true,
+        "max_absolute_smd": 4.342935488602971,
+        "mean_absolute_smd": 0.9188351039436777,
+        "risk_group_count": 33,
+        "smd_row_count": 144
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 167,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "not_found",
+        "eligible": true,
+        "max_absolute_smd": 0.5932580466627512,
+        "mean_absolute_smd": 0.18508772932987755,
+        "risk_group_count": 33,
+        "smd_row_count": 144
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C004949"
+    },
+    {
+      "matched_count": 200,
+      "original": {
+        "avoidance_group_count": 5,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 195,
+        "smd_row_count": 0
+      },
+      "permuted_label_control": {
+        "avoidance_group_count": 5,
+        "breakpoint_factor": null,
+        "breakpoint_month": null,
+        "breakpoint_status": "insufficient_group_size",
+        "eligible": false,
+        "max_absolute_smd": null,
+        "mean_absolute_smd": null,
+        "risk_group_count": 195,
+        "smd_row_count": 0
+      },
+      "risk_membership_changed": true,
+      "target_customer_id": "C004979"
+    }
+  ],
+  "validation_scope": "synthetic, retrospective, matched-cohort only"
+}

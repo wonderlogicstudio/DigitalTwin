@@ -288,17 +288,17 @@ def build_current_status_sentence(
         prefix = "현재는 연체 상태입니다." if status_label == "연체" else f"현재는 {status_label} 상태입니다."
     if breakpoint_result is None:
         suffix = (
-            "Run similar-customer analysis to review the time remaining to the risk turning point."
+            "Run similar-customer analysis to review whether a historical landmark appears in the similar-path cohort."
             if language == "en"
-            else "유사 고객 분석을 실행하면 위험 분기점까지 남은 기간을 함께 확인할 수 있습니다."
+            else "유사 고객 분석을 실행하면 유사 경로 집단에 과거 landmark가 있는지 함께 확인할 수 있습니다."
         )
         return f"{prefix} {suffix}"
 
     status = str(breakpoint_result.get("status", "not_found"))
     if status == "found":
-        months = breakpoint_result.get("months_from_current")
+        breakpoint_month = _to_int_or_none(breakpoint_result.get("breakpoint_month"))
         primary_factor = label_metric(breakpoint_result.get("primary_factor"), language)
-        timing_text = _breakpoint_timing_sentence(months, language)
+        timing_text = _historical_breakpoint_sentence(breakpoint_month, language)
         if language == "en":
             return f"{prefix} {timing_text} The key difference is {primary_factor}."
         return f"{prefix} {timing_text} 주요 차이 지표는 {primary_factor}입니다."
@@ -568,8 +568,8 @@ def build_breakpoint_summary_cards(
             },
             {
                 "title": t("kpi.breakpoint.description", language),
-                "value": display["months_from_current"],
-                "detail": "Based on current Month 12" if language == "en" else "현재 12개월 차 기준",
+                "value": t("kpi.breakpoint.historical_value", language),
+                "detail": t("kpi.breakpoint.historical_detail", language),
                 "tone": "neutral",
             },
             {
@@ -905,9 +905,9 @@ def build_breakpoint_display_data(breakpoint_result: dict[str, Any], language: s
         return {
             "status": status,
             "message": (
-                "This is the first point where a sustained group difference was observed."
+                "This is the first sustained group difference observed in the historical similar-path cohort, not a future date for the current customer."
                 if language == "en"
-                else "유사 고객 그룹 사이에서 지속적인 차이가 처음 관찰된 시점입니다."
+                else "유사 과거 경로 집단에서 지속적인 차이가 처음 관찰된 시점이며, 현재 고객의 미래 시점이 아닙니다."
             ),
             "breakpoint_month": format_month_label(int(breakpoint_result["breakpoint_month"]), language=language),
             "months_from_current": _duration_month_text(breakpoint_result["months_from_current"], language),
@@ -1192,15 +1192,17 @@ def _breakpoint_kpi_card(breakpoint_result: Mapping[str, Any] | None, language: 
     status = str(breakpoint_result.get("status", "not_found"))
     if status == "found":
         breakpoint_month = _to_int_or_none(breakpoint_result.get("breakpoint_month"))
-        months_from_current = _to_int_or_none(breakpoint_result.get("months_from_current"))
         primary_factor = label_metric(breakpoint_result.get("primary_factor"), language)
         return {
             "id": "breakpoint",
             "title": t("kpi.breakpoint", language),
-            "value": _relative_month_text(months_from_current, language),
+            "value": t("kpi.breakpoint.historical_value", language),
             "unit": "" if breakpoint_month is None else _month_number_text(breakpoint_month, language),
             "description": t("kpi.breakpoint.description", language),
-            "detail": t("kpi.breakpoint.primary_factor", language, metric=primary_factor),
+            "detail": (
+                f"{t('kpi.breakpoint.primary_factor', language, metric=primary_factor)} · "
+                f"{t('kpi.breakpoint.historical_detail', language)}"
+            ),
             "tone": "neutral",
             "badge": {"label": t("kpi.breakpoint.found", language), "tone": "neutral"},
             "help": term_help_text("breakpoint", language),
@@ -1304,23 +1306,23 @@ def _relative_month_text(months_from_current: Any, language: str = "ko") -> str:
     return t("kpi.months_ago", language, months=abs(months))
 
 
-def _breakpoint_timing_sentence(months_from_current: Any, language: str = "ko") -> str:
-    months = _to_int_or_none(months_from_current)
+def _historical_breakpoint_sentence(breakpoint_month: Any, language: str = "ko") -> str:
+    """Describe a peer-cohort landmark without implying a customer forecast date."""
+
+    month = _to_int_or_none(breakpoint_month)
     if language == "en":
-        if months is None:
-            return "The risk turning point is not available for the similar-customer group."
-        if months == 0:
-            return "The risk turning point is shown at the current point."
-        if months > 0:
-            return f"About {months} months remain until the risk turning point."
-        return f"The risk turning point passed about {abs(months)} months ago."
-    if months is None:
+        if month is None:
+            return "No historical landmark is available for the similar-customer group."
+        return (
+            f"In the historical similar-path cohort, a sustained difference was observed at Month {month}; "
+            "this is not a future date for the current customer."
+        )
+    if month is None:
         return "유사 고객 집단의 위험 분기점 시점은 확인되지 않았으며,"
-    if months == 0:
-        return "유사 고객 집단의 위험 분기점은 현재 시점으로 표시되며,"
-    if months > 0:
-        return f"유사 고객 집단의 위험 분기점까지 약 {months}개월이 남아 있으며,"
-    return f"유사 고객 집단의 위험 분기점은 약 {abs(months)}개월 전에 지나갔으며,"
+    return (
+        f"유사 과거 경로 집단에서 {month}개월 차에 지속적인 차이가 관찰되었으며, "
+        "이는 현재 고객의 미래 시점이 아닙니다."
+    )
 
 
 def _to_int_or_none(value: Any) -> int | None:

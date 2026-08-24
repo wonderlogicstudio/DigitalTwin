@@ -12,6 +12,7 @@ import app as app_module
 from streamlit.testing.v1 import AppTest
 
 from src.copy import APP_MODE_OPTIONS
+from src.i18n import t
 from src.presentation import GENERAL_MODE, PRESENTATION_MODE, get_presentation_tab_labels
 from src.rm_workspace import (
     RM_WORKSPACE_MODE,
@@ -88,6 +89,12 @@ def test_workspace_view_model_displays_exported_funnel_and_honest_representative
     }
 
 
+def test_workspace_shell_does_not_substitute_a_default_population_for_missing_artifacts() -> None:
+    model = build_rm_workspace_view_model(language="en", funnel=None, representative_cohort=None)
+
+    assert [stage["count"] for stage in model["funnel"]] == [None, None, None]
+
+
 def test_workspace_artifact_loader_is_read_only_and_handles_missing_or_corrupt_files(tmp_path: Path) -> None:
     missing = load_rm_workspace_artifacts(tmp_path)
     assert missing.funnel is None
@@ -95,13 +102,34 @@ def test_workspace_artifact_loader_is_read_only_and_handles_missing_or_corrupt_f
 
     run_dir = tmp_path / "run"
     run_dir.mkdir()
+    incomplete_manifest = {"funnel": {"monitored_total": 5000, "eligible_total": 2, "selected_queue_ready": 1}}
     (run_dir / "rm_selection_manifest.json").write_text(
-        json.dumps({"funnel": {"monitored_total": 5000, "eligible_total": 2, "selected_queue_ready": 1}}),
+        json.dumps(incomplete_manifest),
         encoding="utf-8",
     )
     (run_dir / "rm_representative_cohort.json").write_text(json.dumps(_cohort()), encoding="utf-8")
+    partial = load_rm_workspace_artifacts(tmp_path)
+    assert partial.funnel is None
+    assert partial.load_error == "artifact_unavailable"
+
+    complete_funnel = {
+        "monitored_total": 5000,
+        "eligible_priority": 1,
+        "eligible_review": 1,
+        "eligible_total": 2,
+        "selected_queue_ready": 1,
+        "deferred_capacity": 1,
+        "monitor_only": 1,
+        "no_actionable_signal": 4995,
+        "insufficient_evidence": 0,
+        "data_unavailable": 0,
+    }
+    (run_dir / "rm_selection_manifest.json").write_text(
+        json.dumps({"funnel": complete_funnel, "records": []}),
+        encoding="utf-8",
+    )
     loaded = load_rm_workspace_artifacts(tmp_path)
-    assert loaded.funnel == {"monitored_total": 5000, "eligible_total": 2, "selected_queue_ready": 1}
+    assert loaded.funnel == complete_funnel
     assert loaded.representative_cohort == _cohort()
 
     (run_dir / "rm_selection_manifest.json").write_text("{bad", encoding="utf-8")
@@ -205,11 +233,35 @@ def test_app_test_switches_to_rm_shell_without_changing_presentation_tab_contrac
         "rm_owner_scope",
         "rm_due_scope",
     ]
-    # Portfolio shows the complete selection funnel plus four Alert counts.
-    assert len(at.metric) == 13
+    # Portfolio shows the complete selection funnel plus Alert and in-app delivery counts.
+    portfolio_metric_labels = {
+        t("rm.portfolio.monitored_total", "ko"),
+        t("rm.portfolio.eligible_priority", "ko"),
+        t("rm.portfolio.eligible_review", "ko"),
+        t("rm.portfolio.eligible_total", "ko"),
+        t("rm.portfolio.selected_queue_ready", "ko"),
+        t("rm.portfolio.deferred_capacity", "ko"),
+        t("rm.portfolio.monitor_only", "ko"),
+        t("rm.portfolio.no_actionable_signal", "ko"),
+        t("rm.portfolio.insufficient_evidence", "ko"),
+        t("rm.portfolio.data_unavailable", "ko"),
+        t("rm.alert.new", "ko"),
+        t("rm.alert.open", "ko"),
+        t("rm.alert.due", "ko"),
+        t("rm.alert.overdue", "ko"),
+        t("rm.alert.in_rm_queue", "ko"),
+        t("rm.alert.selected_pending", "ko"),
+    }
+    assert portfolio_metric_labels.issubset({metric.label for metric in at.metric})
+    # The default representative is safely routed to Customer Review in the
+    # same mode, so its observed-signal metrics may be present as well.
+    assert [header.value.split()[0] for header in at.subheader] == ["C000001"]
     assert [widget.key for widget in at.text_input] == ["rm_queue_search"]
     assert any(widget.key == "rm_queue_sort" for widget in at.selectbox)
-    assert len(at.dataframe) == 1
+    assert [frame.key for frame in at.dataframe if frame.key == "rm_review_queue_table"] == [
+        "rm_review_queue_table"
+    ]
+    assert len(at.dataframe) == 2
 
 
 def test_app_test_rm_queue_keeps_english_mode_and_selected_queue_shell() -> None:
@@ -220,7 +272,27 @@ def test_app_test_rm_queue_keeps_english_mode_and_selected_queue_shell() -> None
 
     assert not at.exception
     assert [tab.label for tab in at.tabs] == get_rm_workspace_tab_labels("en")
-    assert len(at.dataframe) == 1
+    assert [frame.key for frame in at.dataframe if frame.key == "rm_review_queue_table"] == [
+        "rm_review_queue_table"
+    ]
+    assert len(at.dataframe) == 2
+
+
+def test_app_test_rm_capacity_comparison_is_opt_in_and_keeps_saved_queue_unchanged() -> None:
+    at = AppTest.from_file(Path(app_module.__file__))
+    at.run(timeout=45)
+    at.sidebar.selectbox(key="app_mode").set_value(RM_WORKSPACE_MODE).run(timeout=45)
+
+    assert not at.exception
+    assert len(at.dataframe) == 2
+    at.checkbox(key="rm_capacity_comparison_enabled").set_value(True).run(timeout=45)
+    at.number_input(key="rm_capacity_comparison_value").set_value(1).run(timeout=45)
+
+    assert not at.exception
+    assert len(at.dataframe) == 3
+    assert [frame.key for frame in at.dataframe if frame.key == "rm_review_queue_table"] == [
+        "rm_review_queue_table"
+    ]
 
 
 def test_app_test_rm_customer_review_renders_observed_evidence_without_changing_tabs() -> None:
@@ -235,6 +307,24 @@ def test_app_test_rm_customer_review_renders_observed_evidence_without_changing_
     assert [header.value.split()[0] for header in at.subheader] == ["C000001"]
     # Queue and historical-outcome distribution are distinct display tables.
     assert len(at.dataframe) == 2
+
+
+def test_app_test_representative_customer_switches_do_not_reuse_prior_context() -> None:
+    at = AppTest.from_file(Path(app_module.__file__))
+    at.run(timeout=45)
+    at.sidebar.selectbox(key="app_mode").set_value(RM_WORKSPACE_MODE).run(timeout=45)
+
+    at.selectbox(key="rm_representative_quick_select").set_value("early_signal_review").run(
+        timeout=45
+    )
+    assert not at.exception
+    assert [header.value.split()[0] for header in at.subheader] == ["C000007"]
+
+    at.selectbox(key="rm_representative_quick_select").set_value("priority_review").run(
+        timeout=45
+    )
+    assert not at.exception
+    assert [header.value.split()[0] for header in at.subheader] == ["C000001"]
 
 
 def test_customer_review_renderer_uses_only_display_chart_helpers() -> None:

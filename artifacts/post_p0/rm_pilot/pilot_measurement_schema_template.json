@@ -1,0 +1,57 @@
+{
+  "measurement_fields": {
+    "human_feedback": [
+      "human_override",
+      "override_reason_code",
+      "sanitized_feedback_code",
+      "private_feedback_exists"
+    ],
+    "ratings": [
+      "evidence_usefulness_rating",
+      "actionability_rating",
+      "perceived_timeliness_rating"
+    ],
+    "review_process": [
+      "review_completed",
+      "review_completion_seconds",
+      "review_outcome",
+      "recommendation_decision",
+      "recommendation_reason_code",
+      "follow_up_status",
+      "insufficient_evidence"
+    ]
+  },
+  "outcome_boundary": {
+    "customer_financial_outcome_improvement_primary_success": false,
+    "longer_term_outcome_requires_separate_governance_and_duration": true
+  },
+  "privacy": {
+    "customer_pii_fields_allowed": false,
+    "raw_feedback_public_export_allowed": false,
+    "raw_free_text_stored_in_public_repository": false,
+    "sanitized_code_only_in_public_contract": true
+  },
+  "process_metrics": [
+    "evidence_usefulness_rating",
+    "review_actionability_rating",
+    "perceived_timeliness_rating",
+    "review_completion_time",
+    "alerts_reviewed_per_period",
+    "defer_monitor_no_action_counts",
+    "recommendation_decision_reason",
+    "follow_up_created_completed",
+    "insufficient_evidence_frequency"
+  ],
+  "pseudonymous_reference_fields": [
+    "case_reference",
+    "alert_reference",
+    "reviewer_pseudonymous_reference"
+  ],
+  "record_identity": [
+    "case_reference",
+    "alert_reference",
+    "review_period"
+  ],
+  "schema_version": "rm_pilot_measurement.v1",
+  "scope": "synthetic_pilot_measurement_contract_only"
+}

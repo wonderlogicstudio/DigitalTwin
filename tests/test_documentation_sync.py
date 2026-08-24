@@ -64,3 +64,22 @@ def test_documented_p0_paths_exist_and_external_delivery_remains_out_of_scope() 
     handoff = (PROJECT_ROOT / "PROJECT_HANDOFF.md").read_text(encoding="utf-8")
     assert "No external notification channel is implemented." in readme
     assert "DB remains unapproved and unimplemented." in handoff
+
+
+def test_post_p0_docs_keep_feedback_claims_and_real_data_boundaries_explicit() -> None:
+    readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
+    handoff = (PROJECT_ROOT / "PROJECT_HANDOFF.md").read_text(encoding="utf-8")
+    rules = (PROJECT_ROOT / "BUSINESS_RULES.md").read_text(encoding="utf-8")
+    report = (PROJECT_ROOT / "reports" / "post_p0" / "12-17_feedback_security_sync.md").read_text(
+        encoding="utf-8"
+    )
+    closure_matrix = PROJECT_ROOT / "artifacts" / "post_p0" / "feedback" / "coverage_matrix_12_17.json"
+
+    assert "Post-P0 feedback-readiness status" in readme
+    assert "not an approved workload" in readme
+    assert "No approved real/anonymized data has been admitted or validated" in readme
+    assert "Post-P0 feedback-readiness additions" in handoff
+    assert "Post-P0 evidence and public-repository boundaries" in rules
+    assert "actual RM pilot" in report
+    assert "external notification delivery" in report
+    assert closure_matrix.exists()

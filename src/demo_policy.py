@@ -23,6 +23,7 @@ HISTORICAL_LANDMARK_SOURCE = "historical_landmark"
 
 PolicyStatus = Literal["draft", "demo", "approved"]
 OperationalLabel = Literal["Monitor", "Review", "Priority Review"]
+TimingSource = Literal["prospective_signal", "historical_landmark"]
 
 
 @dataclass(frozen=True)
@@ -146,9 +147,19 @@ class PolicyTimingEvidence:
     """Prospective timing context at the decision point, without a future event."""
 
     candidate_month: int
-    source: str = PROSPECTIVE_SIGNAL_SOURCE
+    source: Literal["prospective_signal"] = PROSPECTIVE_SIGNAL_SOURCE
     evaluation_status: str = "not_evaluated"
     lead_time_months: None = None
+
+    def __post_init__(self) -> None:
+        if isinstance(self.candidate_month, bool) or not isinstance(self.candidate_month, int) or self.candidate_month < 1:
+            raise ValueError("candidate_month must be a positive integer")
+        if self.source != PROSPECTIVE_SIGNAL_SOURCE:
+            raise ValueError("prospective timing source must be prospective_signal")
+        if not str(self.evaluation_status).strip():
+            raise ValueError("evaluation_status must be non-empty")
+        if self.lead_time_months is not None:
+            raise ValueError("customer-level policy timing cannot contain lead_time_months")
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -166,7 +177,7 @@ class HistoricalLandmarkContext:
 
     breakpoint_status: str
     breakpoint_month: int | None
-    source: str = HISTORICAL_LANDMARK_SOURCE
+    source: Literal["historical_landmark"] = HISTORICAL_LANDMARK_SOURCE
     is_live_alert_trigger: bool = False
 
     def __post_init__(self) -> None:

@@ -1,0 +1,179 @@
+{
+  "schema_version": "post_p0_feedback_readiness_manifest.v1",
+  "baseline_date": "2026-08-24",
+  "gate_result": "GO",
+  "baseline": {
+    "branch": "main",
+    "head": "c68c8cc79561e1a33d9a3e5031a29285cb8342db",
+    "origin_main": "c68c8cc79561e1a33d9a3e5031a29285cb8342db",
+    "working_tree_clean_before_artifact_write": true
+  },
+  "canonical_contract": {
+    "random_seed": 42,
+    "customer_count": 5000,
+    "total_months": 36,
+    "observation_months": [1, 12],
+    "historical_peer_future_months": [13, 36],
+    "top_k_matches": 200,
+    "match_feature_count": 10,
+    "breakpoint": {
+      "absolute_smd_threshold": 0.5,
+      "persistence_months": 2,
+      "minimum_group_size": 20
+    },
+    "whatif": {
+      "simulation_months": 24,
+      "scenario_count": 4,
+      "interpretation": "rule_based_cashflow_not_intervention_efficacy"
+    }
+  },
+  "artifact_sources": {
+    "population": "artifacts/population/seed42_full_run",
+    "triage": "artifacts/triage/seed42_crossfit_5fold_asof12_unbounded",
+    "circularity_validation": "artifacts/validation/circularity/seed42_sample200/circularity_negative_control_report.json",
+    "sensitivity_validation": "artifacts/validation/sensitivity/seeds_7_42_99_k_100_200_300/multi_seed_top_k_sensitivity_report.json"
+  },
+  "reconciliation": {
+    "customer_id_digest_sha256": "a501403bc78b04a6fb0f39a78488c519b650b96e68a430a221c298e011510a90",
+    "canonical_customer_master": {
+      "unique_customer_count": 5000,
+      "duplicate_count": 0
+    },
+    "canonical_customer_monthly": {
+      "row_count": 180000,
+      "unique_customer_count": 5000,
+      "months_per_customer": 36,
+      "duplicate_customer_id_count": 0
+    },
+    "population_detail": {
+      "unique_customer_count": 5000,
+      "duplicate_customer_id_count": 0,
+      "success_count": 5000,
+      "matched_count_distribution": {
+        "200": 5000
+      },
+      "outcome_share_sum_invalid_count": 0,
+      "distance_order_invalid_count": 0,
+      "breakpoint_status_counts": {
+        "found": 1732,
+        "insufficient_group_size": 3268
+      }
+    },
+    "triage_selection": {
+      "unique_customer_count": 5000,
+      "duplicate_customer_id_count": 0,
+      "selected_queue_ready_count": 1522,
+      "selected_rank_is_exact_1_to_n": true,
+      "selected_missing_selection_or_why_now_or_timing_or_policy_provenance_count": 0,
+      "funnel": {
+        "eligible_priority": 1148,
+        "eligible_review": 374,
+        "eligible_total": 1522,
+        "selected_queue_ready": 1522,
+        "deferred_capacity": 0,
+        "monitor_only": 371,
+        "no_actionable_signal": 3107,
+        "insufficient_evidence": 0,
+        "data_unavailable": 0
+      },
+      "representative_cohort": {
+        "deterministically_selected_count": 3,
+        "unavailable_category_count": 1,
+        "uses_future_labels": false,
+        "manual_cherry_picking": false
+      }
+    },
+    "exact_set_comparisons": {
+      "canonical_to_monthly": {
+        "missing_count": 0,
+        "extra_count": 0
+      },
+      "canonical_to_population": {
+        "missing_count": 0,
+        "extra_count": 0
+      },
+      "population_to_triage": {
+        "missing_count": 0,
+        "extra_count": 0
+      }
+    }
+  },
+  "workflow_persisted_state": {
+    "alert_repository_artifact": "absent_clean_baseline",
+    "audit_log_artifact": "absent_clean_baseline",
+    "persisted_alert_customer_count": 0,
+    "persisted_audit_event_count": 0,
+    "referential_corruption_detected": false,
+    "full_selection_to_alert_runtime_artifact_evidenced": false,
+    "interpretation": "No persisted runtime workflow state is not evidence of a successful Alert run; focused and full contract tests provide behavior evidence."
+  },
+  "validation_evidence": {
+    "circularity": {
+      "schema_version": "synthetic_circularity_validation.v1",
+      "target_count": 200,
+      "eligible_cohort_count": 61,
+      "original_found_count": 61,
+      "permuted_label_control_found_count": 0,
+      "synthetic_only": true
+    },
+    "sensitivity": {
+      "schema_version": "synthetic_sensitivity_validation.v1",
+      "validation_seeds": [7, 42, 99],
+      "validation_top_k_grid": [100, 200, 300],
+      "canonical_input_integrity_unchanged": true,
+      "production_top_k_matches": 200
+    }
+  },
+  "application_contract": {
+    "modes": ["General", "Presentation", "RM Workspace"],
+    "presentation_tab_count": 5,
+    "general_has_presentation_tabs": false,
+    "rm_workspace_tab_count": 4,
+    "bat_presentation_helper_import": "passed",
+    "legacy_presentation_reexport": "passed",
+    "app_import": "passed",
+    "bounded_streamlit_health": "passed"
+  },
+  "verification": {
+    "population_triage_workflow_rm_focused_pytest": "87 passed in 22.92s",
+    "methodology_focused_pytest": "46 passed in 15.74s",
+    "full_pytest": "390 passed in 211.26s",
+    "demo_readiness": {
+      "status": "READY_WITH_WARNINGS",
+      "warnings": [
+        "Python 3.10.9; documented project target is Python 3.11",
+        "OPENAI_API_KEY is unset; template fallback is used"
+      ]
+    }
+  },
+  "non_blocking_drift_findings": [
+    {
+      "id": "artifact_code_provenance_precommit",
+      "severity": "warning",
+      "detail": "Population and selection manifests record bfc8d81 while current committed main is c68c8cc; contract values, schema, and exact coverage match."
+    },
+    {
+      "id": "documentation_current_state_stale",
+      "severity": "warning",
+      "detail": "PROJECT_HANDOFF.md and CURRENT_ARCHITECTURE_COMPARISON.md still describe P0 as an uncommitted bfc8d81 local worktree."
+    },
+    {
+      "id": "artifact_absolute_output_paths",
+      "severity": "warning",
+      "detail": "Population and selection provenance contains local absolute output paths; loaders resolve artifact directories safely."
+    },
+    {
+      "id": "no_persisted_full_workflow_run",
+      "severity": "open_follow_up",
+      "detail": "Clean baseline has no persisted Alert/Audit runtime run; later workflow evidence must remain explicit."
+    }
+  ],
+  "claims_boundary": {
+    "synthetic_only": true,
+    "historical_outcome_share_is_prediction_probability": false,
+    "historical_breakpoint_is_live_trigger": false,
+    "whatif_is_intervention_efficacy": false,
+    "external_notification_delivery_implemented": false,
+    "database_implemented": false
+  }
+}

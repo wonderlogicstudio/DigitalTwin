@@ -1,0 +1,170 @@
+{
+  "cases": [
+    {
+      "alert_id": "ALT-01CC940623095BE6922488E470A8E42D",
+      "case_resolution": "CONTACT_COMPLETED",
+      "created_at": "2026-08-24T09:00:00+00:00",
+      "customer_id": "C000001",
+      "due_at": "2026-08-25T09:01:00+00:00",
+      "episode_key": "C000001:synthetic_early_warning_demo:0.1.0:crossfit_seed42_5fold_asof12:prospective_signal_snapshot.v1:12",
+      "last_state_change_reason": "BANKER_CLOSE:rm-synthetic-01",
+      "operational_priority": "PRIORITY_REVIEW",
+      "owner_reference": null,
+      "policy_reference": {
+        "policy_id": "synthetic_early_warning_demo",
+        "policy_version": "0.1.0"
+      },
+      "schema_version": "alert_case.v1",
+      "scope": {
+        "external_delivery_implemented": false,
+        "persistence_implemented": false,
+        "synthetic_analytics_attached": false
+      },
+      "selection_reference": {
+        "selection_policy_id": "synthetic_pilot_saved_rank_prefix",
+        "selection_policy_version": "1",
+        "selection_reason_codes": [
+          "PRIORITY_BAND_PRIORITY_REVIEW",
+          "TIMING_PROSPECTIVE_SIGNAL_AVAILABLE",
+          "PERSISTENCE_NOT_PRESENT",
+          "STABILITY_INITIAL",
+          "EVIDENCE_SUFFICIENT",
+          "CAPACITY_UNBOUNDED",
+          "CREATE_NEW_CASE",
+          "PILOT_DRY_RUN_CAPACITY_SYNTHETIC_PILOT_CAPACITY_3"
+        ]
+      },
+      "signal_reference": {
+        "signal_as_of_month": 12,
+        "signal_run_id": "crossfit_seed42_5fold_asof12",
+        "signal_version": "prospective_signal_snapshot.v1"
+      },
+      "snoozed_until": null,
+      "state": "CLOSED",
+      "timing_evidence_reference": {
+        "candidate_month": 12,
+        "evaluation_status": "not_evaluated",
+        "lead_time_months": null,
+        "lead_time_unit": "months",
+        "source": "prospective_signal"
+      },
+      "updated_at": "2026-08-24T09:10:00+00:00",
+      "why_now_reason_codes": [
+        "CURRENT_STATUS_CONCERNING",
+        "MULTIPLE_CURRENT_FINANCIAL_STRESS_FACTORS",
+        "CURRENT_FINANCIAL_STRESS_FACTOR"
+      ]
+    },
+    {
+      "alert_id": "ALT-AD777F0C67DF5C2F82601AA5187A5B28",
+      "case_resolution": null,
+      "created_at": "2026-08-24T09:00:00+00:00",
+      "customer_id": "C000010",
+      "due_at": "2026-08-25T09:01:00+00:00",
+      "episode_key": "C000010:synthetic_early_warning_demo:0.1.0:crossfit_seed42_5fold_asof12:prospective_signal_snapshot.v1:12",
+      "last_state_change_reason": "SYNTHETIC_DRY_RUN_SNOOZE_FIXTURE",
+      "operational_priority": "PRIORITY_REVIEW",
+      "owner_reference": null,
+      "policy_reference": {
+        "policy_id": "synthetic_early_warning_demo",
+        "policy_version": "0.1.0"
+      },
+      "schema_version": "alert_case.v1",
+      "scope": {
+        "external_delivery_implemented": false,
+        "persistence_implemented": false,
+        "synthetic_analytics_attached": false
+      },
+      "selection_reference": {
+        "selection_policy_id": "synthetic_pilot_saved_rank_prefix",
+        "selection_policy_version": "1",
+        "selection_reason_codes": [
+          "PRIORITY_BAND_PRIORITY_REVIEW",
+          "TIMING_PROSPECTIVE_SIGNAL_AVAILABLE",
+          "PERSISTENCE_NOT_PRESENT",
+          "STABILITY_INITIAL",
+          "EVIDENCE_SUFFICIENT",
+          "CAPACITY_UNBOUNDED",
+          "CREATE_NEW_CASE",
+          "PILOT_DRY_RUN_CAPACITY_SYNTHETIC_PILOT_CAPACITY_3"
+        ]
+      },
+      "signal_reference": {
+        "signal_as_of_month": 12,
+        "signal_run_id": "crossfit_seed42_5fold_asof12",
+        "signal_version": "prospective_signal_snapshot.v1"
+      },
+      "snoozed_until": "2026-08-24T13:00:00+00:00",
+      "state": "SNOOZED",
+      "timing_evidence_reference": {
+        "candidate_month": 12,
+        "evaluation_status": "not_evaluated",
+        "lead_time_months": null,
+        "lead_time_unit": "months",
+        "source": "prospective_signal"
+      },
+      "updated_at": "2026-08-24T09:02:00+00:00",
+      "why_now_reason_codes": [
+        "CURRENT_STATUS_CONCERNING",
+        "MULTIPLE_CURRENT_FINANCIAL_STRESS_FACTORS",
+        "CURRENT_FINANCIAL_STRESS_FACTOR"
+      ]
+    },
+    {
+      "alert_id": "ALT-B084B4DE13E154AD88D1C822E4235A9A",
+      "case_resolution": null,
+      "created_at": "2026-08-24T09:00:00+00:00",
+      "customer_id": "C000008",
+      "due_at": "2026-08-25T09:01:00+00:00",
+      "episode_key": "C000008:synthetic_early_warning_demo:0.1.0:crossfit_seed42_5fold_asof12:prospective_signal_snapshot.v1:12",
+      "last_state_change_reason": "BANKER_START_REVIEW:rm-synthetic-01",
+      "operational_priority": "PRIORITY_REVIEW",
+      "owner_reference": null,
+      "policy_reference": {
+        "policy_id": "synthetic_early_warning_demo",
+        "policy_version": "0.1.0"
+      },
+      "schema_version": "alert_case.v1",
+      "scope": {
+        "external_delivery_implemented": false,
+        "persistence_implemented": false,
+        "synthetic_analytics_attached": false
+      },
+      "selection_reference": {
+        "selection_policy_id": "synthetic_pilot_saved_rank_prefix",
+        "selection_policy_version": "1",
+        "selection_reason_codes": [
+          "PRIORITY_BAND_PRIORITY_REVIEW",
+          "TIMING_PROSPECTIVE_SIGNAL_AVAILABLE",
+          "PERSISTENCE_NOT_PRESENT",
+          "STABILITY_INITIAL",
+          "EVIDENCE_SUFFICIENT",
+          "CAPACITY_UNBOUNDED",
+          "CREATE_NEW_CASE",
+          "PILOT_DRY_RUN_CAPACITY_SYNTHETIC_PILOT_CAPACITY_3"
+        ]
+      },
+      "signal_reference": {
+        "signal_as_of_month": 12,
+        "signal_run_id": "crossfit_seed42_5fold_asof12",
+        "signal_version": "prospective_signal_snapshot.v1"
+      },
+      "snoozed_until": null,
+      "state": "IN_REVIEW",
+      "timing_evidence_reference": {
+        "candidate_month": 12,
+        "evaluation_status": "not_evaluated",
+        "lead_time_months": null,
+        "lead_time_unit": "months",
+        "source": "prospective_signal"
+      },
+      "updated_at": "2026-08-24T09:05:00+00:00",
+      "why_now_reason_codes": [
+        "CURRENT_STATUS_CONCERNING",
+        "MULTIPLE_CURRENT_FINANCIAL_STRESS_FACTORS",
+        "CURRENT_FINANCIAL_STRESS_FACTOR"
+      ]
+    }
+  ],
+  "schema_version": "alert_case_repository.v1"
+}

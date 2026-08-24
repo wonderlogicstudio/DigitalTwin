@@ -1,0 +1,80 @@
+{
+  "approved_real": {
+    "reason": "No approved real-data aggregate result has been supplied.",
+    "status": "absent_not_validated"
+  },
+  "comparison": {
+    "capacity_scenario_comparison_status": "real_absent",
+    "direct_outcome_comparison_allowed": false,
+    "outcome_compatibility_status": "real_absent"
+  },
+  "metric_specifications": [
+    {
+      "definition": "admitted customer-months / expected customer-months and missing customer-months / expected customer-months",
+      "metric_id": "data_coverage_missingness",
+      "unit": "share"
+    },
+    {
+      "definition": "predeclared per-feature distribution summaries and synthetic-minus-real mean/median deltas when both aggregates exist",
+      "metric_id": "feature_trajectory_distribution_shift",
+      "unit": "native feature units"
+    },
+    {
+      "definition": "distribution summaries for reference-match distance and returned neighbor support count",
+      "metric_id": "match_distance_neighbor_support_distribution",
+      "unit": "distance / count"
+    },
+    {
+      "definition": "descriptive distribution of matched historical-cohort outcome shares; never a target prediction probability",
+      "metric_id": "historical_cohort_outcome_share",
+      "unit": "share"
+    },
+    {
+      "definition": "review episodes / declared analysis customer-month denominator * 1000",
+      "metric_id": "prospective_alert_rate_per_1000_customer_months",
+      "unit": "episodes per 1,000 customer-months"
+    },
+    {
+      "definition": "unique alerted customers / declared customers, with selected triage share reported separately",
+      "metric_id": "unique_alerted_selected_rate",
+      "unit": "share"
+    },
+    {
+      "definition": "no-event review episodes / review episodes when an independently defined outcome/event is available",
+      "metric_id": "no_event_alert_rate",
+      "unit": "share"
+    },
+    {
+      "definition": "median, Q1 and Q3 months from alert to independently defined future event; unavailable if no compatible event definition exists",
+      "metric_id": "lead_time_distribution",
+      "unit": "months"
+    },
+    {
+      "definition": "predeclared alert persistence and state-change rates over the declared contiguous analysis months",
+      "metric_id": "persistence_flip_rate",
+      "unit": "share"
+    },
+    {
+      "definition": "selected, deferred, monitor, no-actionable-signal and insufficient-evidence shares under one declared capacity scenario",
+      "metric_id": "triage_capacity_distribution",
+      "unit": "share"
+    },
+    {
+      "definition": "insufficient-evidence customers / declared customers",
+      "metric_id": "insufficient_evidence_rate",
+      "unit": "share"
+    }
+  ],
+  "prohibitions": {
+    "automatic_capacity_selection": false,
+    "automatic_threshold_selection": false,
+    "policy_or_triage_mutated": false,
+    "row_level_values_exported": false,
+    "single_actual_accuracy_score": false
+  },
+  "report_status": "template_real_absent",
+  "schema_version": "synthetic_real_validation_metrics.v1",
+  "synthetic": {
+    "status": "aggregate_input_required"
+  }
+}

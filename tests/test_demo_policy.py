@@ -12,6 +12,7 @@ from src.demo_policy import (
     DemoPolicyRule,
     HistoricalLandmarkContext,
     PolicyEvaluationContext,
+    PolicyTimingEvidence,
     VersionedDemoPolicy,
     assess_policy_snapshot,
     default_demo_policy,
@@ -130,6 +131,15 @@ def test_cooldown_changes_eligibility_without_hiding_the_matching_reasons() -> N
 def test_historical_landmark_cannot_be_created_as_a_live_trigger() -> None:
     with pytest.raises(ValueError, match="cannot be live alert triggers"):
         HistoricalLandmarkContext("found", 14, is_live_alert_trigger=True)
+
+
+def test_timing_sources_are_explicit_and_policy_timing_cannot_carry_future_lead_time() -> None:
+    assert PolicyTimingEvidence(candidate_month=12).source == "prospective_signal"
+    assert HistoricalLandmarkContext("found", 14).source == "historical_landmark"
+    with pytest.raises(ValueError, match="prospective timing source"):
+        PolicyTimingEvidence(candidate_month=12, source="historical_landmark")  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="lead_time_months"):
+        PolicyTimingEvidence(candidate_month=12, lead_time_months=1)  # type: ignore[arg-type]
 
 
 def test_historical_landmark_is_never_a_policy_trigger() -> None:

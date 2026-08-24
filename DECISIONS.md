@@ -142,3 +142,39 @@
 - Reason: External providers, credentials, channels, retries, and delivery
   controls are not approved for this prototype.
 - Impact files: `src/notifications.py`, `NOTIFICATION_ADAPTER_CONTRACT.md`.
+
+## DEC-021 Capacity is a human-approved operational input
+- Date: 2026-08-24
+- Status: accepted
+- Decision: The unbounded synthetic selection is a reference only. Capacity
+  scenarios are caller-supplied `draft` comparisons over the saved rank order;
+  the system cannot choose or approve capacity.
+- Reason: A selected count is not evidence of a bank-standard workload,
+  productivity target, or approved operating threshold.
+- Impact files: `src/capacity_scenarios.py`, `src/rm_workspace.py`,
+  `artifacts/post_p0/capacity/`.
+
+## DEC-022 Real-data readiness is not real-data admission
+- Date: 2026-08-24
+- Status: accepted
+- Decision: The public repository may contain governance metadata, source-free
+  adapter contracts, aggregate report templates, and injected synthetic test
+  fixtures only. Actual or anonymized customer data requires separate data
+  owner, security, and privacy/legal approval in a secure environment.
+- Reason: A synthetic PoC and contract test cannot grant data-processing
+  authority or validate real-bank performance.
+- Impact files: `REAL_DATA_VALIDATION_GOVERNANCE.md`,
+  `src/real_data_governance.py`, `src/validation_dataset_harness.py`,
+  `src/validation_metrics_report.py`.
+
+## DEC-023 Pilot protocol and dry run are non-operational evidence
+- Date: 2026-08-24
+- Status: accepted
+- Decision: RM pilot protocol and synthetic dry-run output may test workflow
+  mechanics and measurement capture, but cannot claim actual RM participation,
+  productivity, customer outcome, intervention efficacy, policy approval, or
+  capacity approval.
+- Reason: No real participant, customer data, or approved pilot exists in this
+  repository.
+- Impact files: `RM_PILOT_VALIDATION_PROTOCOL.md`, `src/rm_pilot_protocol.py`,
+  `src/synthetic_rm_pilot_dry_run.py`, `artifacts/post_p0/pilot_dry_run/`.

@@ -17,6 +17,7 @@ from config import settings
 from src.alert_case import AlertCase
 from src.alert_repository import AlertCaseRepositoryError, FileAlertCaseRepository
 from src.i18n import t
+from src.triage_explainability import humanize_reason_codes
 
 
 # Keep the RM route import-safe even while the page is reloading an older
@@ -48,6 +49,7 @@ _REQUIRED_FUNNEL_KEYS = (
     "monitor_only",
     "no_actionable_signal",
     "insufficient_evidence",
+    "data_unavailable",
 )
 _OPEN_ALERT_STATES = frozenset(
     {"NEW", "ACKNOWLEDGED", "IN_REVIEW", "FOLLOW_UP", "SNOOZED", "ESCALATED"}
@@ -96,9 +98,10 @@ def load_rm_workspace_artifacts(
         cohort = _read_object(cohort_path) if cohort_path.exists() else None
     except (OSError, ValueError, json.JSONDecodeError):
         return RMWorkspaceArtifacts(None, None, str(manifest_path), load_error="artifact_unavailable")
-    funnel = manifest.get("funnel")
-    if funnel is not None and not isinstance(funnel, Mapping):
+    if not _manifest_is_usable(manifest):
         return RMWorkspaceArtifacts(None, None, str(manifest_path), load_error="artifact_unavailable")
+    funnel = manifest["funnel"]
+    assert isinstance(funnel, Mapping)
     return RMWorkspaceArtifacts(
         funnel=funnel,
         representative_cohort=cohort,
@@ -129,7 +132,7 @@ def build_rm_workspace_view_model(
 ) -> dict[str, Any]:
     """Build the compact shell from exports; never compute RM selection."""
 
-    total = _count_or_default((funnel or {}).get("monitored_total"), settings.CUSTOMER_COUNT)
+    total = _count_or_none((funnel or {}).get("monitored_total"))
     candidates = _count_or_none((funnel or {}).get("eligible_total"))
     selected = _count_or_none((funnel or {}).get("selected_queue_ready"))
     return {
@@ -189,7 +192,12 @@ def build_rm_portfolio_queue_view_model(
     case_by_customer = _matching_open_cases_by_customer(selected_records, alert_cases)
     reference_time = now or datetime.now(timezone.utc)
     queue_rows = [
-        _queue_row(record, case_by_customer.get(str(record["customer_id"])), reference_time)
+        _queue_row(
+            record,
+            case_by_customer.get(str(record["customer_id"])),
+            reference_time,
+            language=language,
+        )
         for record in selected_records
     ]
     queue_rows = _filter_queue_rows(
@@ -217,10 +225,15 @@ def build_rm_portfolio_queue_view_model(
             ),
             "new_alert_count": sum(case.state == "NEW" for case in queue_open_cases),
             "open_alert_count": len(queue_open_cases),
+            "case_in_rm_queue_count": len(queue_open_cases),
+            "selected_case_pending_count": len(selected_records) - len(queue_open_cases),
             "due_alert_count": sum(_is_due(case, reference_time) for case in queue_open_cases),
             "overdue_alert_count": sum(_is_overdue(case, reference_time) for case in queue_open_cases),
             "reconciliation": reconciliation,
+            "provenance": _selection_manifest_provenance(selection_manifest),
             "synthetic_demo": True,
+            "delivery_definition": "in_app_rm_work_queue_case",
+            "external_delivery_implemented": False,
         },
         "queue": {
             "source": "triage_selected_or_routed_existing_case",
@@ -238,6 +251,7 @@ def build_rm_portfolio_queue_view_model(
         "representative_comparisons": _representative_quick_selects(
             representative_cohort,
             language=language,
+            allowed_customer_ids=_manifest_customer_ids(selection_manifest),
         ),
     }
 
@@ -267,10 +281,15 @@ def _unavailable_portfolio_queue_model(*, language: str) -> dict[str, Any]:
             "funnel": tuple(_manifest_funnel_stage(key, None, language) for key in _REQUIRED_FUNNEL_KEYS),
             "new_alert_count": None,
             "open_alert_count": None,
+            "case_in_rm_queue_count": None,
+            "selected_case_pending_count": None,
             "due_alert_count": None,
             "overdue_alert_count": None,
             "reconciliation": {"is_exact": False, "status": "artifact_unavailable"},
+            "provenance": _selection_manifest_provenance(None),
             "synthetic_demo": True,
+            "delivery_definition": "in_app_rm_work_queue_case",
+            "external_delivery_implemented": False,
         },
         "queue": {
             "source": "triage_selected_or_routed_existing_case",
@@ -279,7 +298,7 @@ def _unavailable_portfolio_queue_model(*, language: str) -> dict[str, Any]:
             "rows": (),
             "filters": {},
         },
-        "representative_comparisons": (),
+        "representative_comparisons": _representative_quick_selects(None, language=language),
     }
 
 
@@ -357,7 +376,7 @@ def _case_matches_selection_record(case: AlertCase, record: Mapping[str, object]
 
 
 def _queue_row(
-    record: Mapping[str, object], case: AlertCase | None, now: datetime
+    record: Mapping[str, object], case: AlertCase | None, now: datetime, *, language: str
 ) -> dict[str, object]:
     timing = record.get("timing_evidence_reference")
     timing_reference = (
@@ -371,12 +390,22 @@ def _queue_row(
         "selection_rank": _count_or_none(record.get("review_priority_rank")),
         "priority": str(record.get("eligibility_label", "")),
         "case_state": case.state if case is not None else "NO_OPEN_ALERT",
+        "work_queue_delivery_status": (
+            "CASE_IN_RM_QUEUE" if case is not None else "SELECTED_CASE_PENDING"
+        ),
         "selection_reason_codes": _string_tuple(record.get("selection_reason_codes")),
         "why_now_reason_codes": _string_tuple(record.get("why_now_reason_codes")),
+        "selection_reason_details": humanize_reason_codes(
+            record.get("selection_reason_codes"), language=language
+        ),
+        "why_now_reason_details": humanize_reason_codes(
+            record.get("why_now_reason_codes"), language=language
+        ),
         "timing_bucket": str(record.get("timing_bucket", "unavailable")),
         "timing_evidence_reference": dict(timing_reference),
         "due_at": due_at.isoformat() if due_at is not None else None,
         "due_status": _due_status(due_at, now),
+        "created_at": case.created_at.isoformat() if case is not None else None,
         "owner_reference": case.owner_reference if case is not None else None,
         "updated_at": case.updated_at.isoformat() if case is not None else None,
         "routing_disposition": str(record.get("routing_disposition", "")),
@@ -474,6 +503,38 @@ def _portfolio_reconciliation(
     }
 
 
+def _selection_manifest_provenance(
+    manifest: Mapping[str, object] | None,
+) -> dict[str, object | None]:
+    """Expose saved selection provenance without deriving any RM decision."""
+
+    if not isinstance(manifest, Mapping):
+        return {
+            "run_id": None,
+            "schema_version": None,
+            "policy_id": None,
+            "policy_version": None,
+            "policy_status": None,
+            "selection_as_of_month": None,
+            "signal_run_id": None,
+            "capacity_scenario_id": None,
+        }
+    policy = manifest.get("selection_policy")
+    capacity = manifest.get("capacity_scenario")
+    return {
+        "run_id": _string_or_none(manifest.get("run_id")),
+        "schema_version": _string_or_none(manifest.get("schema_version")),
+        "policy_id": _string_or_none(policy.get("policy_id")) if isinstance(policy, Mapping) else None,
+        "policy_version": _string_or_none(policy.get("version")) if isinstance(policy, Mapping) else None,
+        "policy_status": _string_or_none(policy.get("status")) if isinstance(policy, Mapping) else None,
+        "selection_as_of_month": _count_or_none(manifest.get("triage_as_of_month")),
+        "signal_run_id": _string_or_none(manifest.get("signal_run_id")),
+        "capacity_scenario_id": (
+            _string_or_none(capacity.get("scenario_id")) if isinstance(capacity, Mapping) else None
+        ),
+    }
+
+
 def _manifest_funnel_stage(key: str, count: int | None, language: str) -> dict[str, object]:
     return {
         "id": key,
@@ -502,6 +563,7 @@ def _representative_quick_selects(
     cohort: Mapping[str, object] | None,
     *,
     language: str,
+    allowed_customer_ids: frozenset[str] | None = None,
 ) -> tuple[dict[str, object], ...]:
     records_by_category: dict[str, Mapping[str, object]] = {}
     if cohort is not None and isinstance(cohort.get("records"), list):
@@ -519,6 +581,7 @@ def _representative_quick_selects(
             record is not None
             and record.get("status") == "selected"
             and _safe_customer_context(customer_id if isinstance(customer_id, str) else None)
+            and (allowed_customer_ids is None or customer_id in allowed_customer_ids)
         )
         quick_selects.append(
             {
@@ -528,9 +591,28 @@ def _representative_quick_selects(
                 "available": available,
                 "status": "available" if available else "unavailable",
                 "operational_queue_row": False,
+                "selection_reason_codes": _string_tuple(
+                    None if record is None else record.get("selection_reason_codes")
+                ),
+                "selection_explanation": _string_or_none(
+                    None if record is None else record.get("selection_explanation")
+                ),
             }
         )
     return tuple(quick_selects)
+
+
+def _manifest_customer_ids(manifest: Mapping[str, object]) -> frozenset[str]:
+    records = manifest.get("records")
+    if not isinstance(records, list):
+        return frozenset()
+    return frozenset(
+        customer_id
+        for record in records
+        if isinstance(record, Mapping)
+        for customer_id in (_safe_customer_context(record.get("customer_id")),)
+        if customer_id is not None
+    )
 
 
 def _read_object(path: Path) -> Mapping[str, object]:
@@ -540,15 +622,14 @@ def _read_object(path: Path) -> Mapping[str, object]:
     return value
 
 
-def _count_or_default(value: object, default: int) -> int:
-    parsed = _count_or_none(value)
-    return default if parsed is None else parsed
-
-
 def _count_or_none(value: object) -> int | None:
     if isinstance(value, bool) or not isinstance(value, int) or value < 0:
         return None
     return value
+
+
+def _string_or_none(value: object) -> str | None:
+    return value.strip() if isinstance(value, str) and value.strip() else None
 
 
 def _string_tuple(value: object) -> tuple[str, ...]:

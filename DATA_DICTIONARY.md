@@ -259,6 +259,10 @@ input schemas and must not overwrite `data/raw`, `data/processed`, or
 | `artifacts/triage/<run>/rm_selection_manifest.json` | `rm_selection_manifest.v1` | All expected customer IDs, exactly one primary disposition, policy/signal references, reason codes, deterministic rank, and funnel/reconciliation. |
 | `artifacts/triage/<run>/rm_representative_cohort.json` | representative-cohort schema | Deterministic display-only comparison cases; unavailable categories remain unavailable. It does not alter operational selection. |
 | `artifacts/workflow/` | workflow schemas | File-backed Alert/Case and append-only audit prototype data. This root is independent of analytics artifacts. |
+| `artifacts/post_p0/capacity/` | `capacity_comparison.v1` | Aggregate, saved-rank capacity comparison. `draft` does not mean an approved workload. |
+| `artifacts/post_p0/real_data_readiness/` | readiness-only schemas | Governance, adapter, and metric templates with no admitted real-data rows or approval evidence. |
+| `artifacts/post_p0/rm_pilot/` | pilot protocol templates | Source-free future-pilot measurement contract; not pilot observations. |
+| `artifacts/post_p0/pilot_dry_run/<run>/` | `synthetic_rm_pilot_dry_run.v1` | Isolated synthetic rehearsal manifest, workflow and audit artifacts. It cannot claim actual RM or customer results. |
 
 Terminology restrictions:
 
@@ -268,3 +272,6 @@ Terminology restrictions:
   remain separate in records and UI.
 - Analytical `final_outcome` and a human RM CaseOutcome/closure reason are
   distinct fields and must not be substituted for one another.
+- Post-P0 artifacts must contain aggregate/synthetic references only. Direct
+  identifiers, contact data, account data, credentials, raw feedback, and
+  admitted real-data rows are prohibited.

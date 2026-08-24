@@ -1,0 +1,83 @@
+{
+  "schema_version": "post_p0_feedback_closure_matrix.v1",
+  "as_of": "2026-08-24",
+  "scope": "synthetic-prototype and readiness evidence only",
+  "status_definitions": {
+    "covered": "Implemented and evidenced for the synthetic prototype or readiness contract.",
+    "partial": "A bounded product capability exists, but a human presentation or release action remains outside code evidence.",
+    "open": "No actual approved-data or real-RM evidence exists and no completion claim is permitted."
+  },
+  "entries": [
+    {
+      "id": "full_population_execution",
+      "status": "covered",
+      "evidence": "5,000/5,000 synthetic population and triage ID reconciliation",
+      "claim_boundary": "Not real-bank validation."
+    },
+    {
+      "id": "multi_customer_product_flow",
+      "status": "covered",
+      "evidence": "RM Portfolio, selected-only Queue, Customer Review, and deterministic representative cohort",
+      "claim_boundary": "Representative comparison is not manual cherry-picking or an operational selection."
+    },
+    {
+      "id": "app_video_presentation",
+      "status": "partial",
+      "evidence": "Product screens and bounded app checks exist",
+      "claim_boundary": "Recording, slide editing, and rehearsal are separate human production work."
+    },
+    {
+      "id": "capacity_boundary",
+      "status": "covered",
+      "evidence": "Caller-supplied draft comparison over saved deterministic rank",
+      "claim_boundary": "1,522 unbounded synthetic selections are not an approved or recommended workload."
+    },
+    {
+      "id": "why_now_and_historical_landmark",
+      "status": "covered",
+      "evidence": "Saved prospective Why-Now evidence is separated from retrospective historical landmark display",
+      "claim_boundary": "Neither field is a customer-specific future event date or probability."
+    },
+    {
+      "id": "banker_workflow_prototype",
+      "status": "covered",
+      "evidence": "Selected/routed decision, idempotent Case, Banker service, audit, and Preview/Null contract tests",
+      "claim_boundary": "No DB, external delivery, automatic financial decision, or production integration."
+    },
+    {
+      "id": "real_data_readiness",
+      "status": "covered",
+      "evidence": "Governance, adapter, and aggregate comparison contracts are source-free and synthetic-fixture tested",
+      "claim_boundary": "Readiness is not admission, approval, or real-data validation."
+    },
+    {
+      "id": "approved_anonymized_data_validation",
+      "status": "open",
+      "evidence": "No approved data run exists",
+      "claim_boundary": "Do not substitute synthetic or public data for approved anonymized-data validation."
+    },
+    {
+      "id": "rm_pilot_readiness",
+      "status": "covered",
+      "evidence": "Protocol and isolated synthetic dry run with checksum, audit, and Preview failure-path evidence",
+      "claim_boundary": "No actual RM participant, productivity, customer outcome, or intervention-effect result."
+    },
+    {
+      "id": "actual_rm_pilot",
+      "status": "open",
+      "evidence": "No approved participant or pilot observation exists",
+      "claim_boundary": "Protocol and synthetic rehearsal do not initiate or complete a pilot."
+    },
+    {
+      "id": "claims_and_public_repository_security",
+      "status": "covered",
+      "evidence": "12-17 source-of-truth sync and static secret/PII/external-delivery review",
+      "claim_boundary": "A static review is not a production security certification."
+    }
+  ],
+  "status_counts": {
+    "covered": 8,
+    "partial": 1,
+    "open": 2
+  }
+}

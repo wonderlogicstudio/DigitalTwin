@@ -20,6 +20,7 @@ from src.formatters import format_krw_compact, format_percent
 from src.i18n import t
 from src.labels import label_metric, label_status
 from src.recommended_followup import build_recommended_follow_up
+from src.triage_explainability import build_triage_ranking_explanation
 from src.triage_selector import SELECTION_REASON_COPY
 from src.triage_universe import TRIAGE_REASON_COPY
 
@@ -40,6 +41,9 @@ _HISTORICAL_OUTCOME_ORDER = ("healthy", "recovered", "stress", "delinquent")
 _SAFE_CUSTOMER_ID_CHARACTERS = frozenset(
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-"
 )
+_PROSPECTIVE_SIGNAL_SOURCE = "prospective_signal"
+_HISTORICAL_LANDMARK_SOURCE = "historical_landmark"
+_POLICY_STATUSES = frozenset({"draft", "demo", "approved"})
 
 
 @dataclass(frozen=True)
@@ -147,6 +151,7 @@ def build_rm_customer_review_view_model(
     as_of_month = _positive_int(record.get("as_of_month")) or _positive_int(record.get("signal_as_of_month"))
     matching_case = _matching_case(record, alert_cases)
     monitored_total = _manifest_monitored_total(selection_manifest)
+    policy_metadata = _policy_display_metadata(selection_manifest)
     return {
         "available": True,
         "customer_id": safe_customer_id,
@@ -155,11 +160,16 @@ def build_rm_customer_review_view_model(
             cohort_record=cohort_record,
             matching_case=matching_case,
             monitored_total=monitored_total,
+            policy_metadata=policy_metadata,
             language=language,
         ),
         "current_signals": _current_signal_model(observation, language=language),
         "chart_trajectory": pd.DataFrame() if observation is None else observation.trajectory.copy(),
-        "prospective_timing": _prospective_timing_model(record, language=language),
+        "prospective_timing": _prospective_timing_model(
+            record,
+            policy_metadata=policy_metadata,
+            language=language,
+        ),
         "twin_evidence": _twin_evidence_model(population_result, record, language=language),
         "historical_landmark": _historical_landmark_model(population_result, language=language),
         "recommended_follow_up": _recommended_follow_up_model(matching_case, language=language),
@@ -170,6 +180,8 @@ def build_rm_customer_review_view_model(
             "selection_as_of_month": as_of_month,
             "signal_run_id": record.get("signal_run_id"),
             "selection_manifest_only": True,
+            "policy_status": policy_metadata["status"],
+            "policy_limitations": policy_metadata["limitations"],
         },
         "scope": {
             "analytics_recomputed": False,
@@ -237,6 +249,7 @@ def _header_model(
     cohort_record: Mapping[str, object] | None,
     matching_case: AlertCase | None,
     monitored_total: int | None,
+    policy_metadata: Mapping[str, object],
     language: str,
 ) -> dict[str, object]:
     selected = bool(record.get("selected_for_review")) and record.get("selection_disposition") == "SELECTED_FOR_REVIEW"
@@ -271,6 +284,14 @@ def _header_model(
         "why_now": _why_now_sentence(why_now_codes, language=language),
         "selection_reason_codes": reason_codes,
         "why_now_reason_codes": why_now_codes,
+        "why_now_evidence": {
+            "source": _PROSPECTIVE_SIGNAL_SOURCE,
+            "reason_codes": why_now_codes,
+            "observation_window": "current_and_prior_only",
+            "policy_status": policy_metadata["status"],
+            "policy_limitations": policy_metadata["limitations"],
+        },
+        "ranking_explanation": build_triage_ranking_explanation(record, language=language),
         "representative_category": None if cohort_record is None else cohort_record.get("category_id"),
     }
 
@@ -279,6 +300,24 @@ def _manifest_monitored_total(manifest: Mapping[str, object] | None) -> int | No
     funnel = manifest.get("funnel") if isinstance(manifest, Mapping) else None
     value = funnel.get("monitored_total") if isinstance(funnel, Mapping) else None
     return _positive_int(value)
+
+
+def _policy_display_metadata(manifest: Mapping[str, object] | None) -> dict[str, object]:
+    """Read persisted demo-policy provenance without evaluating a policy in the UI."""
+
+    policy = manifest.get("selection_policy") if isinstance(manifest, Mapping) else None
+    if not isinstance(policy, Mapping):
+        return {"status": "unavailable", "limitations": ()}
+    status = str(policy.get("status", "unavailable"))
+    if status not in _POLICY_STATUSES:
+        status = "unavailable"
+    limitations_value = policy.get("limitations")
+    limitations = (
+        tuple(item for item in limitations_value if isinstance(item, str) and item.strip())
+        if isinstance(limitations_value, list)
+        else ()
+    )
+    return {"status": status, "limitations": limitations}
 
 
 def _selection_reason_sentence(
@@ -344,9 +383,14 @@ def _signal_item(metric: str, raw_value: object, display_value: str, language: s
     }
 
 
-def _prospective_timing_model(record: Mapping[str, object], *, language: str) -> dict[str, object]:
+def _prospective_timing_model(
+    record: Mapping[str, object],
+    *,
+    policy_metadata: Mapping[str, object],
+    language: str,
+) -> dict[str, object]:
     evidence = record.get("timing_evidence_reference")
-    if not isinstance(evidence, Mapping) or evidence.get("source") != "prospective_signal":
+    if not isinstance(evidence, Mapping) or evidence.get("source") != _PROSPECTIVE_SIGNAL_SOURCE:
         return {"available": False, "message": t("rm.review.timing.unavailable", language)}
     label = str(record.get("eligibility_label", ""))
     return {
@@ -355,7 +399,14 @@ def _prospective_timing_model(record: Mapping[str, object], *, language: str) ->
         "timing_bucket": str(record.get("timing_bucket", "unavailable")),
         "candidate_month": _positive_int(evidence.get("candidate_month")),
         "evaluation_status": str(evidence.get("evaluation_status", "unavailable")),
-        "source": "prospective_signal",
+        "source": _PROSPECTIVE_SIGNAL_SOURCE,
+        "source_metadata": {
+            "observation_window": "current_and_prior_only",
+            "retrospective_backtest_scope": "policy_validation_only",
+            "historical_landmark_used": False,
+        },
+        "policy_status": policy_metadata["status"],
+        "policy_limitations": policy_metadata["limitations"],
         "message": t("rm.review.timing.current", language, label=label),
         "lead_time_message": t("rm.review.timing.not_evaluated", language),
     }
@@ -397,11 +448,18 @@ def _historical_landmark_model(
     language: str,
 ) -> dict[str, object]:
     if not isinstance(population_result, Mapping):
-        return {"status": "unavailable", "message": t("rm.review.landmark.unavailable", language)}
+        return {
+            "status": "unavailable",
+            "source": _HISTORICAL_LANDMARK_SOURCE,
+            "is_live_alert_trigger": False,
+            "message": t("rm.review.landmark.unavailable", language),
+        }
     status = str(population_result.get("breakpoint_status", "not_found"))
     if status == "found":
         return {
             "status": "found",
+            "source": _HISTORICAL_LANDMARK_SOURCE,
+            "is_live_alert_trigger": False,
             "month": _positive_int(population_result.get("breakpoint_month")),
             "factor": label_metric(population_result.get("breakpoint_factor"), language),
             "message": t("rm.review.landmark.found", language),
@@ -413,6 +471,8 @@ def _historical_landmark_model(
         message_key = "rm.review.landmark.not_found"
     return {
         "status": status,
+        "source": _HISTORICAL_LANDMARK_SOURCE,
+        "is_live_alert_trigger": False,
         "month": None,
         "factor": None,
         "message": t(message_key, language),
@@ -427,6 +487,13 @@ def _recommended_follow_up_model(case: AlertCase | None, *, language: str) -> di
             "title": "Recommended Follow-up",
             "message": t("rm.review.follow_up.pending", language),
             "actions": (),
+            "reason_codes": (),
+            "timing_evidence_reference": None,
+            "scope": {
+                "automatic_execution": False,
+                "automatic_financial_decision": False,
+                "action_effectiveness_estimated": False,
+            },
             "whatif_supporting_evidence": {
                 "available": False,
                 "message": t("rm.review.whatif.unavailable", language),
@@ -439,6 +506,13 @@ def _recommended_follow_up_model(case: AlertCase | None, *, language: str) -> di
             "title": "Recommended Follow-up",
             "message": t("rm.review.follow_up.closed", language),
             "actions": (),
+            "reason_codes": (),
+            "timing_evidence_reference": None,
+            "scope": {
+                "automatic_execution": False,
+                "automatic_financial_decision": False,
+                "action_effectiveness_estimated": False,
+            },
             "whatif_supporting_evidence": {
                 "available": False,
                 "message": t("rm.review.whatif.unavailable", language),
@@ -451,6 +525,9 @@ def _recommended_follow_up_model(case: AlertCase | None, *, language: str) -> di
         "title": follow_up.title,
         "urgency": follow_up.urgency,
         "actions": follow_up.recommended_actions,
+        "reason_codes": follow_up.reason_codes,
+        "timing_evidence_reference": follow_up.timing_evidence_reference.to_dict(),
+        "scope": follow_up.to_dict()["scope"],
         "message": t("rm.review.follow_up.available", language),
         "whatif_supporting_evidence": {
             "available": False,

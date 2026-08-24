@@ -1,0 +1,35 @@
+{
+  "claim_boundary": {
+    "customer_financial_outcome_improvement_claimed": false,
+    "raw_feedback_public_export_allowed": false
+  },
+  "data_scope": "synthetic_pseudonymous_cases_only",
+  "execution_boundary": {
+    "actual_customer_data_processed": false,
+    "actual_rm_recruitment_performed": false,
+    "automatic_alert_or_financial_decision_enabled": false,
+    "external_notification_delivery_enabled": false
+  },
+  "governance_boundary": {
+    "automatic_capacity_approval": false,
+    "automatic_policy_approval": false,
+    "human_governance_review_required": true
+  },
+  "limitations": [
+    "This is a synthetic protocol, not evidence of RM productivity or customer outcomes.",
+    "Pilot scope values require human governance approval outside this public repository."
+  ],
+  "protocol_id": "RM_PILOT_PROTOCOL_V1",
+  "protocol_status": "protocol_only_not_initiated",
+  "schema_version": "rm_pilot_protocol.v1",
+  "scope": {
+    "approval_reference": null,
+    "approval_status": "not_requested",
+    "automatically_selected": false,
+    "bank_standard_claimed": false,
+    "duration_period_count": null,
+    "participating_rm_count": null,
+    "review_capacity_per_period": null,
+    "synthetic_cohort_reference": null
+  }
+}

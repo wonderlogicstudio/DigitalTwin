@@ -434,7 +434,7 @@ def test_title_helpers_return_conclusion_style_labels() -> None:
     assert "저축률" in build_savings_rate_title(target)
     assert "DSR" in build_dsr_title(target)
     assert "위험 경로" in build_outcome_title(_outcome_summary())
-    assert "14개월 차부터" in build_breakpoint_title(_breakpoint_result())
+    assert "유사 과거 경로 landmark" in build_breakpoint_title(_breakpoint_result())
     assert "고정지출 -30만원/월" in build_whatif_title(_whatif_results())
 
 

@@ -1,0 +1,36 @@
+{
+  "automatic_approvals": {
+    "capacity": false,
+    "pilot_start": false,
+    "pilot_stop": false,
+    "policy": false
+  },
+  "execution_boundary": {
+    "actual_customer_data": false,
+    "actual_rm_recruitment": false,
+    "external_notification_delivery": false
+  },
+  "required_human_reviews": [
+    "scope_and_capacity",
+    "timing_semantics",
+    "evidence_usability",
+    "privacy_and_security",
+    "workflow_integrity",
+    "post_pilot_policy_and_capacity_decision"
+  ],
+  "schema_version": "rm_pilot_protocol.v1",
+  "scope_parameters": {
+    "duration": "human_approval_required",
+    "participating_rms": "human_approval_required",
+    "review_capacity": "human_approval_required",
+    "synthetic_customer_cohort": "human_approval_required"
+  },
+  "status": "not_ready_for_actual_pilot_execution",
+  "stop_criteria": [
+    "WORKLOAD_OVERLOAD",
+    "TIMING_SEMANTICS_CONFUSING",
+    "HIGH_UNUSABLE_EVIDENCE",
+    "PRIVACY_OR_SECURITY_ISSUE",
+    "WORKFLOW_CORRUPTION"
+  ]
+}

@@ -1,0 +1,179 @@
+{
+  "alert_cycles": {
+    "duplicate_reconciliation_exact": true,
+    "duplicate_signal": {
+      "deferred_or_nonreview": 0,
+      "existing_case_routed": 3,
+      "failed": 0,
+      "new_case": 0,
+      "noop": 0,
+      "selected": 3,
+      "triage_received": 3
+    },
+    "initial": {
+      "deferred_or_nonreview": 2,
+      "existing_case_routed": 0,
+      "failed": 0,
+      "new_case": 3,
+      "noop": 0,
+      "selected": 3,
+      "triage_received": 5
+    },
+    "initial_reconciliation_exact": true,
+    "snooze_active": {
+      "deferred_or_nonreview": 0,
+      "existing_case_routed": 1,
+      "failed": 0,
+      "new_case": 0,
+      "noop": 1,
+      "selected": 1,
+      "triage_received": 1
+    },
+    "snooze_reconciliation_exact": true
+  },
+  "capacity_comparison": {
+    "automatically_approved": false,
+    "deferred_count": 1519,
+    "deferred_prefix_digest": "8176cad4447c1082025dcab576a573f0522a0e3c1bf9db903e0d5e6c70688aa0",
+    "eligible_count": 1522,
+    "scenario": {
+      "approval_evidence_reference": null,
+      "is_unbounded_reference": false,
+      "max_reviews_per_cycle": 3,
+      "scenario_id": "synthetic_pilot_capacity_3",
+      "scope": "comparison_only",
+      "status": "draft"
+    },
+    "selected_count": 3,
+    "selected_prefix_digest": "0cb8b2d406d89bba3f042033ea142f81b8f54a61f24f2d9889c37d1112b1cdc0",
+    "selection_method": "saved_rank_prefix_cutoff_only",
+    "workflow_rehearsal_selected_sample_count": 3
+  },
+  "failure_scenarios": {
+    "duplicate_signal": {
+      "new_case_count": 0,
+      "status": "no_duplicate_case"
+    },
+    "insufficient_evidence": {
+      "case_created": false,
+      "status": "recorded_as_synthetic_measurement_only"
+    },
+    "no_action_required": {
+      "new_case_count": 0,
+      "status": "nonreview_decision_skipped_no_new_case"
+    },
+    "no_historical_landmark": {
+      "historical_landmark_used_as_trigger": false,
+      "status": "handled_without_live_trigger"
+    },
+    "preview_unavailable": {
+      "error_type": "RuntimeError",
+      "status": "handled_without_case_or_audit_mutation"
+    },
+    "snoozed_case": {
+      "new_case_count": 0,
+      "status": "active_snooze_noop"
+    }
+  },
+  "input_artifacts": {
+    "canonical_source_artifacts_unchanged": true,
+    "checksums_after": {
+      "representative_cohort_sha256": "374e6f0896f3f060ef6592a535851c5d03169fb2485d5eacf59b274f2d60532d",
+      "selection_manifest_sha256": "6489707f12f9fc2cfe9e7e5e8fde8d5b8bbca11813c5fa4d43e6f06f39f3c5bf"
+    },
+    "checksums_before": {
+      "representative_cohort_sha256": "374e6f0896f3f060ef6592a535851c5d03169fb2485d5eacf59b274f2d60532d",
+      "selection_manifest_sha256": "6489707f12f9fc2cfe9e7e5e8fde8d5b8bbca11813c5fa4d43e6f06f39f3c5bf"
+    },
+    "representative_cohort_path": "artifacts\\triage\\seed42_crossfit_5fold_asof12_unbounded\\rm_representative_cohort.json",
+    "selection_manifest_path": "artifacts\\triage\\seed42_crossfit_5fold_asof12_unbounded\\rm_selection_manifest.json"
+  },
+  "limitations": [
+    "This is a deterministic synthetic rehearsal, not an RM productivity or customer-outcome result.",
+    "The capacity value is caller supplied for comparison only and is not an approved workload."
+  ],
+  "measurements": {
+    "alerts_reviewed_per_period": 2.0,
+    "customer_financial_outcome_improvement_proven": false,
+    "declared_review_period_count": 1,
+    "follow_up_status_counts": {
+      "COMPLETED": 1,
+      "CREATED": 0,
+      "NOT_APPLICABLE": 1,
+      "NOT_CREATED": 1
+    },
+    "insufficient_evidence_count": 1,
+    "insufficient_evidence_frequency": 0.3333,
+    "limitations": [
+      "Process measurements are human-review evidence only.",
+      "No customer financial outcome or intervention effect is measured here."
+    ],
+    "measurement_count": 3,
+    "rating_summary": {
+      "evidence_usefulness": {
+        "mean": 3.5,
+        "observed_count": 2
+      },
+      "perceived_timeliness": {
+        "mean": 3.5,
+        "observed_count": 2
+      },
+      "review_actionability": {
+        "mean": 3.5,
+        "observed_count": 2
+      }
+    },
+    "recommendation_decision_counts": {
+      "ACCEPTED": 1,
+      "MODIFIED": 1,
+      "NOT_APPLICABLE": 1,
+      "REJECTED": 0
+    },
+    "review_completed_count": 2,
+    "review_completion_seconds_median": 270.0,
+    "review_outcome_counts": {
+      "DEFERRED": 0,
+      "MONITOR": 1,
+      "NO_ACTION": 1,
+      "REVIEWED": 1
+    },
+    "schema_version": "rm_pilot_measurement.v1"
+  },
+  "notification_preview": {
+    "external_delivery_attempted": false,
+    "network_called": false,
+    "sent": false,
+    "status": "PREVIEW"
+  },
+  "occurred_at": "2026-08-24T09:00:00+00:00",
+  "representative_cohort": {
+    "manual_cherry_picking": false,
+    "record_count": 4,
+    "selected_count": 3,
+    "unavailable_count": 1,
+    "used_for_operational_selection": false
+  },
+  "reset_performed": false,
+  "run_id": "seed42_capacity_3",
+  "run_mode": "synthetic_operational_rehearsal_only",
+  "safety": {
+    "actual_customer_data": false,
+    "actual_rm_participants": false,
+    "automatic_capacity_approval": false,
+    "automatic_policy_approval": false,
+    "canonical_analytics_mutated": false,
+    "customer_financial_outcome_improvement_claimed": false,
+    "external_notification_delivery": false
+  },
+  "schema_version": "synthetic_rm_pilot_dry_run.v1",
+  "workflow": {
+    "append_only_audit_event_count": 10,
+    "closed_case_count": 1,
+    "in_review_case_count": 1,
+    "productivity_or_sla_claimed": false,
+    "snoozed_case_count": 1,
+    "synthetic_actor_reference": "rm-synthetic-01",
+    "synthetic_case_count": 3,
+    "time_instrumentation_seconds": 600
+  }
+}

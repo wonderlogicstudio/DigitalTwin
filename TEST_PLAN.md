@@ -235,6 +235,30 @@ Focused test modules include `test_population_*.py`,
 `test_demo_policy.py`, `test_triage_*.py`, `test_alert_*.py`,
 `test_banker_*.py`, `test_notifications.py`, and `test_rm_*.py`.
 
+## Post-P0 feedback-readiness regression extensions
+
+The suite additionally verifies that:
+
+- capacity comparison reads the persisted rank only, is deterministic and
+  monotonic, and cannot automatically approve a workload;
+- customer-facing `Why Now` remains prospective and separate from a historical
+  landmark, without prediction-probability or future-date wording;
+- selected-only workflow, banker action, append-only audit, and offline
+  Preview/Null remain idempotent and do not depend on external delivery;
+- governance, validation-adapter, and synthetic-vs-real metric contracts admit
+  only injected synthetic fixtures in tests and keep actual-data status
+  unvalidated;
+- synthetic pilot protocol and dry run preserve canonical checksums, isolate
+  output, record no actual RM/customer evidence, and retain capacity/policy
+  approval as human decisions; and
+- source-of-truth docs retain synthetic-only, no-secret, no-network, no-DB,
+  no-automatic-financial-decision claims.
+
+Relevant modules include `test_capacity_scenarios.py`,
+`test_real_data_governance.py`, `test_validation_dataset_harness.py`,
+`test_validation_metrics_report.py`, `test_rm_pilot_protocol.py`,
+`test_synthetic_rm_pilot_dry_run.py`, and `test_documentation_sync.py`.
+
 ## 13. 완료 기준
 
 ```bash

@@ -1,0 +1,47 @@
+{
+  "alerts_reviewed_per_period": 2.0,
+  "customer_financial_outcome_improvement_proven": false,
+  "declared_review_period_count": 1,
+  "follow_up_status_counts": {
+    "COMPLETED": 1,
+    "CREATED": 0,
+    "NOT_APPLICABLE": 1,
+    "NOT_CREATED": 1
+  },
+  "insufficient_evidence_count": 1,
+  "insufficient_evidence_frequency": 0.3333,
+  "limitations": [
+    "Process measurements are human-review evidence only.",
+    "No customer financial outcome or intervention effect is measured here."
+  ],
+  "measurement_count": 3,
+  "rating_summary": {
+    "evidence_usefulness": {
+      "mean": 3.5,
+      "observed_count": 2
+    },
+    "perceived_timeliness": {
+      "mean": 3.5,
+      "observed_count": 2
+    },
+    "review_actionability": {
+      "mean": 3.5,
+      "observed_count": 2
+    }
+  },
+  "recommendation_decision_counts": {
+    "ACCEPTED": 1,
+    "MODIFIED": 1,
+    "NOT_APPLICABLE": 1,
+    "REJECTED": 0
+  },
+  "review_completed_count": 2,
+  "review_completion_seconds_median": 270.0,
+  "review_outcome_counts": {
+    "DEFERRED": 0,
+    "MONITOR": 1,
+    "NO_ACTION": 1,
+    "REVIEWED": 1
+  },
+  "schema_version": "rm_pilot_measurement.v1"
+}

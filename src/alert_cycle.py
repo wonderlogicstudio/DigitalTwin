@@ -26,11 +26,13 @@ from src.alert_repository import AlertCaseRepository
 ALERT_CYCLE_SCHEMA_VERSION = "alert_cycle.v1"
 TRIAGE_DECISION_SCHEMA_VERSION = "triage_decision.v1"
 ALERT_CYCLE_MODES = ("dry_run", "commit")
+ALERT_CREATION_POLICY_STATUSES = ("draft", "demo", "approved")
 QUEUE_STATUSES = ("SELECTED_FOR_REVIEW", "DEFERRED_CAPACITY", "NOT_QUEUE_ELIGIBLE")
 ROUTING_ACTIONS = ("ROUTE_EXISTING_CASE", "CREATE_NEW_CASE", "NO_ROUTING")
 OPERATIONAL_LABELS = ("Priority Review", "Review")
 
 AlertCycleMode = Literal["dry_run", "commit"]
+AlertCreationPolicyStatus = Literal["draft", "demo", "approved"]
 QueueStatus = Literal["SELECTED_FOR_REVIEW", "DEFERRED_CAPACITY", "NOT_QUEUE_ELIGIBLE"]
 RoutingAction = Literal["ROUTE_EXISTING_CASE", "CREATE_NEW_CASE", "NO_ROUTING"]
 
@@ -165,11 +167,20 @@ class TriageDecision:
 
 @dataclass(frozen=True)
 class AlertCreationPolicy:
-    """Versioned operational timing for the case creation boundary."""
+    """Versioned demo due-window contract for the in-app RM work queue.
+
+    ``due_in_hours`` is a caller-configured demonstration parameter.  It is
+    never an automatically approved bank SLA and does not represent an
+    external-message delivery promise.
+    """
 
     policy_id: str
     version: str
     due_in_hours: int = 24
+    status: AlertCreationPolicyStatus = "draft"
+    rationale: str = "Caller-supplied in-app review due window; not a bank SLA."
+    limitations: tuple[str, ...] = ("No external delivery or bank-SLA approval is implied.",)
+    approval_evidence: str | None = None
     schema_version: str = ALERT_CYCLE_SCHEMA_VERSION
 
     def __post_init__(self) -> None:
@@ -178,6 +189,14 @@ class AlertCreationPolicy:
             raise ValueError("due_in_hours must be an integer")
         if self.due_in_hours < 0:
             raise ValueError("due_in_hours must be non-negative")
+        if self.status not in ALERT_CREATION_POLICY_STATUSES:
+            raise ValueError(f"status must be one of {ALERT_CREATION_POLICY_STATUSES}")
+        if not str(self.rationale).strip():
+            raise ValueError("rationale must be non-empty")
+        if not self.limitations or any(not str(item).strip() for item in self.limitations):
+            raise ValueError("limitations must contain at least one non-empty statement")
+        if self.status == "approved" and not str(self.approval_evidence or "").strip():
+            raise ValueError("approved AlertCreationPolicy requires approval_evidence")
         if self.schema_version != ALERT_CYCLE_SCHEMA_VERSION:
             raise ValueError(f"schema_version must be {ALERT_CYCLE_SCHEMA_VERSION}")
 
@@ -187,6 +206,11 @@ class AlertCreationPolicy:
             "policy_id": self.policy_id,
             "version": self.version,
             "due_in_hours": self.due_in_hours,
+            "status": self.status,
+            "rationale": self.rationale,
+            "limitations": list(self.limitations),
+            "approval_evidence": self.approval_evidence,
+            "delivery_definition": "in_app_rm_work_queue_case",
         }
 
 
@@ -197,6 +221,15 @@ def default_alert_creation_policy() -> AlertCreationPolicy:
         policy_id="alert_case_creation_demo",
         version="0.1.0",
         due_in_hours=24,
+        status="demo",
+        rationale=(
+            "Use a fixed 24-hour demo review window after a selected triage decision "
+            "creates or routes an in-app RM case."
+        ),
+        limitations=(
+            "The 24-hour value is a demo parameter, not an approved bank SLA or workload standard.",
+            "An in-app RM work-queue case is not evidence of successful external message delivery.",
+        ),
     )
 
 

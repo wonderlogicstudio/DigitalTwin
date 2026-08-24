@@ -41,6 +41,27 @@ The 5,000-customer outputs and all policy/RM workflow evidence are synthetic
 demo artifacts. They are not real-bank accuracy, efficacy, performance, or
 automated-financial-decision evidence.
 
+## Post-P0 feedback-readiness status
+
+The prototype now supports the evaluator-requested product path — **5,000
+synthetic customers → transparent triage → capacity comparison → selected
+Case → RM action → audit → offline preview** — without changing the original
+analytics contract. This is code and synthetic-fixture evidence, not a bank
+deployment or a completed RM pilot.
+
+| Topic | Current status | Boundary |
+| --- | --- | --- |
+| Full-population evidence | Implemented: 5,000/5,000 synthetic ID reconciliation | Not real-bank validation |
+| RM queue and capacity | Implemented: deterministic rank and human-entered draft comparison | 1,522 unbounded records are not an approved workload |
+| Banker workflow | Implemented prototype: Case, RM actions, audit, Preview/Null | No DB, external delivery, or automatic financial decision |
+| Data-validation readiness | Prepared: governance, adapter, and aggregate-metric contracts | **No approved real/anonymized data has been admitted or validated** |
+| RM pilot readiness | Prepared: protocol and synthetic dry run | **No actual RM pilot, productivity, or customer-outcome result** |
+| Presentation recording | Product screens are available | Video/slide production is a separate human task |
+
+See [the feedback-security sync report](reports/post_p0/12-17_feedback_security_sync.md)
+for evidence references and remaining open items. Any actual-data work may
+occur only in an approved secure environment outside this public repository.
+
 To regenerate the checked-in demo selection artifact without changing the
 canonical seed-42 analytics inputs, run:
 
@@ -90,6 +111,24 @@ Data Generator
   -> Demo Cache / Backup
   -> Streamlit UI
 ```
+
+### P0 및 Post-P0 업무 흐름
+
+```text
+Canonical synthetic analytics (unchanged)
+  -> Population / validation-only reports
+  -> as-of signal + reference-only matching + evaluator separation
+  -> demo policy eligibility
+  -> transparent triage and caller-supplied capacity comparison
+  -> selected/routed Case only
+  -> Banker action service + append-only audit
+  -> Preview/Null notification (not sent)
+  -> separate RM Workspace
+```
+
+`historical landmark`는 유사 과거 집단의 retrospective evidence이고,
+`Why Now`는 현재/과거 관측 신호에 따른 prospective operational evidence입니다.
+둘은 같은 의미나 live trigger가 아닙니다.
 
 주요 기술:
 
@@ -399,6 +438,17 @@ python scripts/check_demo_readiness.py
 - 모바일 UI 최적화는 MVP 범위 밖입니다.
 - 대응 시나리오는 현금흐름 계산이며 위험 비율을 변경하지 않습니다.
 - 사전 계산 fallback은 메인 데모 고객 중심으로 고정됩니다.
+- `1,522`는 unbounded synthetic-demo selection 결과이며 실제 RM 업무량,
+  권장 threshold, 승인된 정책이 아닙니다. RM이 입력한 capacity comparison은
+  draft 비교일 뿐 시스템이 capacity를 승인하지 않습니다.
+- 실제 또는 익명화 고객 데이터는 이 public repository에 존재하지 않으며,
+  승인된 secure environment와 data owner/security/privacy approval 전에는
+  수집·복사·처리·저장하지 않습니다.
+- 실데이터 adapter, synthetic-vs-real metric contract, RM pilot protocol 및
+  synthetic dry run은 readiness 산출물입니다. 실제 validation, RM 수용성,
+  생산성, 고객 결과 또는 개입 효과를 입증하지 않습니다.
+- 외부 이메일·SMS·Teams·Slack·webhook 발송은 구현하지 않았습니다. Notification
+  Preview/Null은 sent가 아니며 network를 호출하지 않습니다.
 
 ## 18. 장애 대응
 
@@ -450,7 +500,7 @@ A. 됩니다. 템플릿 설명과 사전 계산 fallback으로 동작합니다.
 
 ## 20. 향후 확장
 
-- 실제 금융 데이터 스키마와의 안전한 매핑
+- 승인된 secure environment에서만 수행하는 실제 금융 데이터 스키마의 안전한 매핑과 독립 outcome 검증
 - Explainable matching report
 - 상담 이력 관리
 - 사용자별 민감도 조정
@@ -458,6 +508,10 @@ A. 됩니다. 템플릿 설명과 사전 계산 fallback으로 동작합니다.
 - LLM 기반 설명 품질 개선
 - 배포 환경용 인증/권한/감사 로그
 - 데이터베이스 및 캐시 계층 도입
+
+위 항목은 구현 또는 승인 완료 상태가 아닙니다. 특히 실제 데이터, DB,
+외부 notification provider, 자동 금융결정은 별도 governance/architecture
+결정 없이는 시작하지 않습니다.
 
 ## 21. 디자인 및 에셋
 
@@ -527,6 +581,12 @@ streamlit run app.py
 ```powershell
 python scripts\start_streamlit.py --port 8501 --timeout 60
 ```
+
+RM 업무 흐름을 시연할 때는 Presentation 탭을 늘리지 않고 별도 `RM Workspace`
+모드에서 Portfolio → Review Queue → Customer Review → Activity/Audit 순서를
+사용합니다. Portfolio의 5,000명 funnel은 저장된 selection manifest를 표시하며,
+Queue에는 selected/routed records만 표시합니다. 화면 녹화·슬라이드 제작은 이
+repository의 구현 검증과 별도입니다.
 
 ## 24. 언어 선택
 

@@ -1,0 +1,52 @@
+{
+  "boundaries": {
+    "actual_data_connector_present": false,
+    "canonical_p0_settings_mutated": false,
+    "evaluator_fields_open_only_after_scoring": true,
+    "public_repository_data_storage_allowed": false,
+    "scoring_receives_evaluator_fields": false
+  },
+  "contract_id": "<approved_validation_contract_id>",
+  "evaluator_field_mapping_template": {
+    "evaluation_event": "<approved_source_column_or_unavailable>",
+    "evaluation_outcome": "<approved_source_column_or_unavailable>"
+  },
+  "evaluator_optional_fields": [
+    "evaluation_outcome",
+    "evaluation_event"
+  ],
+  "fixture_only": true,
+  "p0_comparison_window": {
+    "first_month": 1,
+    "future_start_month": 13,
+    "last_month": 36,
+    "observation_end_month": 12
+  },
+  "schema_version": "validation_dataset_contract.v1",
+  "scope": "synthetic_fixture_harness_only",
+  "scoring_required_fields": [
+    "customer_id",
+    "month",
+    "income",
+    "total_expense",
+    "savings_amount",
+    "savings_rate",
+    "fixed_expense_ratio",
+    "dsr",
+    "cash_balance",
+    "monthly_status"
+  ],
+  "source_field_mapping_template": {
+    "cash_balance": "<approved_source_column>",
+    "customer_id": "<approved_source_column>",
+    "dsr": "<approved_source_column>",
+    "fixed_expense_ratio": "<approved_source_column>",
+    "income": "<approved_source_column>",
+    "month": "<approved_source_column>",
+    "monthly_status": "<approved_source_column>",
+    "savings_amount": "<approved_source_column>",
+    "savings_rate": "<approved_source_column>",
+    "total_expense": "<approved_source_column>"
+  },
+  "source_specific_mapping_required": true
+}

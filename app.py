@@ -27,6 +27,10 @@ from src.demo_cache import (  # noqa: E402
     missing_demo_cache_files,
 )
 from src.assets import load_hero_svg, load_logo_svg  # noqa: E402
+from src.capacity_scenarios import (  # noqa: E402
+    CapacityScenario,
+    build_capacity_comparison_report,
+)
 from src.i18n import DEFAULT_LANGUAGE, get_supported_languages, t  # noqa: E402
 from src.ui_components import (  # noqa: E402
     ANALYSIS_METRICS,
@@ -82,6 +86,8 @@ from src.rm_customer_review import (  # noqa: E402
     load_customer_observation,
     load_population_result_index,
 )
+from src.recommended_followup import RM_ACTIONS  # noqa: E402
+from src.triage_explainability import humanize_reason_codes  # noqa: E402
 from src.rm_workflow_ui import (  # noqa: E402
     RMWorkflowUIService,
     build_offline_notification_preview,
@@ -662,17 +668,45 @@ def render_rm_workspace_mode(*, selection: SidebarSelection, language: str = "ko
                     t(label_key, language),
                     t("rm.value.unavailable", language) if count is None else f"{count:,}",
                 )
+        delivery_columns = st.columns(2)
+        for column, key, label_key in zip(
+            delivery_columns,
+            ("case_in_rm_queue_count", "selected_case_pending_count"),
+            ("rm.alert.in_rm_queue", "rm.alert.selected_pending"),
+        ):
+            count = alert_summary[key]
+            with column:
+                st.metric(
+                    t(label_key, language),
+                    t("rm.value.unavailable", language) if count is None else f"{count:,}",
+                )
+        st.caption(t("rm.portfolio.delivery_definition", language))
         reconciliation = alert_summary["reconciliation"]
         if reconciliation["is_exact"]:
             st.success(t("rm.portfolio.reconciliation_exact", language))
         else:
             st.warning(t("rm.portfolio.reconciliation_failed", language))
+        provenance = alert_summary["provenance"]
+        if provenance["policy_id"] and provenance["policy_version"] and provenance["signal_run_id"]:
+            st.caption(
+                t(
+                    "rm.portfolio.provenance",
+                    language,
+                    policy=f"{provenance['policy_id']} v{provenance['policy_version']}",
+                    as_of=provenance["selection_as_of_month"],
+                    signal_run=provenance["signal_run_id"],
+                )
+            )
         if alert_snapshot.load_error:
             st.warning(t("rm.repository.unavailable", language))
 
-        quick_selects = portfolio_model["representative_comparisons"] or view_model[
-            "representative_quick_selects"
-        ]
+        _render_rm_capacity_comparison(
+            getattr(artifacts, "selection_manifest", None),
+            available=bool(portfolio_model["available"]),
+            language=language,
+        )
+
+        quick_selects = portfolio_model["representative_comparisons"]
         st.caption(t("rm.representative.comparison", language))
         option_ids = [str(item["category_id"]) for item in quick_selects]
         labels_by_id = {
@@ -693,10 +727,17 @@ def render_rm_workspace_mode(*, selection: SidebarSelection, language: str = "ko
             item for item in quick_selects if item["category_id"] == selected_category
         )
         last_representative_category = st.session_state.get("rm_representative_context_category")
-        if selected_quick_select["available"] and last_representative_category != selected_category:
-            st.session_state["rm_customer_context"] = str(selected_quick_select["customer_id"])
+        selected_representative_customer = str(selected_quick_select["customer_id"] or "")
+        if selected_quick_select["selection_explanation"]:
+            st.caption(str(selected_quick_select["selection_explanation"]))
+        if selected_quick_select["available"] and (
+            last_representative_category != selected_category
+            or st.session_state.get("rm_customer_context") != selected_representative_customer
+        ):
+            st.session_state["rm_customer_context"] = selected_representative_customer
             st.session_state["rm_workspace_requested_tab"] = "customer_review"
             st.session_state["rm_representative_context_category"] = selected_category
+            st.rerun()
     with tabs[1]:
         if not portfolio_model["available"]:
             st.info(t("rm.artifact.unavailable", language))
@@ -741,9 +782,10 @@ def render_rm_workspace_mode(*, selection: SidebarSelection, language: str = "ko
                             portfolio_model,
                             str(queue_rows[selected_index]["customer_id"]),
                         )
-                        if target:
+                        if target and st.session_state.get("rm_customer_context") != target:
                             st.session_state["rm_customer_context"] = target
                             st.session_state["rm_workspace_requested_tab"] = "customer_review"
+                            st.rerun()
     with tabs[2]:
         if customer_review_model is None:
             st.info(t("rm.placeholder.customer_review", language))
@@ -763,6 +805,82 @@ def render_rm_workspace_mode(*, selection: SidebarSelection, language: str = "ko
         )
 
 
+def _render_rm_capacity_comparison(
+    selection_manifest: Mapping[str, object] | None,
+    *,
+    available: bool,
+    language: str,
+) -> None:
+    """Render an opt-in draft cutoff comparison over saved triage ranks only."""
+
+    st.markdown(f"#### {t('rm.capacity.title', language)}")
+    st.caption(t("rm.capacity.unbounded_notice", language))
+    enabled = st.checkbox(
+        t("rm.capacity.enable", language),
+        value=False,
+        key="rm_capacity_comparison_enabled",
+    )
+    if not enabled:
+        return
+    if not available or not isinstance(selection_manifest, Mapping):
+        st.info(t("rm.artifact.unavailable", language))
+        return
+    capacity = st.number_input(
+        t("rm.capacity.input", language),
+        min_value=0,
+        value=0,
+        step=1,
+        key="rm_capacity_comparison_value",
+    )
+    scenario = CapacityScenario(
+        "session_human_entered_capacity",
+        int(capacity),
+        status="draft",
+    )
+    report = build_capacity_comparison_report(
+        selection_manifest,
+        (
+            CapacityScenario("source_unbounded_reference", None, status="demo"),
+            scenario,
+        ),
+    )
+    rows = []
+    for result in report.scenarios:
+        scenario_data = result.scenario
+        rows.append(
+            {
+                t("rm.capacity.column.scenario", language): t(
+                    "rm.capacity.value.unbounded", language
+                )
+                if scenario_data.max_reviews_per_cycle is None
+                else t(
+                    "rm.capacity.value.entered",
+                    language,
+                    capacity=scenario_data.max_reviews_per_cycle,
+                ),
+                t("rm.capacity.column.status", language): scenario_data.status,
+                t("rm.capacity.column.selected", language): result.selected_count,
+                t("rm.capacity.column.deferred", language): result.deferred_count,
+                t("rm.capacity.column.coverage", language): (
+                    t("rm.value.unavailable", language)
+                    if result.coverage_percent is None
+                    else f"{result.coverage_percent:.2f}%"
+                ),
+                t("rm.capacity.column.carry_over", language): result.estimated_carry_over_count,
+                t("rm.capacity.column.priority", language): result.selected_priority_count,
+                t("rm.capacity.column.review", language): result.selected_review_count,
+            }
+        )
+    st.dataframe(
+        pd.DataFrame(rows),
+        hide_index=True,
+        width="stretch",
+        key="rm_capacity_comparison_table",
+    )
+    st.caption(t("rm.capacity.comparison_only", language))
+    st.caption(t("rm.capacity.rank_invariant", language))
+
+
 def _rm_queue_table_rows(queue_rows: Any, *, language: str = "ko") -> pd.DataFrame:
     """Prepare readable display fields without changing triage or case state."""
 
@@ -777,16 +895,22 @@ def _rm_queue_table_rows(queue_rows: Any, *, language: str = "ko") -> pd.DataFra
                 t("rm.queue.column.case_state", language): _rm_queue_case_state_label(
                     row["case_state"], language
                 ),
+                t("rm.queue.column.delivery", language): _rm_queue_delivery_label(
+                    row.get("work_queue_delivery_status"), language
+                ),
                 t("rm.queue.column.selection_reason", language): _rm_queue_reason_label(
-                    row["selection_reason_codes"], language
+                    _rm_queue_reason_details(row, "selection_reason", language),
+                    language,
                 ),
                 t("rm.queue.column.why_now", language): _rm_queue_reason_label(
-                    row["why_now_reason_codes"], language
+                    _rm_queue_reason_details(row, "why_now_reason", language),
+                    language,
                 ),
                 t("rm.queue.column.timing", language): _rm_queue_timing_label(
                     row["timing_evidence_reference"], language
                 ),
-                t("rm.queue.column.due", language): row["due_at"]
+                t("rm.queue.column.due", language): _rm_queue_due_label(row, language),
+                t("rm.queue.column.created", language): row.get("created_at")
                 or t("rm.queue.value.not_scheduled", language),
                 t("rm.queue.column.owner", language): row["owner_reference"]
                 or t("rm.queue.value.unassigned", language),
@@ -798,18 +922,41 @@ def _rm_queue_table_rows(queue_rows: Any, *, language: str = "ko") -> pd.DataFra
     )
 
 
-def _rm_queue_reason_label(reason_codes: Any, language: str) -> str:
-    """Show a compact localized reason, while raw codes stay in the manifest."""
+def _rm_queue_reason_label(reason_details: Any, language: str) -> str:
+    """Show declared human-readable reasons, never raw reason codes."""
 
-    if isinstance(reason_codes, (tuple, list)):
-        for code in reason_codes:
-            if not isinstance(code, str) or not code:
-                continue
-            translation_key = f"rm.queue.reason.{code}"
-            translated = t(translation_key, language)
-            if translated != translation_key:
-                return translated
+    if isinstance(reason_details, (tuple, list)):
+        details = [detail for detail in reason_details if isinstance(detail, str) and detail.strip()]
+        if details:
+            return "; ".join(details)
     return t("rm.queue.reason.declared", language)
+
+
+def _rm_queue_reason_details(
+    row: Mapping[str, Any],
+    reason_key: str,
+    language: str,
+) -> tuple[str, ...]:
+    """Read saved display details, with a safe legacy-row compatibility fallback."""
+
+    declared_details = row.get(f"{reason_key}_details")
+    if isinstance(declared_details, (tuple, list)):
+        return tuple(
+            detail
+            for detail in declared_details
+            if isinstance(detail, str) and detail.strip()
+        )
+    reason_codes = row.get(f"{reason_key}_codes")
+    if not isinstance(reason_codes, (tuple, list)):
+        return ()
+    queue_copy = tuple(
+        translated
+        for code in reason_codes
+        if isinstance(code, str)
+        and (translated := t(f"rm.queue.reason.{code}", language))
+        != f"rm.queue.reason.{code}"
+    )
+    return queue_copy or humanize_reason_codes(reason_codes, language=language)
 
 
 def _rm_queue_priority_label(priority: Any, language: str) -> str:
@@ -832,6 +979,23 @@ def _rm_queue_case_state_label(case_state: Any, language: str) -> str:
         "CLOSED": "closed",
     }.get(str(case_state), "unavailable")
     return t(f"rm.queue.case_state.{state_key}", language)
+
+
+def _rm_queue_delivery_label(delivery_status: Any, language: str) -> str:
+    key = {
+        "CASE_IN_RM_QUEUE": "case_in_rm_queue",
+        "SELECTED_CASE_PENDING": "selected_case_pending",
+    }.get(str(delivery_status), "selected_case_pending")
+    return t(f"rm.queue.delivery.{key}", language)
+
+
+def _rm_queue_due_label(row: Mapping[str, Any], language: str) -> str:
+    due_at = row.get("due_at")
+    if not due_at:
+        return t("rm.queue.due.not_scheduled", language)
+    due_status = str(row.get("due_status", "not_scheduled"))
+    status_key = due_status if due_status in {"upcoming", "due", "overdue"} else "not_scheduled"
+    return f"{due_at} · {t(f'rm.queue.due.{status_key}', language)}"
 
 
 def _rm_queue_timing_label(reference: Any, language: str) -> str:
@@ -859,6 +1023,33 @@ def _render_rm_customer_review(
     )
     st.markdown(f"**{t('rm.review.header.selection_reason', language)}**  {header['selection_reason']}")
     st.markdown(f"**{t('rm.review.header.why_now', language)}**  {header['why_now']}")
+    why_now_evidence = header.get("why_now_evidence")
+    if isinstance(why_now_evidence, Mapping):
+        st.caption(t("rm.review.why_now.scope", language))
+        policy_status = str(why_now_evidence.get("policy_status", "unavailable"))
+        st.caption(t("rm.review.timing.policy_status", language, status=policy_status))
+        limitations = why_now_evidence.get("policy_limitations")
+        if isinstance(limitations, (tuple, list)) and limitations:
+            st.caption(
+                t(
+                    "rm.review.timing.policy_limitations",
+                    language,
+                    limitations="; ".join(str(item) for item in limitations),
+                )
+            )
+    ranking_explanation = header.get("ranking_explanation")
+    if isinstance(ranking_explanation, Mapping):
+        selection_order = ranking_explanation.get("selection_order")
+        if isinstance(selection_order, (tuple, list)):
+            with st.expander(t("rm.review.ranking.details", language), expanded=False):
+                st.caption(str(ranking_explanation.get("rank_semantics", "")))
+                for section in selection_order:
+                    if not isinstance(section, Mapping):
+                        continue
+                    reasons = "; ".join(
+                        str(reason) for reason in section.get("reasons", ())
+                    )
+                    st.markdown(f"**{section.get('label', '')}**  {reasons}")
     provenance = review["provenance"]
     st.caption(
         t(
@@ -891,6 +1082,7 @@ def _render_rm_customer_review(
     if timing["available"]:
         st.info(str(timing["message"]))
         st.caption(str(timing["lead_time_message"]))
+        st.caption(t("rm.review.timing.scope", language))
     else:
         st.info(str(timing["message"]))
 
@@ -934,13 +1126,17 @@ def _render_rm_customer_review(
     follow_up = review["recommended_follow_up"]
     st.info(str(follow_up["message"]))
     if follow_up["available"]:
+        suggested_actions = _rm_recommended_action_codes(follow_up)
         st.caption(
             t(
                 "rm.review.follow_up.actions",
                 language,
-                actions=", ".join(str(action) for action in follow_up["actions"]),
+                actions=", ".join(
+                    _rm_action_code_label(action, language) for action in suggested_actions
+                ),
             )
         )
+        st.caption(t("rm.review.follow_up.basis", language))
     whatif = follow_up.get("whatif_supporting_evidence", {})
     if isinstance(whatif, Mapping):
         st.caption(str(whatif.get("message", t("rm.review.whatif.unavailable", language))))
@@ -989,6 +1185,17 @@ def _render_rm_action_controls(
     feedback = st.session_state.get("rm_workflow_feedback")
     if isinstance(feedback, Mapping) and feedback.get("alert_id") == alert_id:
         st.success(str(feedback.get("message", t("rm.action.completed", language))))
+        operation = str(feedback.get("operation", ""))
+        current_state = str(feedback.get("current_state", case_state))
+        if operation:
+            st.caption(
+                t(
+                    "rm.action.feedback_detail",
+                    language,
+                    operation=_rm_operation_label(operation, language),
+                    state=_rm_queue_case_state_label(current_state, language),
+                )
+            )
     st.caption(t("rm.action.service_boundary", language))
 
     state_buttons: dict[str, tuple[str, str]] = {
@@ -1013,19 +1220,21 @@ def _render_rm_action_controls(
                 language=language,
             )
 
-    if case_state != "CLOSED":
+    recordable_actions = _rm_recordable_action_codes(
+        review.get("recommended_follow_up"),
+        case_state=case_state,
+    )
+    if recordable_actions:
+        recommended_actions = _rm_recommended_action_codes(review.get("recommended_follow_up"))
+        st.caption(t("rm.action.record_scope", language))
         action = st.selectbox(
             t("rm.action.record_label", language),
-            (
-                "REVIEW_COMPLETED",
-                "CONTACT_PLANNED",
-                "CONTACT_COMPLETED",
-                "MONITOR_ONLY",
-                "NO_ACTION_REQUIRED",
-                "REFERRED",
-                "FOLLOW_UP_CREATED",
+            recordable_actions,
+            format_func=lambda code: _rm_action_option_label(
+                code,
+                recommended_actions=recommended_actions,
+                language=language,
             ),
-            format_func=lambda code: t(f"rm.action.code.{code}", language),
             key=f"rm_action_record_choice_{alert_id}_{case_state}",
         )
         if st.button(
@@ -1040,6 +1249,7 @@ def _render_rm_action_controls(
                 action=str(action),
                 language=language,
             )
+    if case_state != "CLOSED":
         close_options: dict[str, str] = {
             "REVIEW_DOCUMENTED": "REVIEW_COMPLETE_NO_FURTHER_ACTION",
             "CONTACT_DOCUMENTED": "CONTACT_COMPLETED",
@@ -1138,8 +1348,66 @@ def _submit_rm_action(
             "rm.action.completed_replay" if response.idempotent_replay else "rm.action.completed",
             language,
         ),
+        "operation": response.operation,
+        "current_state": response.current_state,
+        "audit_event_id": response.audit_event.event_id,
     }
     st.rerun()
+
+
+def _rm_recommended_action_codes(follow_up: object) -> tuple[str, ...]:
+    """Read persisted Recommended Follow-up actions without selecting an action."""
+
+    if not isinstance(follow_up, Mapping) or follow_up.get("available") is not True:
+        return ()
+    actions = follow_up.get("actions")
+    if not isinstance(actions, (tuple, list)):
+        return ()
+    suggested: list[str] = []
+    for action in actions:
+        if isinstance(action, str) and action in RM_ACTIONS and action not in suggested:
+            suggested.append(action)
+    return tuple(suggested)
+
+
+def _rm_recordable_action_codes(
+    follow_up: object,
+    *,
+    case_state: str,
+) -> tuple[str, ...]:
+    """List user-recordable actions with persisted suggestions first.
+
+    This only orders UI choices.  It does not choose an action, change state,
+    or bypass the Banker service's expected-state validation at submission.
+    """
+
+    if case_state == "CLOSED":
+        return ()
+    recommended = _rm_recommended_action_codes(follow_up)
+    return recommended + tuple(action for action in RM_ACTIONS if action not in recommended)
+
+
+def _rm_action_code_label(action: str, language: str) -> str:
+    return t(f"rm.action.code.{action}", language)
+
+
+def _rm_action_option_label(
+    action: str,
+    *,
+    recommended_actions: tuple[str, ...],
+    language: str,
+) -> str:
+    prefix = (
+        "rm.action.recommended_prefix"
+        if action in recommended_actions
+        else "rm.action.other_permitted_prefix"
+    )
+    return f"{t(prefix, language)}: {_rm_action_code_label(action, language)}"
+
+
+def _rm_operation_label(operation: str, language: str) -> str:
+    translated = t(f"rm.action.operation.{operation}", language)
+    return operation if translated == f"rm.action.operation.{operation}" else translated
 
 
 def _render_rm_activity_audit(

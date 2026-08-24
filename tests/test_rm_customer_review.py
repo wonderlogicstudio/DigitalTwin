@@ -42,7 +42,11 @@ def _record(
         "selection_reason_codes": [
             "PRIORITY_BAND_PRIORITY_REVIEW",
             "TIMING_PROSPECTIVE_SIGNAL_AVAILABLE",
+            "PERSISTENCE_NOT_PRESENT",
+            "STABILITY_INITIAL",
             "EVIDENCE_SUFFICIENT",
+            "CAPACITY_UNBOUNDED",
+            "CREATE_NEW_CASE",
         ],
         "why_now_reason_codes": ["CURRENT_STATUS_CONCERNING"],
         "timing_bucket": "prospective_timing_not_evaluated",
@@ -60,6 +64,13 @@ def _record(
 def _manifest(*records: dict[str, object]) -> dict[str, object]:
     return {
         "funnel": {"monitored_total": 5000},
+        "selection_policy": {
+            "status": "demo",
+            "limitations": [
+                "Synthetic eligibility is not production approval.",
+                "Capacity is not an approved workload standard.",
+            ],
+        },
         "records": list(records),
     }
 
@@ -166,6 +177,29 @@ def test_selected_review_uses_manifest_rationale_and_observed_only_current_signa
     assert model["chart_trajectory"]["month"].max() == 12
     assert model["prospective_timing"]["source"] == "prospective_signal"
     assert model["prospective_timing"]["candidate_month"] == 12
+    assert model["prospective_timing"]["source_metadata"] == {
+        "observation_window": "current_and_prior_only",
+        "retrospective_backtest_scope": "policy_validation_only",
+        "historical_landmark_used": False,
+    }
+    assert model["header"]["why_now_evidence"]["reason_codes"] == ("CURRENT_STATUS_CONCERNING",)
+    assert model["header"]["why_now_evidence"]["policy_status"] == "demo"
+    assert model["prospective_timing"]["policy_limitations"] == (
+        "Synthetic eligibility is not production approval.",
+        "Capacity is not an approved workload standard.",
+    )
+    assert {"event_month", "event_type", "lead_time_months"}.isdisjoint(model["prospective_timing"])
+    ranking = model["header"]["ranking_explanation"]
+    assert ranking["is_composite_risk_score"] is False
+    assert ranking["why_now"]["reason_codes"] == ("CURRENT_STATUS_CONCERNING",)
+    assert [section["id"] for section in ranking["selection_order"]] == [
+        "operational_priority",
+        "prospective_timing",
+        "signal_persistence",
+        "evidence_stability_sufficiency",
+        "capacity_and_routing",
+        "deterministic_tie_breaker",
+    ]
     assert model["scope"]["future_data_loaded"] is False
     assert "historical" not in model["prospective_timing"]
     assert "probability" not in str(model).lower()
@@ -183,6 +217,46 @@ def test_observation_display_is_invariant_to_changes_after_the_as_of_month(tmp_p
     assert first.current_values == second.current_values
     assert first.trajectory.equals(second.trajectory)
     assert second.trajectory["month"].max() == 12
+
+
+def test_customer_timing_ignores_injected_future_event_metadata(tmp_path: Path) -> None:
+    record = _record(
+        "C000001",
+        selected=True,
+        disposition="SELECTED_FOR_REVIEW",
+        label="Priority Review",
+        rank=1,
+    )
+    baseline = build_rm_customer_review_view_model(
+        customer_id="C000001",
+        selection_manifest=_manifest(record),
+        representative_cohort=None,
+        population_results={"C000001": _population_result()},
+        observation=_observation(tmp_path),
+        language="en",
+    )
+    mutated = _record(
+        "C000001",
+        selected=True,
+        disposition="SELECTED_FOR_REVIEW",
+        label="Priority Review",
+        rank=1,
+    )
+    mutated["future_event_month"] = 30
+    timing_reference = mutated["timing_evidence_reference"]
+    assert isinstance(timing_reference, dict)
+    timing_reference["event_month"] = 30
+    after_mutation = build_rm_customer_review_view_model(
+        customer_id="C000001",
+        selection_manifest=_manifest(mutated),
+        representative_cohort=None,
+        population_results={"C000001": _population_result()},
+        observation=_observation(tmp_path),
+        language="en",
+    )
+
+    assert after_mutation["prospective_timing"] == baseline["prospective_timing"]
+    assert "event_month" not in after_mutation["prospective_timing"]
 
 
 def test_population_result_loader_is_read_only_and_honest_for_corrupt_detail(tmp_path: Path) -> None:
@@ -248,15 +322,77 @@ def test_historical_landmark_statuses_remain_retrospective_and_follow_up_require
         language="en",
     )
 
-    assert model["historical_landmark"] == {
-        "status": "found",
-        "month": 18,
-        "factor": "Debt Service Ratio",
-        "message": "A historical landmark is available in the similar-path cohort.",
-        "caption": "This is retrospective evidence from similar paths. It does not specify a future date for the current customer.",
-    }
+    landmark = model["historical_landmark"]
+    assert landmark["status"] == "found"
+    assert landmark["source"] == "historical_landmark"
+    assert landmark["is_live_alert_trigger"] is False
+    assert landmark["month"] == 18
+    assert landmark["factor"] == "Debt Service Ratio"
+    assert landmark["caption"] == "This is retrospective evidence from similar paths. It does not specify a future date for the current customer."
     assert model["recommended_follow_up"]["available"] is True
     assert model["recommended_follow_up"]["actions"] == ("REVIEW_COMPLETED", "CONTACT_PLANNED")
+    assert model["recommended_follow_up"]["reason_codes"] == ("CURRENT_STATUS_CONCERNING",)
+    assert model["recommended_follow_up"]["timing_evidence_reference"] == {
+        "source": "prospective_signal",
+        "candidate_month": 12,
+        "evaluation_status": "not_evaluated",
+        "lead_time_months": None,
+        "lead_time_unit": "months",
+    }
+    assert model["recommended_follow_up"]["scope"] == {
+        "automatic_execution": False,
+        "automatic_financial_decision": False,
+        "action_effectiveness_estimated": False,
+    }
+
+
+def test_historical_landmark_found_not_found_and_insufficient_keep_the_same_non_trigger_source(
+    tmp_path: Path,
+) -> None:
+    record = _record(
+        "C000001",
+        selected=False,
+        disposition="NOT_QUEUE_ELIGIBLE",
+        label="Monitor",
+        rank=None,
+    )
+    for status in ("found", "not_found", "insufficient_group_size"):
+        model = build_rm_customer_review_view_model(
+            customer_id="C000001",
+            selection_manifest=_manifest(record),
+            representative_cohort=None,
+            population_results={"C000001": _population_result(status=status)},
+            observation=_observation(tmp_path),
+            language="en",
+        )
+        landmark = model["historical_landmark"]
+        assert landmark["status"] == status
+        assert landmark["source"] == "historical_landmark"
+        assert landmark["is_live_alert_trigger"] is False
+
+
+def test_why_now_and_historical_landmark_copy_are_localized_without_a_customer_future_date(
+    tmp_path: Path,
+) -> None:
+    record = _record(
+        "C000001",
+        selected=True,
+        disposition="SELECTED_FOR_REVIEW",
+        label="Priority Review",
+        rank=1,
+    )
+    model = build_rm_customer_review_view_model(
+        customer_id="C000001",
+        selection_manifest=_manifest(record),
+        representative_cohort=None,
+        population_results={"C000001": _population_result(status="found")},
+        observation=_observation(tmp_path),
+        language="ko",
+    )
+
+    assert "현재 관측" in model["header"]["why_now"]
+    assert "현재 관측 신호" in model["prospective_timing"]["message"]
+    assert "현재 고객의 미래 시점을 의미하지 않습니다" in model["historical_landmark"]["caption"]
 
 
 def test_customer_review_module_has_no_streamlit_or_analytics_execution_dependency() -> None:

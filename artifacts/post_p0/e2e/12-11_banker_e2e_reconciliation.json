@@ -1,0 +1,86 @@
+{
+  "schema_version": "post_p0_banker_e2e_gate.v1",
+  "gate": "12-11",
+  "status": "GO",
+  "repository_head": "c68c8cc79561e1a33d9a3e5031a29285cb8342db",
+  "source_artifacts": {
+    "population_manifest": "artifacts/population/seed42_full_run/population_manifest.json",
+    "population_detail": "artifacts/population/seed42_full_run/population_detail.json",
+    "selection_manifest": "artifacts/triage/seed42_crossfit_5fold_asof12_unbounded/rm_selection_manifest.json",
+    "selection_manifest_code_ref": "bfc8d81ed7a1585c3001704559ffc2f9859f05b3"
+  },
+  "canonical_population_to_selection": {
+    "population_expected": 5000,
+    "population_processed": 5000,
+    "population_succeeded": 5000,
+    "population_failed": 0,
+    "population_detail_results": 5000,
+    "selection_records": 5000,
+    "selection_unique_customer_ids": 5000,
+    "population_selection_id_set_equal": true,
+    "customer_id_sha256": "a501403bc78b04a6fb0f39a78488c519b650b96e68a430a221c298e011510a90",
+    "manifest_exact": true,
+    "funnel_exact": true,
+    "funnel": {
+      "eligible_priority": 1148,
+      "eligible_review": 374,
+      "eligible_total": 1522,
+      "selected_queue_ready": 1522,
+      "deferred_capacity": 0,
+      "monitor_only": 371,
+      "no_actionable_signal": 3107,
+      "insufficient_evidence": 0,
+      "data_unavailable": 0
+    },
+    "selected_routing_dispositions": {
+      "CREATE_NEW_CASE": 1522,
+      "ROUTE_EXISTING_CASE": 0
+    }
+  },
+  "isolated_workflow_fixture": {
+    "source_test": "tests/test_offline_e2e_regression.py::test_offline_fixture_flow_keeps_selection_before_evaluation_and_case_preview_offline",
+    "customer_count": 30,
+    "source_data": "generated in test tmp_path only",
+    "selection_capacity": 1,
+    "triage_received": 30,
+    "selected": 1,
+    "new_case": 1,
+    "deferred_or_nonreview": 29,
+    "failed": 0,
+    "cycle_reconciliation_exact": true,
+    "case_state_sequence": ["NEW", "ACKNOWLEDGED", "IN_REVIEW"],
+    "recorded_rm_action": "CONTACT_PLANNED",
+    "append_only_audit_events": 3,
+    "notification_preview": {
+      "status": "PREVIEW",
+      "sent": false,
+      "network_called": false,
+      "case_mutated": false,
+      "audit_mutated": false
+    }
+  },
+  "scenario_contract_evidence": {
+    "selected_new_case": "test_offline_fixture_flow_keeps_selection_before_evaluation_and_case_preview_offline",
+    "existing_case_routing": "test_selected_existing_route_updates_only_the_referenced_open_case",
+    "deferred_monitor_no_alert_and_insufficient": "test_deferred_monitor_and_no_actionable_decisions_never_create_cases and test_cycle_counters_reconcile_exactly_to_a_selection_manifest_customer_set",
+    "duplicate_rerun": "test_commit_double_run_is_idempotent_and_keeps_selection_evidence",
+    "close_reopen": "test_close_and_reopen_remain_explicit_and_are_visible_in_chronological_history",
+    "ui_service_and_audit_refresh": "test_app_test_action_control_uses_service_and_refreshes_activity"
+  },
+  "scope": {
+    "canonical_artifacts_mutated": false,
+    "analytics_recomputed_in_rm_ui": false,
+    "triage_recomputed_in_rm_ui": false,
+    "ui_direct_repository_write": false,
+    "ui_direct_audit_write": false,
+    "target_future_label_used_for_selection": false,
+    "external_notification_implemented": false,
+    "notification_sent": false,
+    "database_used": false
+  },
+  "limitations": [
+    "The canonical seed-42 manifest has not been materialized as 1,522 persistent workflow cases by this read-only gate.",
+    "The end-to-end state/action/audit evidence is an isolated synthetic tmp_path fixture, not a production RM workflow run.",
+    "No external message delivery, approved SLA, intervention efficacy, real-customer performance, or financial decision is claimed."
+  ]
+}

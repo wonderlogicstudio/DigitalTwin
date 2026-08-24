@@ -1,0 +1,73 @@
+{
+  "actual_data_present": false,
+  "approval_requirements": [
+    {
+      "evidence_reference": null,
+      "role": "data_owner",
+      "status": "not_requested"
+    },
+    {
+      "evidence_reference": null,
+      "role": "security",
+      "status": "not_requested"
+    },
+    {
+      "evidence_reference": null,
+      "role": "privacy_dpo_or_legal_as_applicable",
+      "status": "not_requested"
+    }
+  ],
+  "approval_roles_complete": false,
+  "controls": {
+    "access_and_processing_auditability_required": true,
+    "data_minimization_required": true,
+    "environment_separation_required": true,
+    "export_prohibition_required": true,
+    "least_privilege_access_control_required": true,
+    "retention_and_deletion_schedule_required": true
+  },
+  "data_boundary": {
+    "approved_secure_environment_required": true,
+    "environment_reference": "external_approval_required_not_recorded_here",
+    "export_from_secure_environment_allowed": false,
+    "public_repository_data_allowed": false,
+    "raw_data_download_or_copy_allowed": false
+  },
+  "excluded_data_concepts": [
+    "direct_identifier",
+    "contact_detail",
+    "address",
+    "account_number",
+    "authentication_credential"
+  ],
+  "limitations": [
+    "This artifact does not prove organizational approval, data access, or bank performance.",
+    "No actual, anonymized, or external customer data is included, read, copied, or processed."
+  ],
+  "minimum_data_concepts": [
+    "pseudonymous_customer_key",
+    "monthly_timestamp_or_order",
+    "income_mappable_field",
+    "expense_mappable_field",
+    "debt_mappable_field",
+    "cash_mappable_field",
+    "current_status_mappable_field",
+    "observation_window",
+    "independently_defined_future_outcome_or_event"
+  ],
+  "next_preparation": {
+    "real_data_adapter_execution_allowed": false,
+    "report_template_development_allowed": true,
+    "synthetic_fixture_harness_allowed": true
+  },
+  "outcome_and_horizon_boundary": {
+    "actual_data_availability_requires_separate_approval": true,
+    "canonical_p0_settings_mutated": false,
+    "independent_actual_owner_outcome_definition_required": true,
+    "p0_horizon_comparison_allowed": true,
+    "synthetic_final_outcome_reuse_prohibited": true
+  },
+  "readiness_status": "not_ready_for_real_data_admission",
+  "schema_version": "real_data_governance.v1",
+  "scope": "governance_readiness_only_no_actual_data"
+}

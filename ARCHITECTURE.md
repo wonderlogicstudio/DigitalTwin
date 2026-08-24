@@ -42,6 +42,36 @@ Separate prototype roots are `artifacts/population/`,
 Canonical `data/raw`, `data/processed`, and `data/demo` artifacts retain their
 existing schema and ownership.
 
+## Post-P0 feedback-readiness boundaries
+
+The following additions prepare evidence and governance without widening the
+production analytics or operational perimeter:
+
+```text
+saved Triage manifest
+  -> caller-supplied draft capacity comparison (saved-rank cutoff only)
+  -> isolated synthetic RM rehearsal
+  -> Case / Banker service / append-only audit / Preview or Null
+
+governance metadata + injected synthetic validation fixture
+  -> adapter admission contract
+  -> aggregate synthetic-vs-approved-real metric template
+  -> no real-data admission in this public repository
+```
+
+- `src/capacity_scenarios.py` consumes the saved selection manifest only. It
+  cannot score, rank, approve capacity, or create a Case.
+- `src/real_data_governance.py`, `src/validation_dataset_harness.py`, and
+  `src/validation_metrics_report.py` are source-free readiness boundaries.
+  They accept injected synthetic fixtures in tests; actual data must remain in
+  an approved secure environment outside this repository.
+- `src/rm_pilot_protocol.py` and `src/synthetic_rm_pilot_dry_run.py` record a
+  protocol and isolated synthetic rehearsal. They do not represent an actual
+  RM pilot, customer result, productivity result, policy approval, or capacity
+  approval.
+- Post-P0 artifacts live only under `artifacts/post_p0/` and reports under
+  `reports/post_p0/`. They must not replace canonical inputs or demo cache.
+
 ## 1. 문서 기준
 
 이 문서는 현재 `main` 브랜치의 실제 `src/`, `app.py`, `config/settings.py`, 테스트 구조를 기준으로 작성한다. 과거 계획 문서에 있더라도 현재 존재하지 않는 모듈은 현재 아키텍처 구성 요소로 취급하지 않는다.

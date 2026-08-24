@@ -15,6 +15,7 @@ from src.alert_repository import FileAlertCaseRepository
 from src.audit_trail import FileAuditEventStore
 from src.banker_service import BankerApplicationService
 from src.notifications import PreviewNotificationService
+from src.recommended_followup import RM_ACTIONS
 from src.rm_workflow_ui import (
     RMWorkflowUIService,
     build_offline_notification_preview,
@@ -211,6 +212,35 @@ def test_customer_action_renderer_has_no_direct_repository_or_audit_write() -> N
     assert "sent" in source.lower()
 
 
+def test_action_choice_order_is_persisted_suggestion_then_other_recordable_actions() -> None:
+    follow_up = {
+        "available": True,
+        "actions": (
+            "CONTACT_PLANNED",
+            "REVIEW_COMPLETED",
+            "CONTACT_PLANNED",
+            "NOT_AN_ACTION",
+        ),
+    }
+
+    choices = app_module._rm_recordable_action_codes(follow_up, case_state="IN_REVIEW")
+
+    assert choices[:2] == ("CONTACT_PLANNED", "REVIEW_COMPLETED")
+    assert set(choices) == set(RM_ACTIONS)
+    assert len(choices) == len(RM_ACTIONS)
+    assert app_module._rm_recordable_action_codes(follow_up, case_state="CLOSED") == ()
+    assert app_module._rm_action_option_label(
+        "CONTACT_PLANNED",
+        recommended_actions=("CONTACT_PLANNED",),
+        language="en",
+    ) == "Suggested: Contact planned"
+    assert app_module._rm_action_option_label(
+        "REFERRED",
+        recommended_actions=("CONTACT_PLANNED",),
+        language="en",
+    ) == "Recordable: Referred"
+
+
 def test_app_test_action_control_uses_service_and_refreshes_activity(tmp_path: Path) -> None:
     root = str(tmp_path).replace("\\", "\\\\")
     source = f'''\
@@ -255,7 +285,7 @@ review = {{
     "prospective_timing": {{"available": False, "message": "unavailable"}},
     "twin_evidence": {{"available": False, "message": "unavailable"}},
     "historical_landmark": {{"status": "not_found", "message": "unavailable", "caption": "historical only"}},
-    "recommended_follow_up": {{"available": False, "message": "pending", "actions": (), "whatif_supporting_evidence": {{"available": False, "message": "unavailable"}}}},
+    "recommended_follow_up": {{"available": True, "message": "human review only", "actions": ("REVIEW_COMPLETED", "CONTACT_PLANNED"), "whatif_supporting_evidence": {{"available": False, "message": "unavailable"}}}},
     "workflow_case": {{"available": True, "alert_id": case.alert_id, "state": case.state}},
 }}
 app._render_rm_customer_review(review, language="en", workflow_service=service)
@@ -265,6 +295,11 @@ app._render_rm_activity_audit(review, language="en", workflow_service=service)
     at.run(timeout=30)
 
     assert not at.exception
+    record_choice = at.selectbox(key="rm_action_record_choice_ALT-UI-000001_NEW")
+    assert record_choice.options[:2] == [
+        "Suggested: Review completed",
+        "Suggested: Contact planned",
+    ]
     at.button(key="rm_action_acknowledge_ALT-UI-000001_NEW").click().run(timeout=30)
     assert not at.exception
     assert any("ACKNOWLEDGED" in str(item.value) for item in at.metric)

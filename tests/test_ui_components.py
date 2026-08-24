@@ -132,16 +132,18 @@ def test_negative_cash_balance_is_danger() -> None:
 def test_breakpoint_found_card() -> None:
     breakpoint_card = build_kpi_cards(_summary(), _breakpoint())[-1]
 
-    assert breakpoint_card["value"] == "2개월 후"
+    assert breakpoint_card["value"] == "과거 landmark"
     assert breakpoint_card["unit"] == "14개월 차"
     assert "고정지출 비중" in breakpoint_card["detail"]
+    assert "현재 고객의 미래 시점이 아님" in breakpoint_card["detail"]
 
 
-def test_current_status_sentence_uses_natural_remaining_month_text() -> None:
+def test_current_status_sentence_describes_a_historical_landmark_not_a_customer_countdown() -> None:
     sentence = build_current_status_sentence(_summary(), _breakpoint())
 
-    assert "약 2개월이 남아" in sentence
-    assert "2개월 후 남아" not in sentence
+    assert "14개월 차" in sentence
+    assert "현재 고객의 미래 시점이 아닙니다" in sentence
+    assert "남아" not in sentence
 
 
 def test_breakpoint_not_found_and_insufficient_cards() -> None:

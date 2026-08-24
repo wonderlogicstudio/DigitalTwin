@@ -1,0 +1,98 @@
+{
+  "schema_version": "post_p0_final_feedback_closure.v1",
+  "as_of": "2026-08-24",
+  "overall_status": "READY_WITH_OPEN_REAL_DATA_VALIDATION",
+  "scope": "synthetic prototype, workflow readiness, and public-repository evidence only",
+  "entries": [
+    {
+      "feedback_area": "synthetic_5000_population_and_full_triage_universe",
+      "status": "covered",
+      "evidence": "5,000 exact master-population-triage reconciliation; complete dispositions and deterministic ranks",
+      "boundary": "Synthetic execution is not real-bank validation."
+    },
+    {
+      "feedback_area": "multi_customer_queue_and_representative_cases",
+      "status": "covered",
+      "evidence": "Selected-only Queue and deterministic representative cohort with an unavailable category",
+      "boundary": "Representative comparison is not manual cherry-picking or an operational selection."
+    },
+    {
+      "feedback_area": "approved_anonymized_data_validation",
+      "status": "open",
+      "evidence": "No approved data run exists",
+      "boundary": "Governance, adapter, and metrics contracts are READY_NOT_VALIDATED only."
+    },
+    {
+      "feedback_area": "app_product_path",
+      "status": "covered",
+      "evidence": "General, Presentation five tabs, and RM Workspace four tabs support 5k-to-queue-to-action/audit",
+      "boundary": "UI product capability is distinct from video production."
+    },
+    {
+      "feedback_area": "recording_and_presentation_rehearsal",
+      "status": "partial",
+      "evidence": "Bounded app health and UI contracts pass",
+      "boundary": "Recording, editing, and rehearsal require a separate human task."
+    },
+    {
+      "feedback_area": "banker_workflow_prototype",
+      "status": "covered",
+      "evidence": "Selected/routed decision to idempotent Case, due field, Banker action, audit, and offline Preview/Null",
+      "boundary": "No DB, external delivery, automated financial decision, or production integration."
+    },
+    {
+      "feedback_area": "prospective_why_now_and_historical_landmark",
+      "status": "covered",
+      "evidence": "Separate saved prospective timing and retrospective historical-landmark contracts",
+      "boundary": "Neither is a target future-event date or prediction probability."
+    },
+    {
+      "feedback_area": "leakage_circularity_and_claim_integrity",
+      "status": "covered",
+      "evidence": "As-of, reference-only, cross-fit, future-mutation, negative-control, and terminology regressions",
+      "boundary": "Synthetic methodology evidence is not accuracy, causality, or intervention-effect evidence."
+    },
+    {
+      "feedback_area": "capacity_comparison_mechanism",
+      "status": "covered",
+      "evidence": "Caller-supplied draft comparison over saved deterministic rank with selected/deferred reconciliation",
+      "boundary": "Unbounded 1,522 and synthetic capacity 3 are not approved workloads."
+    },
+    {
+      "feedback_area": "approved_operational_capacity",
+      "status": "open",
+      "evidence": "No human approval-evidence reference exists",
+      "boundary": "The system cannot choose or approve capacity."
+    },
+    {
+      "feedback_area": "rm_pilot_protocol_and_synthetic_dry_run",
+      "status": "covered",
+      "evidence": "Protocol, measurement schema, checksum-preserving isolated dry run, audit, and Preview failure path",
+      "boundary": "No actual RM, productivity, customer-outcome, or intervention-effect result."
+    },
+    {
+      "feedback_area": "actual_rm_pilot",
+      "status": "open",
+      "evidence": "No approved participant or pilot observation exists",
+      "boundary": "Synthetic rehearsal does not initiate or complete a pilot."
+    },
+    {
+      "feedback_area": "claims_and_public_repository_security",
+      "status": "covered",
+      "evidence": "Source-of-truth sync plus secret, PII, and provider-import static scans",
+      "boundary": "Static review is not a production security certification."
+    }
+  ],
+  "status_counts": {
+    "covered": 9,
+    "partial": 1,
+    "open": 3
+  },
+  "gate_invariants": {
+    "canonical_analytics_changed": false,
+    "future_label_leakage_detected": false,
+    "external_notification_delivery": false,
+    "real_data_admitted": false,
+    "automatic_policy_or_capacity_approval": false
+  }
+}

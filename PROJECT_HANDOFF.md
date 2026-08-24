@@ -2,14 +2,16 @@
 
 ## 0. Current implementation snapshot (2026-08-24)
 
-The tracked `main` baseline is `bfc8d81`; the active working tree contains the
-post-baseline P0 implementation described below and must be validated as a
-whole before commit. `HEAD...origin/main` is currently `0/0`.
+The committed `main` baseline is
+`c68c8cc79561e1a33d9a3e5031a29285cb8342db`, and it already contains the P0
+implementation described below. At the 12-17 documentation review, `HEAD` and
+`origin/main` matched. Any later uncommitted feedback-closure work must be
+reported separately from this committed P0 baseline.
 
-The dated verification record later in this handoff documents the original
-baseline only. Use the current commands in `README.md` and `TEST_PLAN.md` for
-the P0 implementation rather than treating those earlier test counts as the
-latest regression result.
+The dated verification record later in this handoff is retained as historical
+evidence for the original demo. It is not the latest P0 or Post-P0 regression
+result; use the current commands in `README.md`, `TEST_PLAN.md`, and the
+latest `reports/post_p0/` report instead.
 
 ### Implemented after the original handoff
 
@@ -38,6 +40,19 @@ latest regression result.
   and Activity/Audit tabs. General remains vertical and Presentation remains
   five tabs.
 
+### Post-P0 feedback-readiness additions
+
+- Human-entered, comparison-only capacity scenarios preserve the saved triage
+  rank. The source unbounded selection is 1,522 synthetic records, **not** an
+  approved operational workload or recommended threshold.
+- Real-data governance, adapter, and aggregate validation-metric contracts are
+  source-free readiness artifacts. Their status is `not_ready` / unvalidated:
+  this public repository admits no actual or anonymized customer data.
+- RM pilot protocol and a synthetic-only dry run provide engineering evidence
+  for workflow, measurement, audit, and Preview/Null behavior. They are not
+  evidence from actual RM participants, productivity, customer outcomes, or
+  intervention efficacy.
+
 ### Current operational cautions
 
 - All data, validation results, timing evidence, policies, triage outputs, and
@@ -54,9 +69,9 @@ latest regression result.
 
 이 문서는 다음 작업자가 현재 프로젝트의 동작 범위, 검증 상태, 변경 금지 조건을 빠르게 확인할 수 있도록 정리한 인수인계 문서입니다.
 
-- 작성 기준일: 2026-08-20
+- 작성 기준일: 2026-08-24 (12-17 sync)
 - 기준 브랜치: `main`
-- 기준 커밋: `faccf3f` (`feat: add presentation mode tabs`)
+- 기준 커밋: `c68c8cc` (P0 implementation baseline)
 - 우선 근거: 현재 HEAD 코드, 기존 테스트, `config/settings.py`, 그리고 최신 검증 명령 결과
 
 과거 계획서나 QA 보고서와 현재 코드가 다를 때는 과거 문서를 임의로 신뢰하지 말고, 위 우선 근거를 사용합니다.
@@ -119,17 +134,20 @@ python scripts\start_streamlit.py --port 8519 --timeout 60
 
 ## 7. 최신 검증 결과
 
-2026-08-20에 코드 변경 없이 다음을 재확인했습니다.
+`214 passed` 기록은 2026-08-20의 original-demo 검증 이력이다. P0와
+Post-P0 feedback-readiness 최신 검증은 아래처럼 별도 취급한다.
 
-- `pytest -q`: `214 passed in 175.55s`
-- `python scripts/check_demo_readiness.py`: `READY_WITH_WARNINGS`
-- 사전 계산 캐시 smoke check: 메인 고객 `C002608`, 유사 고객 `200명` 로드 성공
-- 필수 패키지, 원본 데이터, 처리 데이터, 데모 JSON, 사전 계산 캐시: 준비됨
-- 8501 포트: 확인 시 사용 가능
+- 12-16 synthetic RM pilot dry run 직전 전체 회귀: `459 passed in 229.49s`.
+- 같은 단계의 focused workflow/capacity/audit/notification suite: `59 passed`.
+- bounded Streamlit health: `python scripts\start_streamlit.py --port 8519 --timeout 60` 통과 후 임시 서버 종료.
+- 사전 계산 cache smoke check: 메인 고객 `C002608`, 유사 고객 `200명` 로드 성공.
+- 12-17 이후 문서와 public-repository security scan은 이 handoff의 수치가 아니라
+  `reports/post_p0/12-17_feedback_security_sync.md`의 실행 결과를 기준으로 한다.
 
 현재 readiness 경고는 아래 두 가지입니다.
 
-- 현재 Python은 `3.10.9`이며 프로젝트 목표 버전은 Python `3.11`입니다.
+- 현재 Python은 `3.10.9`이며 프로젝트 목표 버전은 Python `3.11`입니다. 이는
+  compatibility warning이며, 배포/발표 전 Python 3.11 환경에서 재확인이 필요합니다.
 - `OPENAI_API_KEY`가 설정되지 않았다는 readiness 경고가 남지만, 현재 앱은 외부 LLM을 호출하지 않으므로 템플릿 브리핑 동작에는 영향이 없습니다.
 
 ## 8. 유지해야 할 불변 조건

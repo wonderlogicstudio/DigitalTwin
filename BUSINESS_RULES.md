@@ -310,3 +310,25 @@ these additional operational boundaries:
   new Alert.
 - **RM actions:** Recommended Follow-up supports human review. It must not
   approve/decline/restructure/sell a financial product automatically.
+
+## Post-P0 evidence and public-repository boundaries
+
+- **Capacity:** `unbounded_demo` is a synthetic reference, not a daily,
+  optimal, recommended, or approved RM workload. A capacity scenario only
+  selects a saved rank prefix and must remain human-supplied and `draft` until
+  an external approval reference exists.
+- **Real data:** No actual or anonymized customer data may be collected,
+  downloaded, copied, transformed, stored, or processed in this public
+  repository. Governance, adapter, and metric contracts are readiness-only;
+  actual validation remains `not_ready` / unvalidated until the approved secure
+  environment and external approvals exist.
+- **Pilot evidence:** Synthetic pilot dry-run counts and durations are workflow
+  instrumentation, not RM productivity, SLA, customer-outcome, or
+  intervention-effect evidence. A pilot protocol does not initiate a pilot.
+- **Claims:** Product functionality and video/slide production are separate.
+  An available RM screen does not mean a recording, actual RM adoption, or
+  real-bank deployment has occurred.
+- **Security and delivery:** Preview/Null notification remains not-sent and
+  offline. No provider credential, endpoint, webhook, direct identifier, raw
+  feedback, or row-level real-data artifact belongs in source, tests, logs,
+  artifacts, or reports.

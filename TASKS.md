@@ -53,6 +53,26 @@
   real customer data, and automated financial decisions. These are explicitly
   out of P0 scope, not completed work.
 
+## Post-P0 feedback readiness status
+
+- [x] Evaluator feedback evidence matrix, leakage/circularity regression, and
+  5,000-customer Portfolio/Queue/representative-cohort proof.
+- [x] Transparent saved-rank explanation and human-entered draft capacity
+  comparison; `1,522` remains unbounded-demo evidence, not approved workload.
+- [x] Why-Now versus historical-landmark copy review, selected-only Alert/Case
+  delivery contract, Recommended Follow-up usability, and Banker/audit E2E
+  synthetic-fixture evidence.
+- [x] Real-data governance, validation-adapter, and synthetic-vs-real metric
+  readiness contracts with no actual-data admission.
+- [x] RM pilot protocol and isolated synthetic dry run; no actual RM pilot,
+  productivity, customer outcome, capacity approval, or policy approval claim.
+- [x] Claims/documentation/public-repository security synchronization report.
+- [ ] Human presentation recording/rehearsal is a separate task; it is not
+  code-complete merely because the RM Workspace exists.
+- [ ] Actual anonymized-data validation, an actual RM pilot, DB/ORM/migration,
+  and external notification providers remain blocked pending separate external
+  governance/architecture decisions.
+
 ## M1 Synthetic Data Generator Status
 - [x] GeneratorConfig
 - [x] customer_master.csv generation
@@ -281,7 +301,7 @@
 - [x] 결과 분포와 저축률/DSR 제목을 더 짧게 바꾸고 Plotly top margin/title 위치를 보수적으로 조정했다.
 - [x] 실제 1366x768 및 1920x1080 브라우저 픽셀 스크린샷을 Presentation/RM 모드에서 확인했다. RM queue의 1366 폭은 가로 스크롤을 사용한다.
 
-## 다음 단계: DB 연결 설계 및 의사결정
+## 향후 별도 결정 필요: DB 연결 설계 및 의사결정
 
 - [ ] DB 종류와 로컬/배포 실행 환경을 결정한다.
 - [ ] CSV/JSON과 DB의 역할, 읽기/쓰기 책임, 호환 범위를 정한다.
@@ -291,4 +311,5 @@
 - [ ] 실제 금융 데이터 도입 전 개인정보, 인증/권한, 감사 로그 요구사항을 확인한다.
 - [ ] `DECISIONS.md`에 위 선택을 기록한 뒤에만 DB 구현 범위를 시작한다.
 
-이 섹션은 설계 전제 조건이며, 데이터베이스 구현이 완료되었음을 의미하지 않는다.
+이 섹션은 설계 전제 조건이며, 데이터베이스 구현이 완료되었거나 현재 다음
+작업으로 승인되었음을 의미하지 않는다.

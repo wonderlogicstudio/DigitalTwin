@@ -106,10 +106,12 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "kpi.grid_aria": "핵심 KPI",
         "kpi.cash_balance.description": "12개월 차 기준 보유 현금",
         "kpi.recent_3m_average": "최근 3개월 평균",
-        "kpi.breakpoint.description": "분기점까지 남은 기간",
+        "kpi.breakpoint.description": "유사 과거 경로의 관찰 landmark",
         "kpi.breakpoint.after_analysis": "유사 고객 분석 후 표시",
-        "kpi.breakpoint.detail": "분기점까지 남은 기간",
+        "kpi.breakpoint.detail": "현재 고객의 미래 시점이 아님",
         "kpi.breakpoint.primary_factor": "주요 차이: {metric}",
+        "kpi.breakpoint.historical_value": "과거 landmark",
+        "kpi.breakpoint.historical_detail": "현재 고객의 미래 시점이 아님",
         "kpi.breakpoint.comparison": "분기점 비교",
         "kpi.breakpoint.found": "발견",
         "kpi.before_analysis": "분석 전",
@@ -181,9 +183,9 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "chart.current_point": "현재 시점",
         "chart.observed_period": "관측",
         "chart.future_period": "미래 구간",
-        "chart.breakpoint": "위험 분기점",
+        "chart.breakpoint": "과거 경로 landmark",
         "chart.current_point_annotation": "현재 · {month}개월",
-        "chart.breakpoint_annotation": "분기점 · {month}개월",
+        "chart.breakpoint_annotation": "과거 landmark · {month}개월",
         "chart.period": "기간",
         "chart.status": "상태",
         "chart.category": "구분",
@@ -241,7 +243,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "chart.group_missing.avoidance": "위험 회피 고객 중앙값을 표시할 데이터가 없습니다.",
         "chart.outcome.title": "위험 경로 {risk_ratio} · 유사 고객 {matched_count}명",
         "chart.outcome.risk_summary": "위험 경로 합계 {risk_count}명 · {risk_ratio}",
-        "chart.breakpoint.title": "{month}개월 차부터 {metric} 차이",
+        "chart.breakpoint.title": "유사 과거 경로 landmark: {month}개월 차 {metric} 차이",
         "chart.breakpoint.no_info": "분기점 정보를 표시할 수 없습니다.",
         "chart.breakpoint.no_month_metric": "분기점 월 또는 주요 지표가 없습니다.",
         "chart.breakpoint.no_group_mean": "표시할 그룹 평균 데이터가 없습니다.",
@@ -458,10 +460,12 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "kpi.grid_aria": "Key KPIs",
         "kpi.cash_balance.description": "Cash held at month 12",
         "kpi.recent_3m_average": "Recent 3-month average",
-        "kpi.breakpoint.description": "Time remaining to turning point",
+        "kpi.breakpoint.description": "Observed landmark in historical similar paths",
         "kpi.breakpoint.after_analysis": "Shown after similar-customer analysis",
-        "kpi.breakpoint.detail": "Time remaining to turning point",
+        "kpi.breakpoint.detail": "Not a future date for the current customer",
         "kpi.breakpoint.primary_factor": "Key difference: {metric}",
+        "kpi.breakpoint.historical_value": "Historical landmark",
+        "kpi.breakpoint.historical_detail": "Not a future date for the current customer",
         "kpi.breakpoint.comparison": "Turning-point comparison",
         "kpi.breakpoint.found": "Found",
         "kpi.before_analysis": "Before Analysis",
@@ -533,9 +537,9 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "chart.current_point": "Current Point",
         "chart.observed_period": "Observed",
         "chart.future_period": "Future",
-        "chart.breakpoint": "Risk Turning Point",
+        "chart.breakpoint": "Historical Landmark",
         "chart.current_point_annotation": "Current · M{month}",
-        "chart.breakpoint_annotation": "Turning Point · M{month}",
+        "chart.breakpoint_annotation": "Historical landmark · M{month}",
         "chart.period": "Period",
         "chart.status": "Status",
         "chart.category": "Category",
@@ -593,7 +597,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "chart.group_missing.avoidance": "No median is available for the risk-avoidance group.",
         "chart.outcome.title": "Risk path {risk_ratio} · {matched_count} similar customers",
         "chart.outcome.risk_summary": "Risk path total {risk_count} customers · {risk_ratio}",
-        "chart.breakpoint.title": "{metric} diverged at month {month}.",
+        "chart.breakpoint.title": "Historical similar-path landmark: {metric} diverged at month {month}.",
         "chart.breakpoint.no_info": "The turning-point information cannot be displayed.",
         "chart.breakpoint.no_month_metric": "The turning-point month or key metric is missing.",
         "chart.breakpoint.no_group_mean": "No group-average data is available for display.",
@@ -741,8 +745,11 @@ TRANSLATIONS["ko"].update(
         "rm.portfolio.insufficient_evidence": "증거 부족 / 데이터 불가",
         "rm.alert.new": "신규 Alert",
         "rm.alert.open": "열린 Alert",
+        "rm.alert.in_rm_queue": "RM 업무 큐 Case",
+        "rm.alert.selected_pending": "Case 생성 대기",
         "rm.alert.due": "기한 도래 Alert",
         "rm.alert.overdue": "기한 경과 Alert",
+        "rm.portfolio.delivery_definition": "RM 전달은 앱의 RM 업무 큐에 열린 Case가 생성·표시된 상태를 뜻하며, 외부 메시지 발송 성공을 뜻하지 않습니다.",
         "rm.portfolio.reconciliation_exact": "선택 manifest의 population·선별 큐 수가 정확히 일치합니다.",
         "rm.portfolio.reconciliation_failed": "선택 manifest를 완전히 조정할 수 없어, 수치를 추정하지 않습니다.",
         "rm.repository.unavailable": "Alert repository를 읽을 수 없습니다. triage queue는 변경되지 않았습니다.",
@@ -758,10 +765,12 @@ TRANSLATIONS["ko"].update(
         "rm.queue.column.rank": "선별 순위",
         "rm.queue.column.priority": "업무 우선순위",
         "rm.queue.column.case_state": "Alert 상태",
+        "rm.queue.column.delivery": "업무 큐 전달 상태",
         "rm.queue.column.selection_reason": "선정 근거",
         "rm.queue.column.why_now": "왜 지금",
         "rm.queue.column.timing": "시점 근거",
         "rm.queue.column.due": "기한",
+        "rm.queue.column.created": "Case 생성",
         "rm.queue.column.owner": "담당자",
         "rm.queue.column.updated": "업데이트",
         "rm.queue.priority.priority_review": "우선 검토",
@@ -780,6 +789,12 @@ TRANSLATIONS["ko"].update(
         "rm.queue.timing.unavailable": "시점 근거 없음",
         "rm.queue.value.not_scheduled": "미정",
         "rm.queue.value.unassigned": "미배정",
+        "rm.queue.delivery.case_in_rm_queue": "RM 업무 큐 Case",
+        "rm.queue.delivery.selected_case_pending": "선정됨 · Case 미생성",
+        "rm.queue.due.upcoming": "예정",
+        "rm.queue.due.due": "기한 도래",
+        "rm.queue.due.overdue": "기한 경과",
+        "rm.queue.due.not_scheduled": "기한 미정",
         "rm.queue.reason.PRIORITY_BAND_PRIORITY_REVIEW": "Priority Review 기준",
         "rm.queue.reason.PRIORITY_BAND_REVIEW": "Review 기준",
         "rm.queue.reason.TIMING_PROSPECTIVE_SIGNAL_AVAILABLE": "현재 신호 시점 근거",
@@ -811,8 +826,11 @@ TRANSLATIONS["en"].update(
         "rm.portfolio.insufficient_evidence": "Insufficient evidence / unavailable data",
         "rm.alert.new": "New alerts",
         "rm.alert.open": "Open alerts",
+        "rm.alert.in_rm_queue": "RM work-queue cases",
+        "rm.alert.selected_pending": "Selected, case pending",
         "rm.alert.due": "Due alerts",
         "rm.alert.overdue": "Overdue alerts",
+        "rm.portfolio.delivery_definition": "RM delivery means an open case is created and visible in the in-app RM work queue; it does not mean an external message was sent successfully.",
         "rm.portfolio.reconciliation_exact": "Population and selected-queue counts reconcile exactly with the selection manifest.",
         "rm.portfolio.reconciliation_failed": "The selection manifest cannot be fully reconciled; counts are not estimated.",
         "rm.repository.unavailable": "The Alert repository could not be read. The triage queue has not changed.",
@@ -828,10 +846,12 @@ TRANSLATIONS["en"].update(
         "rm.queue.column.rank": "Rank",
         "rm.queue.column.priority": "Operational priority",
         "rm.queue.column.case_state": "Alert state",
+        "rm.queue.column.delivery": "Work-queue delivery",
         "rm.queue.column.selection_reason": "Why selected",
         "rm.queue.column.why_now": "Why now",
         "rm.queue.column.timing": "Timing evidence",
         "rm.queue.column.due": "Due",
+        "rm.queue.column.created": "Case created",
         "rm.queue.column.owner": "Owner",
         "rm.queue.column.updated": "Updated",
         "rm.queue.priority.priority_review": "Priority Review",
@@ -850,6 +870,12 @@ TRANSLATIONS["en"].update(
         "rm.queue.timing.unavailable": "Timing evidence unavailable",
         "rm.queue.value.not_scheduled": "Not scheduled",
         "rm.queue.value.unassigned": "Unassigned",
+        "rm.queue.delivery.case_in_rm_queue": "Case in RM work queue",
+        "rm.queue.delivery.selected_case_pending": "Selected; case pending",
+        "rm.queue.due.upcoming": "Upcoming",
+        "rm.queue.due.due": "Due now",
+        "rm.queue.due.overdue": "Overdue",
+        "rm.queue.due.not_scheduled": "Due not scheduled",
         "rm.queue.reason.PRIORITY_BAND_PRIORITY_REVIEW": "Priority Review tier",
         "rm.queue.reason.PRIORITY_BAND_REVIEW": "Review tier",
         "rm.queue.reason.TIMING_PROSPECTIVE_SIGNAL_AVAILABLE": "Current-signal timing evidence",
@@ -868,6 +894,99 @@ TRANSLATIONS["en"].update(
     }
 )
 
+
+# Recommended Follow-up remains a display of persisted review evidence.  These
+# strings explain the human action boundary without changing selection, policy,
+# or the What-if calculation.
+TRANSLATIONS["ko"].update(
+    {
+        "rm.review.follow_up.basis": "권장 활동은 저장된 Why Now 사유와 prospective timing 근거를 바탕으로 하며 자동 실행되지 않습니다.",
+        "rm.action.record_scope": "제안된 기록 항목을 먼저 표시합니다. 제출 시 Banker Application Service가 현재 Case 상태를 다시 검증합니다.",
+        "rm.action.recommended_prefix": "권장",
+        "rm.action.other_permitted_prefix": "기록 가능",
+        "rm.action.feedback_detail": "처리: {operation} · 현재 Case 상태: {state} · append-only 감사 이벤트가 함께 기록되었습니다.",
+        "rm.action.operation.ACKNOWLEDGE": "확인",
+        "rm.action.operation.START_REVIEW": "검토 시작",
+        "rm.action.operation.SET_FOLLOW_UP": "후속조치 설정",
+        "rm.action.operation.RECORD_ACTION": "RM 조치 기록",
+        "rm.action.operation.CLOSE": "Case 종료",
+        "rm.action.operation.REOPEN": "Case 재개",
+    }
+)
+TRANSLATIONS["en"].update(
+    {
+        "rm.review.follow_up.basis": "Suggested activities use persisted Why Now reasons and prospective-timing evidence; they are never executed automatically.",
+        "rm.action.record_scope": "Suggested records appear first. The Banker Application Service revalidates the current Case state when you submit.",
+        "rm.action.recommended_prefix": "Suggested",
+        "rm.action.other_permitted_prefix": "Recordable",
+        "rm.action.feedback_detail": "Processed: {operation} · current Case state: {state} · an append-only audit event was recorded.",
+        "rm.action.operation.ACKNOWLEDGE": "Acknowledge",
+        "rm.action.operation.START_REVIEW": "Start review",
+        "rm.action.operation.SET_FOLLOW_UP": "Set follow-up",
+        "rm.action.operation.RECORD_ACTION": "Record RM action",
+        "rm.action.operation.CLOSE": "Close case",
+        "rm.action.operation.REOPEN": "Reopen case",
+    }
+)
+
+# Portfolio provenance is display-only metadata from the persisted selection
+# manifest. Keep it outside that artifact so localization never changes it.
+TRANSLATIONS["ko"].update(
+    {
+        "rm.portfolio.data_unavailable": "\ub370\uc774\ud130 \uc0ac\uc6a9 \ubd88\uac00",
+        "rm.portfolio.provenance": "\uc120\uc815 \uc815\ubcf4: {policy} \u00b7 as-of {as_of}\uac1c\uc6d4 \u00b7 signal run {signal_run}",
+    }
+)
+TRANSLATIONS["en"].update(
+    {
+        "rm.portfolio.data_unavailable": "Data unavailable",
+        "rm.portfolio.provenance": "Selection provenance: {policy} \u00b7 as-of month {as_of} \u00b7 signal run {signal_run}",
+    }
+)
+
+# Capacity comparison stays in the RM display layer. It is intentionally
+# separate from selection-policy settings and any persisted operational queue.
+TRANSLATIONS["ko"].update(
+    {
+        "rm.capacity.title": "\uac80\ud1a0 \uc6a9\ub7c9 \ube44\uad50",
+        "rm.capacity.unbounded_notice": "\ud604\uc7ac unbounded demo \uacb0\uacfc(1,522\uba85)\ub294 \uc2e4\uc81c RM \uc5c5\ubb34\ub7c9 \uae30\uc900\uc774 \uc544\ub2d9\ub2c8\ub2e4.",
+        "rm.capacity.enable": "\uc0ac\ub78c\uc774 \uc785\ub825\ud55c \uc6a9\ub7c9\uc73c\ub85c \ube44\uad50\ud558\uae30",
+        "rm.capacity.input": "\ud68c\ucc28\ub2f9 \ube44\uad50 \uac80\ud1a0 \uac74\uc218",
+        "rm.capacity.comparison_only": "\uc785\ub825\uac12\uc740 draft \ube44\uad50 \uc2dc\ub098\ub9ac\uc624\uc77c \ubfd0, \uc801\uc815 \uc5c5\ubb34\ub7c9\uc744 \uc790\ub3d9 \uacb0\uc815\ud558\uac70\ub098 \uc2b9\uc778\ud558\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4.",
+        "rm.capacity.rank_invariant": "\ub3d9\uc77c\ud55c \uc800\uc7a5\ub41c \uc21c\uc704\ub97c \uc7ac\uacc4\uc0b0\ud558\uc9c0 \uc54a\uace0, \uc785\ub825 \uc6a9\ub7c9\ub9cc\ud07c \uc0c1\uc704 \uc21c\uc704\ub97c \ube44\uad50\ud569\ub2c8\ub2e4.",
+        "rm.capacity.column.scenario": "\ube44\uad50 \uc2dc\ub098\ub9ac\uc624",
+        "rm.capacity.column.status": "\uc0c1\ud0dc",
+        "rm.capacity.column.selected": "\uc120\ubcc4",
+        "rm.capacity.column.deferred": "\uc6a9\ub7c9 \ubcf4\ub958",
+        "rm.capacity.column.coverage": "\ud6c4\ubcf4 \ucee4\ubc84\ub9ac\uc9c0",
+        "rm.capacity.column.carry_over": "1\ud68c\ucc28 \uc774\uc6d4 \ucd94\uc815",
+        "rm.capacity.column.priority": "Priority Review \uc120\ubcc4",
+        "rm.capacity.column.review": "Review \uc120\ubcc4",
+        "rm.capacity.value.unbounded": "Unbounded demo \uae30\uc900",
+        "rm.capacity.value.entered": "\uc785\ub825 \uc6a9\ub7c9 {capacity}\uba85",
+    }
+)
+TRANSLATIONS["en"].update(
+    {
+        "rm.capacity.title": "Review-capacity comparison",
+        "rm.capacity.unbounded_notice": "The current unbounded demo result (1,522 customers) is not an RM workload standard.",
+        "rm.capacity.enable": "Compare a human-entered capacity",
+        "rm.capacity.input": "Comparison reviews per cycle",
+        "rm.capacity.comparison_only": "The entered value is a draft comparison scenario only; it does not automatically choose or approve an appropriate workload.",
+        "rm.capacity.rank_invariant": "The saved rank order is not recalculated; the comparison changes only its cutoff.",
+        "rm.capacity.column.scenario": "Comparison scenario",
+        "rm.capacity.column.status": "Status",
+        "rm.capacity.column.selected": "Selected",
+        "rm.capacity.column.deferred": "Deferred by capacity",
+        "rm.capacity.column.coverage": "Candidate coverage",
+        "rm.capacity.column.carry_over": "One-cycle carry-over",
+        "rm.capacity.column.priority": "Priority Review selected",
+        "rm.capacity.column.review": "Review selected",
+        "rm.capacity.value.unbounded": "Unbounded demo reference",
+        "rm.capacity.value.entered": "Entered capacity: {capacity}",
+    }
+)
+
 TRANSLATIONS["ko"].update(
     {
         "rm.review.unavailable": "고객 검토 근거를 준비하지 못했습니다.",
@@ -881,6 +1000,10 @@ TRANSLATIONS["ko"].update(
         "rm.review.timing.unavailable": "Prospective timing 근거가 준비되지 않았습니다.",
         "rm.review.timing.current": "{label}: 현재 관측 신호에 대해 지금 검토할 업무 라벨입니다.",
         "rm.review.timing.not_evaluated": "이 현재 신호의 retrospective lead-time은 평가되지 않았습니다.",
+        "rm.review.why_now.scope": "Why Now는 현재·과거 관측과 저장된 정책 근거만 사용하며, 개인별 미래 발생월을 표시하지 않습니다.",
+        "rm.review.timing.scope": "Lead-time 분포는 정책 수준의 retrospective validation 근거이며, 이 고객에게 개별 기간으로 부여되지 않습니다.",
+        "rm.review.timing.policy_status": "정책 상태: {status}",
+        "rm.review.timing.policy_limitations": "정책 한계: {limitations}",
         "rm.review.twin.unavailable": "유사 경로 근거를 읽을 수 없습니다.",
         "rm.review.twin.description": "유사 고객 집단에서 관찰된 historical outcome 분포와 매칭 거리를 표시합니다.",
         "rm.review.landmark.unavailable": "Historical landmark 근거를 읽을 수 없습니다.",
@@ -922,6 +1045,10 @@ TRANSLATIONS["en"].update(
         "rm.review.timing.unavailable": "Prospective timing evidence is unavailable.",
         "rm.review.timing.current": "{label}: this is the operational label for reviewing the current observed signal now.",
         "rm.review.timing.not_evaluated": "Retrospective lead time is not evaluated for this current signal.",
+        "rm.review.why_now.scope": "Why Now uses only current/prior observations and persisted policy reasons; no individual future event month is shown.",
+        "rm.review.timing.scope": "Lead-time distributions are retrospective policy-validation evidence and are not assigned as an individual customer timeline.",
+        "rm.review.timing.policy_status": "Policy status: {status}",
+        "rm.review.timing.policy_limitations": "Policy limitations: {limitations}",
         "rm.review.twin.unavailable": "Similar-path evidence is unavailable.",
         "rm.review.twin.description": "Displays the historical outcome distribution and match distance of the similar-customer cohort.",
         "rm.review.landmark.unavailable": "Historical landmark evidence is unavailable.",
@@ -1156,6 +1283,42 @@ TRANSLATIONS["en"].update(
         "presentation.whatif.disclaimer": "Response scenarios are rule-based cash-flow simulations; they do not estimate or guarantee intervention efficacy.",
         "presentation.whatif.title": "How can response scenarios be compared?",
         "presentation.whatif.message": "In the rule-based cash-flow simulation, {scenario} differs from the baseline scenario by {improvement} in calculated 24-month ending balance.",
+    }
+)
+
+
+# Ranking explanations are display-only translations of already persisted
+# reason codes. They do not modify the triage selector or policy.
+TRANSLATIONS["ko"].update(
+    {
+        "rm.ranking.section.operational_priority": "\uc5c5\ubb34 \uc6b0\uc120\uc21c4",
+        "rm.ranking.section.why_now": "\uc65c \uc9c0\uae08",
+        "rm.ranking.section.prospective_timing": "\ud604\uc7ac \uc2e0\ud638 \uc2dc\uc810",
+        "rm.ranking.section.signal_persistence": "\uc2e0\ud638 \uc9c0\uc18d\uc131",
+        "rm.ranking.section.evidence": "\uadfc\uac70 \uc548\uc815\uc131 \ubc0f \ucda9\ubd84\uc131",
+        "rm.ranking.section.capacity_routing": "\uc6a9\ub7c9 \ubc0f \uacbd\ub85c",
+        "rm.ranking.section.other": "\uae30\ud0c0 \uba85\uc2dc \uadfc\uac70",
+        "rm.ranking.section.tie_breaker": "\uc7ac\ud604 \uac00\ub2a5\ud55c \ub3d9\uc810 \ucc98\ub9ac",
+        "rm.ranking.tie_breaker": "\uace0\uac1d ID\ub294 \uc704\ud5d8 \uadfc\uac70\uac00 \uc544\ub2cc \ucd5c\uc885 \uc7ac\ud604 \uc21c4\uc11c \uc815\ub82c\uc6a9\uc785\ub2c8\ub2e4.",
+        "rm.ranking.rank_semantics": "\uac80\ud1a0 \uc21c\uc704\ub294 \ubc84\uc804\ub41c \ub300\uae30\uc5f4 \uc815\ub82c \uc21c\uc11c\uc77c \ubfd0, \uac1c\uc778 \uc704\ud5d8 \uc810\uc218\ub098 \uc2e0\uc6a9 \uc810\uc218\uac00 \uc544\ub2d9\ub2c8\ub2e4.",
+        "rm.ranking.reason.unknown": "\uba85\uc2dc\ub41c \uadfc\uac70\ub97c \uc0ac\ub78c\uc774 \uc77d\uc744 \uc218 \uc788\ub294 \ubb38\uad6c\ub85c \ud655\uc778\ud560 \uc218 \uc5c6\uc5b4 \ud45c\uc2dc\ud558\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4.",
+        "rm.review.ranking.details": "\uc120\uc815 \uc21c\uc11c\uc640 \uadfc\uac70 \uc0c1\uc138",
+    }
+)
+TRANSLATIONS["en"].update(
+    {
+        "rm.ranking.section.operational_priority": "Operational priority",
+        "rm.ranking.section.why_now": "Why now",
+        "rm.ranking.section.prospective_timing": "Current-signal timing",
+        "rm.ranking.section.signal_persistence": "Signal persistence",
+        "rm.ranking.section.evidence": "Evidence stability and sufficiency",
+        "rm.ranking.section.capacity_routing": "Capacity and routing",
+        "rm.ranking.section.other": "Other declared reason",
+        "rm.ranking.section.tie_breaker": "Reproducible tie-breaker",
+        "rm.ranking.tie_breaker": "Customer ID is used only for deterministic final ordering, not as risk evidence.",
+        "rm.ranking.rank_semantics": "Review rank is versioned queue ordering, not an individual risk or credit score.",
+        "rm.ranking.reason.unknown": "An unrecognized declared reason is unavailable for human-readable display.",
+        "rm.review.ranking.details": "Selection order and evidence details",
     }
 )
 

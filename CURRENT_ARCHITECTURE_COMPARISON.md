@@ -2,21 +2,26 @@
 
 > 기준일: 2026-08-24
 >
-> 비교 기준: GitHub `origin/main` = `bfc8d81` / 현재 로컬 작업 트리
-> 핵심 결론: **분석 데모에서 5,000명 기반 RM 업무 프로토타입까지 구현됐지만, 아직 GitHub에는 반영되지 않았고 실제 익명화 데이터 검증도 시작되지 않았습니다.**
+> 비교 기준: GitHub `origin/main` = `c68c8cc` / Post-P0 feedback-readiness
+> additions
+> 핵심 결론: **P0의 5,000명 기반 RM 업무 프로토타입은 현재 GitHub main에
+> 포함됩니다. Post-P0는 claims·governance·synthetic rehearsal readiness를
+> 보강하지만, 실제 익명화 데이터 검증과 실제 RM pilot은 시작되지 않았습니다.**
 
 ## 1. 한눈에 보는 변화
 
-| 구분 | GitHub 현재본 | 로컬 확장본 |
+| 구분 | 현재 GitHub main (P0) | Post-P0 feedback readiness |
 | --- | --- | --- |
-| 분석 단위 | 주로 한 명의 데모 고객 | 전체 5,000명 분석 + 개별 고객 화면 |
-| 경고 근거 | 유사 집단의 과거 결과와 분기점 | 미래를 보지 않는 as-of 신호, 교차검증, 타이밍 근거 |
-| 고객 선택 | 데모 고객 중심 | 정책 → 투명 순위 → triage → 용량별 선택 |
-| 은행 직원 흐름 | 인사이트 표시에서 종료 | Alert/Case → 검토·조치 → 감사 로그 → 알림 미리보기 |
-| 앱 화면 | General / Presentation 5탭 | General / Presentation 5탭 / RM Workspace 4탭 |
-| 운영 연결 | 없음 | 파일 기반 P0 프로토타입. DB·외부 발송은 의도적으로 미구현 |
+| 분석 단위 | 전체 5,000명 분석 + 개별 고객 화면 | canonical 분석은 변경하지 않음 |
+| 경고 근거 | as-of 신호, 교차검증, historical/prospective 분리 | leakage/claim regression 및 timing copy 검토 |
+| 고객 선택 | 정책 → 투명 순위 → triage → unbounded 또는 비교 capacity | 사람이 입력한 draft capacity 비교, 자동 승인 없음 |
+| 은행 직원 흐름 | Alert/Case → 검토·조치 → 감사 로그 → offline Preview | 합성 dry-run과 pilot measurement protocol |
+| 앱 화면 | General / Presentation 5탭 / RM Workspace 4탭 | 영상 제작은 코드 완료로 취급하지 않음 |
+| 운영 연결 | 파일 기반 P0 prototype, DB·외부 발송 없음 | 실데이터 governance/adapter/metrics readiness만; actual data 없음 |
 
-현재 P0 구현은 수정된 추적 파일과 다수의 새 모듈·테스트·artifact로 구성됩니다. 따라서 **GitHub 링크만 보는 사람은 아직 이 확장을 볼 수 없습니다.** 커밋·검토·push 결정 전까지는 로컬 검증본으로만 취급합니다.
+P0 구현은 `c68c8cc` GitHub main에서 확인할 수 있습니다. 12-17 이후의
+working-tree changes는 별도 검토·commit·push 전까지 local feedback-readiness
+evidence이며, GitHub release 상태와 혼동하지 않습니다.
 
 ## 2. 이전 GitHub 구조: “한 고객의 Twin 분석 데모”
 
@@ -148,13 +153,16 @@ Breakpoint는 1,732명에서 historical landmark를 찾았고 3,268명은 비교
 | leakage 방지 | as-of, reference-only scaler, cross-fit scorer/evaluator 분리 | 구현·테스트됨 |
 | workflow 안전성 | 중복 case 방지, stale-state guard, append-only audit | 구현·테스트됨 |
 | 외부 의존성 | DB·SMTP·webhook·provider SDK 없음, Preview/Null만 | 의도된 P0 범위 |
-| 회귀 | `pytest -q`: 390 passed | 통과 |
+| 회귀 | 12-16 직전 `pytest -q`: 459 passed | 12-17에서도 재검증 필요 |
 | 사용자 실행 | 최근 import 오류를 구조 분리로 보완 | **영상 전 BAT 실기동 리허설 필요** |
-| GitHub 재현성 | P0 확장 미커밋 | **가장 큰 전달 병목** |
+| GitHub 재현성 | P0는 `c68c8cc` main에 포함 | Post-P0 작업은 검토·commit 전 local evidence |
 
 ## 8. 다음 우선순위
 
-1. `03_run_app.bat`으로 깨끗한 실기동과 RM 4탭 리허설을 먼저 끝낸다.
-2. 위 90초 순서로 화면 녹화를 만들고, 슬라이드는 방법론·한계만 보조하도록 줄인다.
-3. 검증된 로컬 P0 변경을 검토·커밋·push하여 GitHub에서도 재현 가능하게 만든다.
-4. 별도 승인 후에만 익명화 실제 데이터의 ingestion, governance, outcome validation을 설계한다. 현재 합성 결과를 실제 은행 성과로 주장하지 않는다.
+1. `03_run_app.bat`으로 clean environment의 General/Presentation/RM rehearsal을
+   끝내고, 필요한 영상은 별도 human production task로 제작한다.
+2. P0 이후 local feedback-readiness changes를 검토·commit·push하기 전에는
+   GitHub release evidence라고 주장하지 않는다.
+3. 별도 승인 후에만 secure environment의 anonymized-data validation을 검토한다.
+   현재 repository의 governance/adapter/metric contract는 approval이나 real-data
+   validation을 의미하지 않는다.

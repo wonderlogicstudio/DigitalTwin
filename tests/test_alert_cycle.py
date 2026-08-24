@@ -11,7 +11,12 @@ import pytest
 
 import src.alert_cycle as alert_cycle
 from src.alert_case import TimingEvidenceReference
-from src.alert_cycle import AlertCycleRunner, TriageDecision
+from src.alert_cycle import (
+    AlertCreationPolicy,
+    AlertCycleRunner,
+    TriageDecision,
+    default_alert_creation_policy,
+)
 from src.alert_repository import FileAlertCaseRepository
 
 
@@ -99,10 +104,74 @@ def test_commit_double_run_is_idempotent_and_keeps_selection_evidence(tmp_path: 
     assert second.counters.noop == 1
     assert len(repository.list_cases()) == 1
     case = repository.list_cases()[0]
+    assert case.created_at == RUN_AT
+    assert case.due_at == RUN_AT + timedelta(hours=24)
+    assert case.operational_priority == "PRIORITY_REVIEW"
+    assert case.state == "NEW"
     assert case.policy_version == "0.1.0"
     assert case.signal_version == "prospective_signal_snapshot.v1"
     assert case.selection_policy_version == "0.1.0"
     assert case.selection_reason_codes == ("PRIORITY_BAND_PRIORITY_REVIEW",)
+    assert first.alert_creation_policy.status == "demo"
+    assert first.alert_creation_policy.to_dict()["delivery_definition"] == "in_app_rm_work_queue_case"
+
+
+def test_alert_creation_due_policy_is_versioned_demo_not_automatically_approved() -> None:
+    policy = default_alert_creation_policy()
+
+    assert policy.status == "demo"
+    assert policy.due_in_hours == 24
+    assert policy.approval_evidence is None
+    assert policy.to_dict() == {
+        "schema_version": "alert_cycle.v1",
+        "policy_id": "alert_case_creation_demo",
+        "version": "0.1.0",
+        "due_in_hours": 24,
+        "status": "demo",
+        "rationale": (
+            "Use a fixed 24-hour demo review window after a selected triage decision "
+            "creates or routes an in-app RM case."
+        ),
+        "limitations": [
+            "The 24-hour value is a demo parameter, not an approved bank SLA or workload standard.",
+            "An in-app RM work-queue case is not evidence of successful external message delivery.",
+        ],
+        "approval_evidence": None,
+        "delivery_definition": "in_app_rm_work_queue_case",
+    }
+
+    with pytest.raises(ValueError, match="requires approval_evidence"):
+        AlertCreationPolicy("future-bank-sla", "1.0.0", status="approved")
+
+    approved = AlertCreationPolicy(
+        "future-bank-sla",
+        "1.0.0",
+        status="approved",
+        approval_evidence="Documented governance approval reference.",
+    )
+    assert approved.status == "approved"
+
+
+def test_custom_draft_due_window_changes_only_case_due_time(tmp_path: Path) -> None:
+    repository = FileAlertCaseRepository(tmp_path / "workflow")
+    runner = AlertCycleRunner(
+        repository,
+        alert_creation_policy=AlertCreationPolicy(
+            "custom_demo_due_window",
+            "0.1.0",
+            due_in_hours=6,
+            status="draft",
+            rationale="Compare a caller-configured six-hour demo window.",
+            limitations=("Draft comparison only; no bank SLA approval.",),
+        ),
+    )
+
+    runner.run(( _decision(),), run_id="custom-due", mode="commit", occurred_at=RUN_AT)
+
+    case = repository.list_cases()[0]
+    assert case.created_at == RUN_AT
+    assert case.due_at == RUN_AT + timedelta(hours=6)
+    assert runner.alert_creation_policy.status == "draft"
 
 
 def test_selected_existing_route_updates_only_the_referenced_open_case(tmp_path: Path) -> None:

@@ -1,0 +1,141 @@
+{
+  "schema_version": "post_p0_feedback_coverage_matrix.v1",
+  "baseline_manifest": "artifacts/post_p0/baseline/feedback_readiness_manifest.json",
+  "baseline_head": "c68c8cc79561e1a33d9a3e5031a29285cb8342db",
+  "gate_result": "GO",
+  "status_counts": {
+    "covered": 2,
+    "partial": 9,
+    "open": 2
+  },
+  "entries": [
+    {
+      "id": "full_population_execution",
+      "evaluator_question": "Was the full 5,000-customer population actually executed?",
+      "current_evidence": ["artifacts/population/seed42_full_run/population_manifest.json", "artifacts/post_p0/baseline/feedback_readiness_manifest.json"],
+      "status": "covered",
+      "gap": "Surface existing exact coverage in product evidence without UI recalculation.",
+      "next_steps": ["12-04", "12-11"],
+      "forbidden_overclaim": "Synthetic full-population execution is not real-bank validation."
+    },
+    {
+      "id": "single_customer_limitation",
+      "evaluator_question": "Is the product more than a single-customer demo?",
+      "current_evidence": ["src/rm_workspace.py", "src/rm_customer_review.py", "artifacts/triage/seed42_crossfit_5fold_asof12_unbounded/rm_representative_cohort.json", "tests/test_rm_workspace.py", "tests/test_rm_portfolio_queue.py"],
+      "status": "partial",
+      "gap": "Post-P0 multi-customer review and representative-versus-operational-queue proof is still needed.",
+      "next_steps": ["12-04", "12-05"],
+      "forbidden_overclaim": "A representative comparison is neither manual cherry-picking nor an operational selection."
+    },
+    {
+      "id": "app_strength_visible",
+      "evaluator_question": "Can the app itself show the 5k-to-RM story?",
+      "current_evidence": ["app.py", "src/rm_workspace.py", "tests/test_presentation_tabs.py", "tests/test_rm_workspace.py"],
+      "status": "partial",
+      "gap": "Feedback-oriented Portfolio and Queue evidence needs targeted verification; recording is a separate presentation task.",
+      "next_steps": ["12-04", "12-05", "12-11"],
+      "forbidden_overclaim": "Video production is not an implemented product feature."
+    },
+    {
+      "id": "capacity_realism",
+      "evaluator_question": "Is the unbounded selection treated as actual RM workload?",
+      "current_evidence": ["artifacts/triage/seed42_crossfit_5fold_asof12_unbounded/rm_selection_manifest.json", "src/triage_selector.py"],
+      "status": "partial",
+      "gap": "Human-supplied capacity comparison and approval provenance are not yet evidenced.",
+      "next_steps": ["12-07"],
+      "forbidden_overclaim": "1,522 is not recommended, approved, daily, or optimal capacity."
+    },
+    {
+      "id": "banker_workflow",
+      "evaluator_question": "Does Banker Workflow exist beyond analytics insight?",
+      "current_evidence": ["src/alert_cycle.py", "src/banker_service.py", "src/audit_trail.py", "tests/test_banker_workflow_audit_gate.py", "tests/test_offline_e2e_regression.py"],
+      "status": "partial",
+      "gap": "No persisted full selected-to-Alert/Audit runtime artifact or real RM operational usage exists.",
+      "next_steps": ["12-09", "12-10", "12-11"],
+      "forbidden_overclaim": "No production workflow integration, DB, or automated financial decision exists."
+    },
+    {
+      "id": "rm_timing_delivery",
+      "evaluator_question": "Is an RM informed at the right time?",
+      "current_evidence": ["src/timing_evidence.py", "src/rm_workspace.py", "src/notifications.py", "tests/test_timing_evidence.py", "tests/test_notifications.py"],
+      "status": "partial",
+      "gap": "There is no external delivery provider or real delivery/SLA evidence; timing and historical landmark copy need review.",
+      "next_steps": ["12-08", "12-09"],
+      "forbidden_overclaim": "Do not claim external delivery or a customer-specific future breakpoint date."
+    },
+    {
+      "id": "rm_action",
+      "evaluator_question": "Does the RM know what to do next?",
+      "current_evidence": ["src/recommended_followup.py", "src/banker_service.py", "src/rm_workflow_ui.py", "tests/test_banker_service.py", "tests/test_rm_action_audit_preview.py"],
+      "status": "partial",
+      "gap": "Human usability and action clarity need targeted evidence.",
+      "next_steps": ["12-10", "12-11"],
+      "forbidden_overclaim": "Recommendations are not automatic financial decisions or efficacy evidence."
+    },
+    {
+      "id": "why_now_vs_historical_landmark",
+      "evaluator_question": "Is Why Now distinct from the historical breakpoint?",
+      "current_evidence": ["src/prospective_signals.py", "src/rm_customer_review.py", "tests/test_rm_customer_review.py", "tests/test_prospective_signals.py"],
+      "status": "partial",
+      "gap": "Per-customer wording, empty states, and visual hierarchy require a focused review.",
+      "next_steps": ["12-08"],
+      "forbidden_overclaim": "A historical landmark is not a forecasted risk date for the current customer."
+    },
+    {
+      "id": "engineering_reproducibility",
+      "evaluator_question": "Is the prototype reproducible and engineering-ready?",
+      "current_evidence": ["config/settings.py", "scripts/start_streamlit.py", "scripts/check_demo_readiness.py", "tests/test_start_streamlit.py", "artifacts/post_p0/baseline/feedback_readiness_manifest.json"],
+      "status": "partial",
+      "gap": "Pre-commit artifact code references, stale current-state documentation, and Python 3.10.9 versus 3.11 target remain.",
+      "next_steps": ["12-03", "12-17"],
+      "forbidden_overclaim": "Do not call provenance and documentation fully release-clean."
+    },
+    {
+      "id": "circularity_honesty",
+      "evaluator_question": "Is circularity handled honestly?",
+      "current_evidence": ["artifacts/validation/circularity/seed42_sample200/circularity_negative_control_report.json", "artifacts/validation/sensitivity/seeds_7_42_99_k_100_200_300/multi_seed_top_k_sensitivity_report.json", "tests/test_circularity_validation.py", "tests/test_sensitivity_validation.py"],
+      "status": "covered",
+      "gap": "Existing synthetic controls need continued regression protection.",
+      "next_steps": ["12-03"],
+      "forbidden_overclaim": "Synthetic negative controls are not real-world accuracy, causal effect, or real-data validation."
+    },
+    {
+      "id": "real_anonymized_data_validation",
+      "evaluator_question": "Has real anonymized customer data been validated?",
+      "current_evidence": [],
+      "status": "open",
+      "gap": "No approved anonymized data, adapter run, or real-data metric report exists.",
+      "next_steps": ["12-12", "12-13", "12-14"],
+      "forbidden_overclaim": "Public, aggregate, or synthetic evidence cannot substitute for approved real-data validation."
+    },
+    {
+      "id": "small_rm_pilot",
+      "evaluator_question": "Has a small RM pilot demonstrated usefulness, timeliness, workload, or follow-up?",
+      "current_evidence": [],
+      "status": "open",
+      "gap": "No pilot protocol result or real participant data exists.",
+      "next_steps": ["12-15", "12-16"],
+      "forbidden_overclaim": "Do not claim RM acceptance, productivity, customer outcome, or intervention impact."
+    },
+    {
+      "id": "claims_documentation_security",
+      "evaluator_question": "Are claims, documentation, and public-repository boundaries aligned?",
+      "current_evidence": ["README.md", "ARCHITECTURE.md", "DECISIONS.md", "PROJECT_HANDOFF.md", "CURRENT_ARCHITECTURE_COMPARISON.md", "tests/test_documentation_sync.py"],
+      "status": "partial",
+      "gap": "Current-state statements and public artifact provenance require a final claims/security synchronization.",
+      "next_steps": ["12-17", "12-18"],
+      "forbidden_overclaim": "Do not state real validation, external notification, or approved operational policy as completed."
+    }
+  ],
+  "out_of_scope_presentation_production": [
+    "Video recording and slide production are not implementation-complete evidence.",
+    "The product must support the 5k-to-queue-to-customer-to-action flow before it is recorded."
+  ],
+  "claims_boundary": {
+    "synthetic_only": true,
+    "real_anonymized_data_validation": "open",
+    "external_notification_delivery": "not_implemented",
+    "database": "not_implemented",
+    "automatic_financial_decision": "not_implemented"
+  }
+}

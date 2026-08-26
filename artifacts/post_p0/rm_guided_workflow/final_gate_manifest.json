@@ -1,0 +1,99 @@
+{
+  "schema_version": "rm_guided_workflow_final_gate.v1",
+  "stage": "14-07",
+  "decision": "GO",
+  "readiness_status": "READY_WITH_WARNINGS",
+  "baseline": {
+    "branch": "main",
+    "head": "6744e962441ad56ffa17dfe24b13e04845e30be2",
+    "origin_main": "6744e962441ad56ffa17dfe24b13e04845e30be2"
+  },
+  "structure": {
+    "app_mode_count": 3,
+    "presentation_tab_count": 5,
+    "rm_tab_count": 4,
+    "guided_step_count": 5,
+    "guided_step_ids": [
+      "PORTFOLIO_CAPACITY",
+      "QUEUE_SELECTION",
+      "CUSTOMER_EVIDENCE_REVIEW",
+      "RM_ACTION",
+      "AUDIT_PREVIEW"
+    ]
+  },
+  "reconciliation": {
+    "funnel": {
+      "monitored_total": 5000,
+      "eligible_priority": 1148,
+      "eligible_review": 374,
+      "eligible_total": 1522,
+      "selected_queue_ready": 1522,
+      "monitor_only": 371,
+      "no_actionable_signal": 3107
+    },
+    "queue": {
+      "operational_count": 1522,
+      "customer_id_digest_before": "5b3e8542935495d619210ffb4edcb095be85e791f61b188230e5360c6faa31ef",
+      "customer_id_digest_after_capacity": "5b3e8542935495d619210ffb4edcb095be85e791f61b188230e5360c6faa31ef",
+      "excluded_dispositions": {
+        "NOT_QUEUE_ELIGIBLE": 3478
+      },
+      "verified_handoff_customer_id": "C000001"
+    },
+    "capacity_comparison": {
+      "human_input": 3,
+      "selected_count": 3,
+      "deferred_count": 1519,
+      "ranking_digest_before": "5b3e8542935495d619210ffb4edcb095be85e791f61b188230e5360c6faa31ef",
+      "ranking_digest_after": "5b3e8542935495d619210ffb4edcb095be85e791f61b188230e5360c6faa31ef",
+      "comparison_only": true,
+      "operational_queue_mutated": false,
+      "source_ranking_recomputed": false,
+      "alert_creation": false
+    },
+    "default_rm": {
+      "workflow_root_exists": false,
+      "audit_root_exists": false,
+      "case_count": 0,
+      "no_case_creation_delta": 0
+    },
+    "workflow_demo": {
+      "status": "DEMO_READY",
+      "case_count": 3,
+      "case_states": ["CLOSED", "IN_REVIEW", "NEW"],
+      "audit_event_count": 8,
+      "audit_case_customer_references_valid": true,
+      "default_workflow_root_used": false,
+      "default_audit_root_used": false,
+      "external_delivery_attempted": false,
+      "network_called": false,
+      "sent": false,
+      "future_label_selection": false
+    }
+  },
+  "manual": {
+    "generator_invoked": true,
+    "output": "reports/operating_manual/Financial_Path_Twin_운영_사용자_매뉴얼.docx",
+    "rendered_page_count": 50,
+    "guided_viewport_edge_status": "NOT_RUN",
+    "existing_pngs_are_fresh_guided_evidence": false
+  },
+  "verification": {
+    "focused_tests": {
+      "passed": 94,
+      "seconds": 52.61
+    },
+    "full_pytest": {
+      "passed": 530,
+      "seconds": 264.72
+    },
+    "readiness": "READY_WITH_WARNINGS",
+    "bounded_streamlit_health": "PASS",
+    "diff_check": "PASS"
+  },
+  "warnings": [
+    "Guided Workflow Edge viewport sign-off is NOT_RUN.",
+    "Python 3.10.9 differs from the project target of Python 3.11.",
+    "OPENAI_API_KEY is absent; template fallback is active."
+  ]
+}

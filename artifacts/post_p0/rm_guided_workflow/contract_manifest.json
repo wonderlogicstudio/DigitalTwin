@@ -1,0 +1,230 @@
+{
+  "schema_version": "rm_guided_workflow_contract_audit.v1",
+  "step": "14-01",
+  "audit_result": "GO",
+  "authorization": "14-02 only; no later step is authorized or executed by this artifact",
+  "repository": {
+    "branch": "main",
+    "head": "6744e962441ad56ffa17dfe24b13e04845e30be2",
+    "origin_main": "6744e962441ad56ffa17dfe24b13e04845e30be2",
+    "baseline_status_short": "clean"
+  },
+  "canonical_invariants": {
+    "random_seed": 42,
+    "customer_count": 5000,
+    "observation_months": "1-12",
+    "future_months": "13-36",
+    "top_k": 200,
+    "rm_app_mode_count": 3,
+    "presentation_tab_count": 5,
+    "rm_workspace_tab_count": 4
+  },
+  "current_artifacts": {
+    "triage": {
+      "manifest_schema": "rm_selection_manifest.v1",
+      "run_id": "seed42_crossfit_5fold_asof12_unbounded",
+      "records": 5000,
+      "unique_customers": 5000,
+      "selected_for_review": 1522,
+      "not_queue_eligible": 3478,
+      "reconciliation_exact": true,
+      "missing_ids": 0,
+      "duplicate_ids": 0,
+      "unexpected_ids": 0,
+      "capacity_scenario": "unbounded_demo",
+      "capacity_automatically_chosen": false,
+      "funnel": {
+        "data_unavailable": 0,
+        "deferred_capacity": 0,
+        "eligible_priority": 1148,
+        "eligible_review": 374,
+        "eligible_total": 1522,
+        "insufficient_evidence": 0,
+        "monitor_only": 371,
+        "monitored_total": 5000,
+        "no_actionable_signal": 3107,
+        "selected_queue_ready": 1522
+      }
+    },
+    "default_workflow": {
+      "workflow_directory_present": false,
+      "audit_directory_present": false,
+      "case_count": 0,
+      "audit_event_count": 0
+    },
+    "workflow_demo": {
+      "runtime_status": "DEMO_READY",
+      "case_count": 3,
+      "case_states": [
+        "CLOSED",
+        "IN_REVIEW",
+        "NEW"
+      ],
+      "audit_event_count": 8,
+      "fixture_initial_case_count": 3,
+      "fixture_initial_case_state": "NEW",
+      "future_label_selection": false,
+      "network_called": false,
+      "sent": false,
+      "external_delivery_attempted": false,
+      "uses_default_workflow_paths": false,
+      "runtime_hash_note": "Live runtime hashes differ from reset-manifest hashes because post-reset demo actions occurred; no reset is required."
+    }
+  },
+  "operational_queue_contract": {
+    "predicate": {
+      "selected_for_review": true,
+      "selection_disposition": "SELECTED_FOR_REVIEW",
+      "routing_disposition_any_of": [
+        "CREATE_NEW_CASE",
+        "ROUTE_EXISTING_CASE"
+      ]
+    },
+    "selection_rule": "Only a visible operational Queue row may complete QUEUE_SELECTION. Representative cohort context never qualifies.",
+    "queue_scope_rule": "Any future scope control must not expand this queue to all customers."
+  },
+  "view_boundaries": {
+    "portfolio_capacity": "Read-only saved artifact and comparison; no ranking, approval, case, or notification mutation.",
+    "customer_evidence_review": "Observation-only current/prior evidence through as-of; no target future loading, scoring, ranking, case mutation, or live-trigger conversion.",
+    "rm_action": "Existing case actions route through RMWorkflowUIService and Banker application service.",
+    "audit_preview": "Activity history is read-only. Offline Preview is PREVIEW with sent=false and no network/external delivery.",
+    "workflow_demo": "Explicit isolated optional branch under rm_workflow_demo_ and artifacts/workflow_demo."
+  },
+  "navigation_contract": {
+    "current_app_tabs_are_keyed_or_controlled": false,
+    "current_requested_tab_behavior": "rm_workspace_requested_tab is written but not consumed for navigation.",
+    "installed_streamlit_version": "1.57.0",
+    "installed_official_tab_features": [
+      "key",
+      "default",
+      "on_change"
+    ],
+    "compatibility_requirement": "Validate official behavior across supported dependency range or use a truthful target-tab CTA; no DOM/JavaScript hack."
+  },
+  "status_vocabulary": [
+    "COMPLETE",
+    "CURRENT",
+    "AVAILABLE",
+    "BLOCKED",
+    "NOT_APPLICABLE"
+  ],
+  "current_guided_state_model": {
+    "exists": false,
+    "baseline_status_interpretation": "NOT_APPLICABLE means this audit has no active guided user session; it is not a customer outcome."
+  },
+  "required_guided_contract": [
+    {
+      "step_id": "PORTFOLIO_CAPACITY",
+      "ordinal": 1,
+      "status": "NOT_APPLICABLE",
+      "completion_condition": "Saved artifact usable and reconciliation exact; user explicitly acknowledges a human-entered draft capacity comparison; queue unchanged.",
+      "next_action": "Select a visible operational Queue row.",
+      "block_reason": "Artifact unavailable, reconciliation failure, or missing acknowledgement.",
+      "source_evidence": [
+        "rm_selection_manifest",
+        "saved funnel",
+        "capacity comparison"
+      ],
+      "safe_to_proceed": false,
+      "safe_to_proceed_when": "The completion condition is met; capacity comparison remains non-mutating.",
+      "target_tab_id": "portfolio_capacity"
+    },
+    {
+      "step_id": "QUEUE_SELECTION",
+      "ordinal": 2,
+      "status": "NOT_APPLICABLE",
+      "completion_condition": "A visible operational Queue row is safely selected; representative context does not count.",
+      "next_action": "Open Customer Review for the selected operational customer.",
+      "block_reason": "No eligible visible operational row, unsafe ID, or no selection.",
+      "source_evidence": [
+        "visible filtered queue",
+        "operational queue predicate"
+      ],
+      "safe_to_proceed": false,
+      "safe_to_proceed_when": "A safe operational customer context is resolved.",
+      "target_tab_id": "queue_selection"
+    },
+    {
+      "step_id": "CUSTOMER_EVIDENCE_REVIEW",
+      "ordinal": 3,
+      "status": "NOT_APPLICABLE",
+      "completion_condition": "Operational Customer Review is available and the user UI-only acknowledges Selection Reason / Why Now.",
+      "next_action": "Review existing case/action availability.",
+      "block_reason": "No selected operational customer, unavailable observation evidence, or missing acknowledgement.",
+      "source_evidence": [
+        "observation-only customer review",
+        "Selection Reason / Why Now"
+      ],
+      "safe_to_proceed": false,
+      "safe_to_proceed_when": "Acknowledged review remains within the no-future-label boundary.",
+      "target_tab_id": "customer_evidence_review"
+    },
+    {
+      "step_id": "RM_ACTION",
+      "ordinal": 4,
+      "status": "NOT_APPLICABLE",
+      "completion_condition": "Existing Case plus successful Banker action, or current case audit confirms a relevant action.",
+      "next_action": "Open Activity/Audit and acknowledge the relevant audit record; Preview is supporting evidence only.",
+      "block_reason": "For a selected customer with no case, status is BLOCKED; do not auto-create an alert or case.",
+      "source_evidence": [
+        "existing case",
+        "Banker operation result",
+        "current case audit"
+      ],
+      "safe_to_proceed": false,
+      "safe_to_proceed_when": "A legitimate existing-case action outcome is present.",
+      "target_tab_id": "rm_action"
+    },
+    {
+      "step_id": "AUDIT_PREVIEW",
+      "ordinal": 5,
+      "status": "NOT_APPLICABLE",
+      "completion_condition": "Activity/Audit is available and the user acknowledges the relevant audit record; Preview never represents delivery.",
+      "next_action": "Finish or deliberately enter the optional workflow-demo branch.",
+      "block_reason": "Activity/audit unavailable or acknowledgement absent.",
+      "source_evidence": [
+        "read-only activity history",
+        "offline PREVIEW state"
+      ],
+      "safe_to_proceed": false,
+      "safe_to_proceed_when": "The audit acknowledgement is present without any external send.",
+      "target_tab_id": "audit_preview"
+    }
+  ],
+  "reserved_session_namespace": {
+    "prefix": "rm_guided_",
+    "proposed_keys": [
+      "rm_guided_state",
+      "rm_guided_customer_id",
+      "rm_guided_customer_origin",
+      "rm_guided_step_statuses",
+      "rm_guided_acknowledgements",
+      "rm_guided_last_action",
+      "rm_guided_requested_target_tab"
+    ],
+    "must_not_reuse": [
+      "rm_workflow_demo_",
+      "rm_customer_context",
+      "rm_workspace_requested_tab"
+    ]
+  },
+  "gaps": [
+    "No persisted rm_guided_ state model or per-step status exists.",
+    "rm_workspace_requested_tab is written but not consumed for navigation.",
+    "rm_queue_scope is collected but not supplied to the queue view model.",
+    "Representative and operational queue origins are not explicitly preserved in current customer context.",
+    "The no-case baseline has no guided BLOCKED explanation, although no auto-case/no auto-alert is correct.",
+    "Action controls, Activity/Audit, and Preview need explicit guided handoff wording."
+  ],
+  "deferred_nonblocking_drift": [
+    "Historical 13-06/13-07 material records an earlier uninitialized demo/default state; current isolated runtime is DEMO_READY.",
+    "PROJECT_HANDOFF.md opens with older c68c8cc baseline information.",
+    "Manual Edge rehearsal and documentation synchronization remain 14-07 work."
+  ],
+  "verification": {
+    "focused_pytest": "57 passed in 30.31s",
+    "full_pytest": "486 passed in 216.29s (0:03:36)",
+    "demo_readiness": "READY_WITH_WARNINGS: Python 3.10.9 versus project target 3.11; OPENAI_API_KEY unset and template fallback used; remaining checks READY.",
+    "streamlit_smoke": "Healthy on temporary port 8519; smoke completed and server stopped."
+  }
+}

@@ -238,6 +238,9 @@ def build_rm_portfolio_queue_view_model(
         "queue": {
             "source": "triage_selected_or_routed_existing_case",
             "unfiltered_count": len(selected_records),
+            "unfiltered_customer_ids": tuple(
+                str(record["customer_id"]) for record in selected_records
+            ),
             "filtered_count": len(queue_rows),
             "rows": tuple(queue_rows),
             "filters": {
@@ -294,6 +297,7 @@ def _unavailable_portfolio_queue_model(*, language: str) -> dict[str, Any]:
         "queue": {
             "source": "triage_selected_or_routed_existing_case",
             "unfiltered_count": 0,
+            "unfiltered_customer_ids": (),
             "filtered_count": 0,
             "rows": (),
             "filters": {},

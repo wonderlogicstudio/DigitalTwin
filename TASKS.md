@@ -73,6 +73,16 @@
   and external notification providers remain blocked pending separate external
   governance/architecture decisions.
 
+## RM Guided Workflow status (14-01~14-07)
+
+- [x] 14-01 read-only contract audit and safe implementation boundary report.
+- [x] 14-02 pure five-step Guided state model with no Streamlit or persistence.
+- [x] 14-03 compact Guided shell above the existing four RM tabs.
+- [x] 14-04 capacity-to-Queue safe handoff and excluded-disposition locks.
+- [x] 14-05 Customer Review evidence, no-Case, action/audit handoff locks.
+- [x] 14-06 optional Synthetic Workflow Demo entry/return isolation locks.
+- [x] 14-07 Source of Truth/manual synchronization and final read-only gate (`READY_WITH_WARNINGS`: Guided viewport Edge sign-off is `NOT_RUN`).
+
 ## M1 Synthetic Data Generator Status
 - [x] GeneratorConfig
 - [x] customer_master.csv generation

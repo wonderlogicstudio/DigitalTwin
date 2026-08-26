@@ -5,7 +5,7 @@ from __future__ import annotations
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Mapping
+from typing import Any, Callable, Mapping, MutableMapping
 
 import pandas as pd
 import streamlit as st
@@ -85,6 +85,11 @@ from src.rm_customer_review import (  # noqa: E402
     build_rm_customer_review_view_model,
     load_customer_observation,
     load_population_result_index,
+)
+from src.rm_guided_workflow import (  # noqa: E402
+    RMGuidedContext,
+    RMGuidedWorkflowState,
+    build_rm_guided_workflow_state,
 )
 from src.recommended_followup import RM_ACTIONS, build_recommended_follow_up  # noqa: E402
 from src.triage_explainability import humanize_reason_codes  # noqa: E402
@@ -667,8 +672,21 @@ def render_rm_workspace_mode(*, selection: SidebarSelection, language: str = "ko
             alert_cases=alert_snapshot.cases,
             language=language,
         )
+    guided_state = _build_rm_guided_state(
+        portfolio_model=portfolio_model,
+        customer_review_model=customer_review_model,
+        workflow_service=workflow_service,
+    )
+    _render_rm_guided_workflow_shell(guided_state, language=language)
+    if _render_workflow_demo_entry_cta(language=language):
+        return
     tabs = st.tabs(view_model["tabs"])
     with tabs[0]:
+        _render_rm_guided_tab_instruction(
+            guided_state,
+            target_tab_id="portfolio_capacity",
+            language=language,
+        )
         st.caption(t("rm.synthetic.notice", language))
         if artifacts.load_error or artifacts.source_reference is None:
             st.info(t("rm.artifact.unavailable", language))
@@ -726,13 +744,14 @@ def render_rm_workspace_mode(*, selection: SidebarSelection, language: str = "ko
         if alert_snapshot.load_error:
             st.warning(t("rm.repository.unavailable", language))
 
-        _render_workflow_demo_entry_cta(language=language)
-
-        _render_rm_capacity_comparison(
+        capacity_reconciliation = _render_rm_capacity_comparison(
             getattr(artifacts, "selection_manifest", None),
+            portfolio_model=portfolio_model,
             available=bool(portfolio_model["available"]),
             language=language,
         )
+        if capacity_reconciliation is not None:
+            st.session_state["rm_guided_capacity_reconciliation"] = capacity_reconciliation
 
         quick_selects = portfolio_model["representative_comparisons"]
         st.caption(t("rm.representative.comparison", language))
@@ -758,15 +777,24 @@ def render_rm_workspace_mode(*, selection: SidebarSelection, language: str = "ko
         selected_representative_customer = str(selected_quick_select["customer_id"] or "")
         if selected_quick_select["selection_explanation"]:
             st.caption(str(selected_quick_select["selection_explanation"]))
+        st.caption(t("rm.guided.representative.notice", language))
         if selected_quick_select["available"] and (
             last_representative_category != selected_category
-            or st.session_state.get("rm_customer_context") != selected_representative_customer
         ):
-            st.session_state["rm_customer_context"] = selected_representative_customer
+            _apply_rm_guided_customer_handoff(
+                st.session_state,
+                target=selected_representative_customer,
+                origin="representative_comparison",
+            )
             st.session_state["rm_workspace_requested_tab"] = "customer_review"
             st.session_state["rm_representative_context_category"] = selected_category
             st.rerun()
     with tabs[1]:
+        _render_rm_guided_tab_instruction(
+            guided_state,
+            target_tab_id="queue_selection",
+            language=language,
+        )
         if not portfolio_model["available"]:
             st.info(t("rm.artifact.unavailable", language))
         else:
@@ -810,11 +838,19 @@ def render_rm_workspace_mode(*, selection: SidebarSelection, language: str = "ko
                             portfolio_model,
                             str(queue_rows[selected_index]["customer_id"]),
                         )
-                        if target and st.session_state.get("rm_customer_context") != target:
-                            st.session_state["rm_customer_context"] = target
+                        if target and _apply_rm_guided_customer_handoff(
+                            st.session_state,
+                            target=target,
+                            origin="operational_queue",
+                        ):
                             st.session_state["rm_workspace_requested_tab"] = "customer_review"
                             st.rerun()
     with tabs[2]:
+        _render_rm_guided_tab_instruction(
+            guided_state,
+            target_tab_id="customer_evidence_review",
+            language=language,
+        )
         if customer_review_model is None:
             st.info(t("rm.placeholder.customer_review", language))
         elif not customer_review_model["available"]:
@@ -826,6 +862,11 @@ def render_rm_workspace_mode(*, selection: SidebarSelection, language: str = "ko
                 workflow_service=workflow_service,
             )
     with tabs[3]:
+        _render_rm_guided_tab_instruction(
+            guided_state,
+            target_tab_id="audit_preview",
+            language=language,
+        )
         _render_rm_activity_audit(
             customer_review_model,
             language=language,
@@ -833,10 +874,431 @@ def render_rm_workspace_mode(*, selection: SidebarSelection, language: str = "ko
         )
 
 
-def _render_workflow_demo_entry_cta(*, language: str) -> None:
+_RM_GUIDED_TARGET_TAB_KEYS = {
+    "portfolio_capacity": "rm.tab.portfolio",
+    "queue_selection": "rm.tab.review_queue",
+    "customer_evidence_review": "rm.tab.customer_review",
+    "rm_action": "rm.tab.customer_review",
+    "audit_preview": "rm.tab.activity_audit",
+}
+
+
+def _build_rm_guided_state(
+    *,
+    portfolio_model: Mapping[str, object],
+    customer_review_model: Mapping[str, object] | None,
+    workflow_service: RMWorkflowUIService | None,
+) -> RMGuidedWorkflowState:
+    """Rebuild display state from prepared models on every RM rerun.
+
+    Guided session values persist through language changes. On RM re-entry the
+    prepared models, capacity entry, and visible Queue are revalidated. An
+    invalid context is shown as blocked rather than silently promoted or
+    repaired.
+    """
+
+    review = customer_review_model if isinstance(customer_review_model, Mapping) else None
+    customer_id = review.get("customer_id") if isinstance(review, Mapping) else None
+    customer_id = customer_id if isinstance(customer_id, str) else None
+    workflow_case = review.get("workflow_case") if isinstance(review, Mapping) else None
+    workflow_case = workflow_case if isinstance(workflow_case, Mapping) else None
+    alert_id = workflow_case.get("alert_id") if isinstance(workflow_case, Mapping) else None
+    alert_id = alert_id if isinstance(alert_id, str) else None
+    activity_metadata: Mapping[str, object] | None = None
+    if workflow_service is not None and customer_id is not None:
+        activity_metadata = build_rm_activity_history(
+            workflow_service,
+            alert_id=alert_id,
+            customer_id=customer_id,
+        )
+    feedback = st.session_state.get("rm_workflow_feedback")
+    relevant_audit_marker = _rm_guided_relevant_action_audit_marker(
+        activity_metadata,
+        alert_id=alert_id,
+        customer_id=customer_id,
+    )
+    operation_metadata = _rm_guided_current_action_feedback(
+        feedback,
+        alert_id=alert_id,
+        customer_id=customer_id,
+        case_state=workflow_case.get("state") if workflow_case is not None else None,
+        relevant_audit_marker=relevant_audit_marker,
+    )
+    capacity_value = _rm_guided_capacity_value_from_session(st.session_state)
+    capacity_acknowledged = _rm_guided_capacity_acknowledgement_is_current(
+        st.session_state,
+        capacity_value=capacity_value,
+    )
+    evidence_key = _rm_guided_evidence_acknowledgement_key(customer_id)
+    audit_key = _rm_guided_audit_acknowledgement_key(alert_id)
+    preview_key = f"rm_notification_preview_result:{alert_id}" if alert_id else ""
+    return build_rm_guided_workflow_state(
+        RMGuidedContext(
+            portfolio_queue_view_model=portfolio_model,
+            customer_review_view_model=review,
+            capacity_acknowledged=capacity_acknowledged,
+            capacity_value=capacity_value,
+            customer_id=customer_id,
+            customer_origin=str(st.session_state.get("rm_guided_customer_origin", "none")),
+            workflow_service_available=workflow_service is not None,
+            current_case_metadata=workflow_case,
+            activity_audit_metadata=activity_metadata,
+            last_banker_operation_metadata=operation_metadata,
+            relevant_audit_marker=relevant_audit_marker,
+            evidence_acknowledged=st.session_state.get(evidence_key) is True if evidence_key else False,
+            audit_acknowledged=st.session_state.get(audit_key) is True if audit_key else False,
+            preview_seen=_rm_guided_preview_matches_current_case(
+                st.session_state.get(preview_key) if preview_key else None,
+                alert_id=alert_id,
+                customer_id=customer_id,
+            ),
+        )
+    )
+
+
+def _render_rm_guided_workflow_shell(
+    state: RMGuidedWorkflowState,
+    *,
+    language: str,
+) -> None:
+    """Render one compact shell above the existing four RM tabs."""
+
+    st.markdown(f"#### {t('rm.guided.shell.title', language)}")
+    step_columns = st.columns(len(state.steps))
+    for column, step in zip(step_columns, state.steps):
+        with column:
+            st.caption(f"{step.ordinal}. {t(step.title_key, language)}")
+            st.caption(t(step.status_key, language))
+
+    current_step = next(
+        (step for step in state.steps if step.step_id == state.current_step_id),
+        state.steps[-1],
+    )
+    st.markdown(
+        f"**{t('rm.guided.shell.current_step', language, ordinal=current_step.ordinal, title=t(current_step.title_key, language), status=t(current_step.status_key, language))}**"
+    )
+    st.caption(
+        t(
+            "rm.guided.shell.completion",
+            language,
+            completion=t(current_step.completion_message_key, language),
+        )
+    )
+    if current_step.next_action_key is not None:
+        target_key = _RM_GUIDED_TARGET_TAB_KEYS[current_step.target_tab_id]
+        st.info(
+            t(
+                "rm.guided.shell.next_action",
+                language,
+                next_action=t(current_step.next_action_key, language),
+                target=t(target_key, language),
+            )
+        )
+    if current_step.block_reason_key is not None:
+        st.warning(
+            t(
+                "rm.guided.shell.block_reason",
+                language,
+                reason=t(current_step.block_reason_key, language),
+            )
+        )
+    if (
+        current_step.step_id == "CUSTOMER_EVIDENCE_REVIEW"
+        and st.session_state.get("rm_guided_customer_origin") == "operational_queue"
+    ):
+        st.info(t("rm.guided.handoff.operational_next", language))
+    _render_rm_guided_acknowledgement(current_step.step_id, state, language=language)
+    st.caption(t("rm.guided.session.retained", language))
+
+
+def _render_rm_guided_acknowledgement(
+    step_id: str,
+    state: RMGuidedWorkflowState,
+    *,
+    language: str,
+) -> None:
+    """Collect UI-only acknowledgements; no business artifact is changed."""
+
+    if step_id == "PORTFOLIO_CAPACITY":
+        if _rm_guided_capacity_value_from_session(st.session_state) is None:
+            st.caption(t("rm.guided.ack.capacity_help", language))
+        return
+    # Customer Review and Activity/Audit render their own acknowledgements
+    # beside the evidence they confirm, after validating the current context.
+
+
+def _render_rm_guided_tab_instruction(
+    state: RMGuidedWorkflowState,
+    *,
+    target_tab_id: str,
+    language: str,
+) -> None:
+    """Give a truthful tab target without controlling Streamlit's active tab."""
+
+    current_step = next(
+        (step for step in state.steps if step.step_id == state.current_step_id),
+        state.steps[-1],
+    )
+    current_target_key = _RM_GUIDED_TARGET_TAB_KEYS[current_step.target_tab_id]
+    if current_step.target_tab_id == target_tab_id:
+        st.caption(
+            t(
+                "rm.guided.tab.current_instruction",
+                language,
+                step=t(current_step.title_key, language),
+            )
+        )
+        return
+    st.caption(
+        t(
+            "rm.guided.tab.instruction",
+            language,
+            step=t(current_step.title_key, language),
+            target=t(current_target_key, language),
+        )
+    )
+
+
+def _rm_guided_evidence_acknowledgement_key(customer_id: str | None) -> str:
+    return f"rm_guided_evidence_acknowledged_{customer_id}" if customer_id else ""
+
+
+def _rm_guided_audit_acknowledgement_key(alert_id: str | None) -> str:
+    return f"rm_guided_audit_acknowledged_{alert_id}" if alert_id else ""
+
+
+def _store_rm_guided_acknowledgement(control_key: str, acknowledgement_key: str) -> None:
+    """Persist a UI-only acknowledgement beyond a conditional widget rerun."""
+
+    st.session_state[acknowledgement_key] = st.session_state.get(control_key) is True
+
+
+def _rm_guided_capacity_value_from_session(
+    session_state: Mapping[str, object],
+) -> int | None:
+    """Return only a current human-entered capacity value from UI session state."""
+
+    if session_state.get("rm_capacity_comparison_enabled") is not True:
+        return None
+    value = session_state.get("rm_capacity_comparison_value")
+    return value if isinstance(value, int) and not isinstance(value, bool) and value >= 0 else None
+
+
+def _rm_guided_capacity_acknowledgement_is_current(
+    session_state: MutableMapping[str, object],
+    *,
+    capacity_value: int | None,
+) -> bool:
+    """Invalidate a UI-only acknowledgement when its comparison input changes."""
+
+    acknowledgement_key = "rm_guided_capacity_acknowledged"
+    acknowledged_value_key = "rm_guided_capacity_acknowledged_value"
+    control_key = "rm_guided_capacity_acknowledgement_control"
+    is_current = (
+        capacity_value is not None
+        and session_state.get(acknowledgement_key) is True
+        and session_state.get(acknowledged_value_key) == capacity_value
+    )
+    if not is_current:
+        session_state[acknowledgement_key] = False
+        session_state[acknowledged_value_key] = None
+        session_state[control_key] = False
+    return is_current
+
+
+def _store_rm_guided_capacity_acknowledgement() -> None:
+    """Store acknowledgement with the exact input it confirms; no artifact changes."""
+
+    acknowledgement_key = "rm_guided_capacity_acknowledged"
+    acknowledged_value_key = "rm_guided_capacity_acknowledged_value"
+    control_key = "rm_guided_capacity_acknowledgement_control"
+    acknowledged = st.session_state.get(control_key) is True
+    st.session_state[acknowledgement_key] = acknowledged
+    st.session_state[acknowledged_value_key] = (
+        _rm_guided_capacity_value_from_session(st.session_state) if acknowledged else None
+    )
+
+
+_RM_GUIDED_ACTION_OPERATIONS = frozenset(
+    {"ACKNOWLEDGE", "START_REVIEW", "SET_FOLLOW_UP", "RECORD_ACTION", "CLOSE", "REOPEN"}
+)
+
+
+def _rm_guided_relevant_action_audit_marker(
+    activity_metadata: Mapping[str, object] | None,
+    *,
+    alert_id: str | None,
+    customer_id: str | None,
+) -> dict[str, object]:
+    """Find only explicitly typed current-case Banker audit events."""
+
+    if not isinstance(activity_metadata, Mapping) or activity_metadata.get("available") is not True:
+        return {"available": False, "relevant_action": False}
+    events = activity_metadata.get("events")
+    if not isinstance(events, (tuple, list)) or not alert_id or not customer_id:
+        return {"available": True, "relevant_action": False}
+    matching_events = [
+        event
+        for event in events
+        if isinstance(event, Mapping)
+        and event.get("alert_id") == alert_id
+        and event.get("customer_id") == customer_id
+        and isinstance(event.get("operation"), str)
+        and event.get("operation") in _RM_GUIDED_ACTION_OPERATIONS
+        and event.get("event_type")
+        == f"BANKER_{event.get('operation')}_REQUESTED"
+    ]
+    if not matching_events:
+        return {"available": True, "relevant_action": False}
+    last_event = matching_events[-1]
+    return {
+        "available": True,
+        "relevant_action": True,
+        "event_id": last_event.get("event_id"),
+        "operation": last_event.get("operation"),
+        "current_state": last_event.get("new_state"),
+    }
+
+
+def _rm_guided_current_action_feedback(
+    feedback: object,
+    *,
+    alert_id: str | None,
+    customer_id: str | None,
+    case_state: object,
+    relevant_audit_marker: Mapping[str, object],
+) -> dict[str, object] | None:
+    """Accept success feedback only when it reconciles to the current case audit."""
+
+    if not isinstance(feedback, Mapping) or not alert_id or not customer_id:
+        return None
+    operation = feedback.get("operation")
+    audit_event_id = feedback.get("audit_event_id")
+    if (
+        feedback.get("alert_id") != alert_id
+        or feedback.get("customer_id") != customer_id
+        or feedback.get("current_state") != case_state
+        or not isinstance(operation, str)
+        or operation not in _RM_GUIDED_ACTION_OPERATIONS
+        or not isinstance(audit_event_id, str)
+        or not audit_event_id
+    ):
+        return None
+    if (
+        relevant_audit_marker.get("relevant_action") is not True
+        or relevant_audit_marker.get("event_id") != audit_event_id
+        or relevant_audit_marker.get("operation") != operation
+        or relevant_audit_marker.get("current_state") != case_state
+    ):
+        return None
+    return {
+        "success": True,
+        "operation": operation,
+        "audit_event_id": audit_event_id,
+        "current_state": case_state,
+    }
+
+
+def _rm_guided_preview_matches_current_case(
+    preview: object,
+    *,
+    alert_id: str | None,
+    customer_id: str | None,
+) -> bool:
+    """Show an offline Preview only for the active customer and existing Case."""
+
+    if not isinstance(preview, Mapping) or not alert_id or not customer_id:
+        return False
+    scope = preview.get("scope")
+    return (
+        preview.get("available") is True
+        and preview.get("alert_id") == alert_id
+        and preview.get("customer_id") == customer_id
+        and preview.get("status") == "PREVIEW"
+        and preview.get("sent") is False
+        and preview.get("external_delivery_attempted") is False
+        and isinstance(scope, Mapping)
+        and scope.get("case_mutated") is False
+        and scope.get("audit_mutated") is False
+        and scope.get("network_called") is False
+    )
+
+
+def _apply_rm_guided_customer_handoff(
+    session_state: MutableMapping[str, object],
+    *,
+    target: str,
+    origin: str,
+) -> bool:
+    """Apply a validated operational or representative context without queue writes."""
+
+    if origin not in {"operational_queue", "representative_comparison"}:
+        return False
+    if not _is_safe_rm_guided_customer_id(target):
+        return False
+    if (
+        session_state.get("rm_customer_context") == target
+        and session_state.get("rm_guided_customer_origin") == origin
+        and session_state.get("rm_guided_customer_id") == target
+    ):
+        return False
+
+    _clear_rm_guided_customer_specific_state(session_state)
+    session_state["rm_customer_context"] = target
+    session_state["rm_guided_customer_origin"] = origin
+    session_state["rm_guided_customer_id"] = target
+    session_state["rm_guided_queue_handoff_reconciliation"] = {
+        "selected_customer_id": target,
+        "selected_customer_origin": origin,
+    }
+    return True
+
+
+def _clear_rm_guided_customer_specific_state(
+    session_state: MutableMapping[str, object],
+) -> None:
+    """Discard only prior customer review, action, and audit UI state."""
+
+    prefixes = (
+        "rm_guided_evidence_acknowledged_",
+        "rm_guided_audit_acknowledged_",
+        "rm_notification_preview_result:",
+        "rm_submission:",
+    )
+    for key in tuple(session_state):
+        if key in {"rm_workflow_feedback", "rm_guided_last_action_ref"} or (
+            isinstance(key, str) and key.startswith(prefixes)
+        ):
+            session_state.pop(key, None)
+
+
+def _is_safe_rm_guided_customer_id(value: object) -> bool:
+    return (
+        isinstance(value, str)
+        and bool(value.strip())
+        and all(character.isalnum() or character in "_-" for character in value)
+    )
+
+
+def _rm_guided_customer_id_from_state() -> str | None:
+    origin = st.session_state.get("rm_guided_customer_origin")
+    customer_id = st.session_state.get("rm_customer_context")
+    if origin in {"operational_queue", "restored_operational_context"} and customer_id:
+        return str(customer_id)
+    return None
+
+
+def _rm_guided_alert_id_from_state() -> str | None:
+    feedback = st.session_state.get("rm_workflow_feedback")
+    if isinstance(feedback, Mapping) and feedback.get("alert_id"):
+        return str(feedback["alert_id"])
+    return None
+
+
+def _render_workflow_demo_entry_cta(*, language: str) -> bool:
     """Offer an explicit, zero-write route into the secondary demo context."""
 
-    st.markdown(f"#### {t('rm.workflow_demo.title', language)}")
+    st.caption(t("rm.workflow_demo.separation", language))
     st.caption(t("rm.workflow_demo.cta_caption", language))
     if st.button(
         t("rm.workflow_demo.cta", language),
@@ -844,11 +1306,14 @@ def _render_workflow_demo_entry_cta(*, language: str) -> None:
     ):
         enter_workflow_demo(st.session_state)
         st.rerun()
+        return True
+    return False
 
 
 def _render_workflow_demo_context(*, language: str) -> None:
     """Render actions only against the explicitly initialized demo runtime."""
 
+    st.caption(t("rm.workflow_demo.breadcrumb", language))
     st.subheader(t("rm.workflow_demo.title", language))
     header_columns = st.columns([3, 2])
     with header_columns[1]:
@@ -859,6 +1324,7 @@ def _render_workflow_demo_context(*, language: str) -> None:
             exit_workflow_demo(st.session_state)
             st.rerun()
     st.warning(t("rm.workflow_demo.banner", language))
+    st.caption(t("rm.workflow_demo.separation", language))
     st.caption(t("rm.workflow_demo.banner.preview", language))
     st.caption(t("rm.workflow_demo.cta_caption", language))
 
@@ -1221,9 +1687,10 @@ def _workflow_demo_case_option_label(case: Any, *, language: str) -> str:
 def _render_rm_capacity_comparison(
     selection_manifest: Mapping[str, object] | None,
     *,
+    portfolio_model: Mapping[str, object],
     available: bool,
     language: str,
-) -> None:
+) -> dict[str, object] | None:
     """Render an opt-in draft cutoff comparison over saved triage ranks only."""
 
     st.markdown(f"#### {t('rm.capacity.title', language)}")
@@ -1234,10 +1701,10 @@ def _render_rm_capacity_comparison(
         key="rm_capacity_comparison_enabled",
     )
     if not enabled:
-        return
+        return None
     if not available or not isinstance(selection_manifest, Mapping):
         st.info(t("rm.artifact.unavailable", language))
-        return
+        return None
     capacity = st.number_input(
         t("rm.capacity.input", language),
         min_value=0,
@@ -1257,6 +1724,7 @@ def _render_rm_capacity_comparison(
             scenario,
         ),
     )
+    comparison_result = report.scenarios[1]
     rows = []
     for result in report.scenarios:
         scenario_data = result.scenario
@@ -1291,7 +1759,95 @@ def _render_rm_capacity_comparison(
         key="rm_capacity_comparison_table",
     )
     st.caption(t("rm.capacity.comparison_only", language))
+    st.caption(t("rm.capacity.queue_unchanged", language))
     st.caption(t("rm.capacity.rank_invariant", language))
+    capacity_value = int(capacity)
+    acknowledgement_is_current = _rm_guided_capacity_acknowledgement_is_current(
+        st.session_state,
+        capacity_value=capacity_value,
+    )
+    st.checkbox(
+        t("rm.guided.ack.capacity", language),
+        value=acknowledgement_is_current,
+        key="rm_guided_capacity_acknowledgement_control",
+        on_change=_store_rm_guided_capacity_acknowledgement,
+    )
+    if acknowledgement_is_current:
+        st.info(t("rm.guided.handoff.capacity_next", language))
+    return _build_rm_capacity_queue_reconciliation(
+        portfolio_model=portfolio_model,
+        selection_manifest=selection_manifest,
+        capacity_input=capacity_value,
+        comparison_selected=comparison_result.selected_count,
+        comparison_deferred=comparison_result.deferred_count,
+        ranking_digest_before=report.scenarios[0].ranking_digest,
+        ranking_digest_after=comparison_result.ranking_digest,
+        selected_customer_origin=st.session_state.get("rm_guided_customer_origin", "none"),
+    )
+
+
+def _build_rm_capacity_queue_reconciliation(
+    *,
+    portfolio_model: Mapping[str, object],
+    selection_manifest: Mapping[str, object],
+    capacity_input: int,
+    comparison_selected: int,
+    comparison_deferred: int,
+    ranking_digest_before: str,
+    ranking_digest_after: str,
+    selected_customer_origin: object,
+) -> dict[str, object]:
+    """Record comparison evidence while proving the saved Queue was not changed."""
+
+    queue = portfolio_model.get("queue")
+    queue = queue if isinstance(queue, Mapping) else {}
+    raw_customer_ids = queue.get("unfiltered_customer_ids")
+    queue_customer_ids = (
+        tuple(customer_id for customer_id in raw_customer_ids if isinstance(customer_id, str))
+        if isinstance(raw_customer_ids, (list, tuple))
+        else ()
+    )
+    queue_count = queue.get("unfiltered_count")
+    queue_count = queue_count if isinstance(queue_count, int) and queue_count >= 0 else 0
+    return {
+        "capacity_input": capacity_input,
+        "comparison_selected": comparison_selected,
+        "comparison_deferred": comparison_deferred,
+        "queue_unfiltered_count_before": queue_count,
+        "queue_unfiltered_count_after_capacity": queue_count,
+        "queue_customer_ids_before": queue_customer_ids,
+        "queue_customer_ids_after_capacity": queue_customer_ids,
+        "ranking_digest_before": ranking_digest_before,
+        "ranking_digest_after": ranking_digest_after,
+        "excluded_disposition_counts": _rm_guided_excluded_disposition_counts(
+            selection_manifest
+        ),
+        "selected_customer_origin": (
+            selected_customer_origin
+            if isinstance(selected_customer_origin, str)
+            else "none"
+        ),
+    }
+
+
+def _rm_guided_excluded_disposition_counts(
+    selection_manifest: Mapping[str, object],
+) -> dict[str, int]:
+    """Count saved non-operational dispositions without adding them to Queue."""
+
+    records = selection_manifest.get("records")
+    if not isinstance(records, list):
+        return {}
+    counts: dict[str, int] = {}
+    for record in records:
+        if not isinstance(record, Mapping):
+            continue
+        if record.get("selected_for_review") is True:
+            continue
+        disposition = record.get("selection_disposition")
+        if isinstance(disposition, str) and disposition:
+            counts[disposition] = counts.get(disposition, 0) + 1
+    return dict(sorted(counts.items()))
 
 
 def _rm_queue_table_rows(queue_rows: Any, *, language: str = "ko") -> pd.DataFrame:
@@ -1417,6 +1973,33 @@ def _rm_queue_timing_label(reference: Any, language: str) -> str:
     return t(f"rm.queue.timing.{key}", language)
 
 
+def _render_rm_guided_evidence_acknowledgement(
+    review: Mapping[str, Any],
+    *,
+    language: str,
+) -> None:
+    """Place the evidence acknowledgement next to its current operational proof."""
+
+    customer_id = review.get("customer_id")
+    header = review.get("header")
+    if (
+        not isinstance(customer_id, str)
+        or _rm_guided_customer_id_from_state() != customer_id
+        or not isinstance(header, Mapping)
+        or header.get("context_type") != "operational_queue"
+    ):
+        return
+    acknowledgement_key = _rm_guided_evidence_acknowledgement_key(customer_id)
+    control_key = f"{acknowledgement_key}_control"
+    st.checkbox(
+        t("rm.guided.ack.evidence", language),
+        value=st.session_state.get(acknowledgement_key) is True,
+        key=control_key,
+        on_change=_store_rm_guided_acknowledgement,
+        args=(control_key, acknowledgement_key),
+    )
+
+
 def _render_rm_customer_review(
     review: Mapping[str, Any],
     *,
@@ -1436,6 +2019,7 @@ def _render_rm_customer_review(
     )
     st.markdown(f"**{t('rm.review.header.selection_reason', language)}**  {header['selection_reason']}")
     st.markdown(f"**{t('rm.review.header.why_now', language)}**  {header['why_now']}")
+    _render_rm_guided_evidence_acknowledgement(review, language=language)
     why_now_evidence = header.get("why_now_evidence")
     if isinstance(why_now_evidence, Mapping):
         st.caption(t("rm.review.why_now.scope", language))
@@ -1588,18 +2172,47 @@ def _render_rm_action_controls(
     st.markdown(f"#### {t('rm.review.section.actions', language)}")
     workflow_case = review.get("workflow_case")
     if not isinstance(workflow_case, Mapping) or not workflow_case.get("available"):
-        st.info(t("rm.action.no_case", language))
+        header = review.get("header")
+        is_operational_context = (
+            isinstance(header, Mapping)
+            and header.get("context_type") == "operational_queue"
+            and _rm_guided_customer_id_from_state() == review.get("customer_id")
+        )
+        if is_operational_context:
+            st.info(t("rm.action.no_case_selected", language))
+            st.caption(t("rm.action.no_case_owner", language))
+        else:
+            st.info(t("rm.action.no_case", language))
         return
     if workflow_service is None:
         st.warning(t("rm.action.service_unavailable", language))
         return
     alert_id = str(workflow_case["alert_id"])
     case_state = str(workflow_case["state"])
+    customer_id = review.get("customer_id")
+    customer_id = customer_id if isinstance(customer_id, str) else None
     feedback = st.session_state.get("rm_workflow_feedback")
-    if isinstance(feedback, Mapping) and feedback.get("alert_id") == alert_id:
+    activity_metadata = build_rm_activity_history(
+        workflow_service,
+        alert_id=alert_id,
+        customer_id=customer_id,
+    )
+    relevant_audit_marker = _rm_guided_relevant_action_audit_marker(
+        activity_metadata,
+        alert_id=alert_id,
+        customer_id=customer_id,
+    )
+    current_feedback = _rm_guided_current_action_feedback(
+        feedback,
+        alert_id=alert_id,
+        customer_id=customer_id,
+        case_state=case_state,
+        relevant_audit_marker=relevant_audit_marker,
+    )
+    if current_feedback is not None:
         st.success(str(feedback.get("message", t("rm.action.completed", language))))
-        operation = str(feedback.get("operation", ""))
-        current_state = str(feedback.get("current_state", case_state))
+        operation = str(current_feedback["operation"])
+        current_state = str(current_feedback["current_state"])
         if operation:
             st.caption(
                 t(
@@ -1698,7 +2311,7 @@ def _render_rm_action_controls(
         ):
             try:
                 case = load_rm_workflow_case(workflow_service, alert_id=alert_id)
-                if case is None:
+                if case is None or case.customer_id != customer_id:
                     raise KeyError(alert_id)
                 st.session_state[f"rm_notification_preview_result:{alert_id}"] = (
                     build_offline_notification_preview(workflow_service, alert_case=case)
@@ -1706,7 +2319,12 @@ def _render_rm_action_controls(
             except (KeyError, OSError, ValueError, RuntimeError):
                 st.warning(t("rm.notification.preview_unavailable", language))
         preview = st.session_state.get(f"rm_notification_preview_result:{alert_id}")
-        if isinstance(preview, Mapping):
+        if _rm_guided_preview_matches_current_case(
+            preview,
+            alert_id=alert_id,
+            customer_id=customer_id,
+        ):
+            assert isinstance(preview, Mapping)
             st.markdown(f"**{preview.get('title', '')}**")
             st.write(str(preview.get("body", "")))
             st.code(str(preview.get("deep_link", "")), language=None)
@@ -1757,10 +2375,18 @@ def _submit_rm_action(
         return
     st.session_state["rm_workflow_feedback"] = {
         "alert_id": response.alert_case.alert_id,
+        "customer_id": response.alert_case.customer_id,
         "message": t(
             "rm.action.completed_replay" if response.idempotent_replay else "rm.action.completed",
             language,
         ),
+        "operation": response.operation,
+        "current_state": response.current_state,
+        "audit_event_id": response.audit_event.event_id,
+    }
+    st.session_state["rm_guided_last_action_ref"] = {
+        "alert_id": response.alert_case.alert_id,
+        "customer_id": response.alert_case.customer_id,
         "operation": response.operation,
         "current_state": response.current_state,
         "audit_event_id": response.audit_event.event_id,
@@ -1837,10 +2463,18 @@ def _render_rm_activity_audit(
     workflow_case = review.get("workflow_case") if isinstance(review, Mapping) else None
     alert_id = workflow_case.get("alert_id") if isinstance(workflow_case, Mapping) else None
     customer_id = review.get("customer_id") if isinstance(review, Mapping) else None
+    if (
+        not isinstance(workflow_case, Mapping)
+        or workflow_case.get("available") is not True
+        or not isinstance(alert_id, str)
+        or not isinstance(customer_id, str)
+    ):
+        st.info(t("rm.audit.no_case", language))
+        return
     history = build_rm_activity_history(
         workflow_service,
-        alert_id=str(alert_id) if alert_id else None,
-        customer_id=str(customer_id) if customer_id else None,
+        alert_id=alert_id,
+        customer_id=customer_id,
     )
     if not history["available"]:
         st.warning(t("rm.audit.unavailable", language))
@@ -1849,8 +2483,57 @@ def _render_rm_activity_audit(
     if not events:
         st.info(t("rm.audit.empty", language))
         return
+    relevant_audit_marker = _rm_guided_relevant_action_audit_marker(
+        history,
+        alert_id=alert_id,
+        customer_id=customer_id,
+    )
+    last_action_reference = _rm_guided_current_action_feedback(
+        st.session_state.get("rm_guided_last_action_ref"),
+        alert_id=alert_id,
+        customer_id=customer_id,
+        case_state=workflow_case.get("state"),
+        relevant_audit_marker=relevant_audit_marker,
+    )
+    if (
+        last_action_reference is None
+        and relevant_audit_marker.get("relevant_action") is True
+    ):
+        last_action_reference = {
+            "operation": relevant_audit_marker.get("operation"),
+            "current_state": relevant_audit_marker.get("current_state"),
+        }
     st.caption(t("rm.audit.caption", language))
+    if (
+        last_action_reference is not None
+        and isinstance(last_action_reference.get("operation"), str)
+    ):
+        st.info(
+            t(
+                "rm.audit.last_action",
+                language,
+                operation=_rm_operation_label(str(last_action_reference["operation"]), language),
+                state=_rm_queue_case_state_label(
+                    last_action_reference["current_state"], language
+                ),
+            )
+        )
     st.dataframe(pd.DataFrame(events), hide_index=True, width="stretch")
+    header = review.get("header") if isinstance(review, Mapping) else None
+    if (
+        _rm_guided_customer_id_from_state() == customer_id
+        and isinstance(header, Mapping)
+        and header.get("context_type") == "operational_queue"
+    ):
+        acknowledgement_key = _rm_guided_audit_acknowledgement_key(alert_id)
+        control_key = f"{acknowledgement_key}_control"
+        st.checkbox(
+            t("rm.guided.ack.audit", language),
+            value=st.session_state.get(acknowledgement_key) is True,
+            key=control_key,
+            on_change=_store_rm_guided_acknowledgement,
+            args=(control_key, acknowledgement_key),
+        )
 
 
 def _rm_display_decimal(value: object, *, language: str = "ko") -> str:

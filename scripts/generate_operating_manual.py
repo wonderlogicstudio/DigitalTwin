@@ -1641,7 +1641,10 @@ def _capture_one_edge_screen(
             stderr=subprocess.DEVNULL,
         )
         websocket_url = _edge_page_websocket(devtools_port, app_url)
-        connection = websocket.create_connection(websocket_url, timeout=12, origin="http://localhost")
+        # A tab change can trigger a full Streamlit rerun before CDP sends the
+        # next command response.  Give the bounded, local-only capture session
+        # enough time to settle so a valid current screenshot is not discarded.
+        connection = websocket.create_connection(websocket_url, timeout=90, origin="http://localhost")
         try:
             command_id = 1
             _cdp_command(connection, command_id, "Page.enable")
@@ -3224,8 +3227,64 @@ def create_document(
         document,
         "현재 live 화면의 Action/Audit 범위",
         "기본 앱 경로에는 실제 case fixture가 없으므로 Portfolio에서는 selected pending 1,522 / open case 0이 정상일 수 있습니다. "
-        "Action/Audit 완결 흐름은 격리된 synthetic dry-run 증거(3 synthetic cases, 10 audit events)로만 제시해야 합니다. 실운영처럼 보이게 하지 마십시오.",
+        "Action/Audit 완결 흐름은 격리된 synthetic dry-run 증거(최대 3개의 synthetic case와 append-only audit)로만 제시해야 합니다. 실운영처럼 보이게 하지 마십시오.",
         color="FFF8E9",
+    )
+    document.add_heading("8.1 안내된 RM 업무 흐름: 화면을 처음 보는 사용자를 위한 5단계", level=2)
+    document.add_paragraph(
+        "Guided Workflow는 새 정책이나 자동 의사결정 기능이 아닙니다. 이미 준비된 RM 화면을 읽는 순서를 안내하며, "
+        "각 단계에서 현재 상태, 완료 조건, 다음 행동, 차단 사유를 보여줍니다. 기본 RM의 네 탭은 그대로 유지됩니다."
+    )
+    _add_callout(
+        document,
+        "Guided Workflow 이미지 상태: 한국어 기준 캡처 갱신 / 장비 sign-off 대기",
+        "이 매뉴얼의 일반·발표·RM PNG는 현재 코드에서 임시 Edge 프로필(한국어, 1440×1500)로 다시 캡처한 기준 이미지입니다. 다만 실제 발표 장비의 1366×768과 1920×1080, Korean/English viewport sign-off는 별도로 PASS/FAIL로 기록해야 합니다. Step 1, capacity acknowledgement, Queue selection, Customer Review, no-Case 또는 Case action, Activity/Audit, Demo entry/return을 확인하고 상세 checklist는 SCREEN_CAPTURE_GUIDE.md를 따르십시오.",
+        color="FFF1F3",
+    )
+    document.add_page_break()
+    _add_table(
+        document,
+        ("단계", "사용자가 확인할 것", "완료 조건 / 다음 행동", "안전 경계"),
+        (
+            ("1. Portfolio / Capacity", "5,000명 funnel과 사람이 입력한 comparison", "입력한 정확한 capacity를 acknowledgement → Review Queue", "comparison-only; Queue ID·saved rank·Alert는 바뀌지 않음"),
+            ("2. Queue Selection", "보이는 selected/routed operational row", "행 선택 → Customer Review", "Monitor·NoSignal·Insufficient·대표 비교는 operational Queue 완료가 아님"),
+            ("3. Customer Evidence Review", "Selection Reason과 Why Now를 먼저 읽음", "근거 acknowledgement → RM Action", "landmark는 유사 과거 cohort의 retrospective 근거이며 미래 날짜가 아님"),
+            ("4. RM Action", "기존 Case와 Banker action 가능 여부", "Case가 있으면 human RM action 기록 → Activity/Audit", "Case가 없으면 ‘선정됨 · Case 미생성’이 정상 block; 자동 Case 생성 없음"),
+            ("5. Activity / Audit / Preview", "현재 Case의 append-only audit과 offline Preview", "기록 acknowledgement로 flow 종료", "Preview는 not sent·network 없음; audit은 현재 Case에만 연결"),
+        ),
+    )
+    document.add_heading("8.2 다음 탭이 막힌 것처럼 보일 때: 실제 동작과 해결 순서", level=2)
+    document.add_paragraph(
+        "Guided Workflow의 진행 상태와 기본 RM 탭은 서로 다릅니다. Portfolio, Review Queue, Customer Review, "
+        "Activity/Audit의 네 탭은 직접 열어 볼 수 있으며, Guide가 탭을 자동으로 이동시키거나 탭 자체를 잠그지 않습니다. "
+        "다만 선행 완료 조건이 충족되지 않으면 상단 Guide는 다음 단계로 넘어가지 않고 현재 단계, 완료 조건, 다음 행동, 차단 사유를 계속 표시합니다. "
+        "따라서 다음 표의 ‘먼저 할 일’을 해당 탭에서 마친 뒤 상단 Guide의 현재 단계가 바뀌었는지 확인하십시오."
+    )
+    _add_callout(
+        document,
+        "가장 먼저 볼 곳",
+        "상단 Guided RM workflow의 Current step / 완료 조건 / 다음 행동 / 차단 사유를 먼저 읽으십시오. "
+        "다음 탭을 먼저 열어도 내용을 확인할 수는 있지만, 선행 조건을 대신 완료하거나 Case를 자동으로 만들지는 않습니다.",
+        color="EAF2FB",
+    )
+    document.add_page_break()
+    _add_table(
+        document,
+        ("현재 단계", "다음 단계로 진행되지 않는 흔한 이유", "먼저 할 일"),
+        (
+            ("1. Portfolio / Capacity", "capacity comparison을 열지 않았거나 값을 입력·확인하지 않음", "Portfolio에서 Capacity comparison을 켠 뒤 0 이상의 값을 입력하고 ‘이 비교 시나리오 확인 완료’를 체크합니다. 값을 바꾸면 확인은 다시 해야 합니다."),
+            ("2. Queue Selection", "선택한 고객이 없거나 representative comparison을 선택함", "Review Queue에서 보이는 selected/routed 행을 클릭합니다. 행이 안 보이면 검색어와 우선순위·담당자·기한 필터를 전체로 되돌립니다. Portfolio의 대표 비교 사례는 업무 Queue 선택이 아닙니다."),
+            ("3. Customer Evidence Review", "운영 Queue에서 온 고객이 아니거나 Selection Reason / Why Now 확인이 끝나지 않음", "Customer Review에서 선택 이유와 Why Now를 먼저 읽고 ‘선정 근거와 Why Now 확인 완료’를 체크합니다. 근거 화면이 없거나 오래되었다면 Queue의 보이는 행을 다시 선택합니다."),
+            ("4. RM Action", "선택 고객에게 기존 Alert/Case가 없음", "기본 RM에서 ‘선정됨 · Case 미생성’은 정상적인 안전 차단입니다. 자동 Case를 만들지 마십시오. 전체 조치·감사 연습이 필요하면 별도의 Synthetic Workflow Demo를 열어 연습하되, 기본 RM 진행 상태를 완료로 바꾸지는 않습니다."),
+            ("5. Activity / Audit / Preview", "기존 Case의 조치·감사 기록이 없거나 기록 확인을 하지 않음", "기존 Case의 Banker 조치와 append-only Activity/Audit 기록을 확인한 뒤 ‘기록 확인 완료’를 체크합니다. Preview는 발송이 아니며 Preview만으로 이 단계가 완료되지는 않습니다."),
+        ),
+    )
+    _add_callout(
+        document,
+        "사용자가 해결하지 않는 차단",
+        "‘저장된 RM 산출물을 사용할 수 없음’, ‘선택 결과 재조정 불일치’, ‘RM workflow service를 사용할 수 없음’은 고객을 새로 선택하거나 Case를 만드는 방식으로 해결하지 않습니다. "
+        "현재 화면을 유지하고 산출물·서비스 상태를 담당자에게 확인하십시오. Queue가 실제로 비어 있으면 Monitor·NoSignal 고객을 억지로 Queue에 넣지 않습니다.",
+        color="FFF1F3",
     )
     rm_visual = screens.get("rm", capture_cards["rm"])
     _add_picture(

@@ -177,6 +177,11 @@ def test_app_test_explicit_entry_and_return_keep_rm_four_tabs_and_default_roots_
 
     assert not at.exception
     assert [tab.label for tab in at.tabs] == get_rm_workspace_tab_labels("ko")
+    assert any(caption.value == "기본 RM 업무와 분리된 연습용 화면입니다." for caption in at.caption)
+    assert any(
+        caption.value == "최대 3건의 합성 Case · 실제 운영 Alert 아님 · 실제 발송 없음"
+        for caption in at.caption
+    )
     assert [button.key for button in at.button if button.key == "rm_workflow_demo_open_cta"] == [
         "rm_workflow_demo_open_cta"
     ]
@@ -185,6 +190,8 @@ def test_app_test_explicit_entry_and_return_keep_rm_four_tabs_and_default_roots_
 
     assert not at.exception
     assert list(at.tabs) == []
+    assert any(caption.value == "RM Workspace > 합성 Workflow Demo" for caption in at.caption)
+    assert any(caption.value == "기본 RM 업무와 분리된 연습용 화면입니다." for caption in at.caption)
     assert not demo_paths.runtime_root.exists()
     assert [button.key for button in at.button if button.key == "rm_workflow_demo_initialize"] == [
         "rm_workflow_demo_initialize"
@@ -206,10 +213,13 @@ def test_app_test_workflow_demo_entry_keeps_english_copy_and_return_contract() -
     at.sidebar.selectbox(key="app_mode").set_value(RM_WORKSPACE_MODE).run(timeout=45)
 
     assert at.button(key="rm_workflow_demo_open_cta").label == "Open Synthetic Workflow Demo"
+    assert any(caption.value == "A practice context separate from default RM work." for caption in at.caption)
     at.button(key="rm_workflow_demo_open_cta").click().run(timeout=45)
 
     assert not at.exception
     assert [header.value for header in at.subheader] == ["Synthetic Workflow Demo"]
+    assert any(caption.value == "RM Workspace > Synthetic Workflow Demo" for caption in at.caption)
+    assert any(caption.value == "A practice context separate from default RM work." for caption in at.caption)
     assert at.button(key="rm_workflow_demo_back").label == "Return to default RM workspace"
     at.button(key="rm_workflow_demo_back").click().run(timeout=45)
     assert [tab.label for tab in at.tabs] == get_rm_workspace_tab_labels("en")

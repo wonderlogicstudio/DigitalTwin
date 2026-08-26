@@ -221,6 +221,8 @@ def build_offline_notification_preview(
         raise RuntimeError("P0 notification preview must remain offline and not sent")
     return {
         "available": True,
+        "alert_id": alert_case.alert_id,
+        "customer_id": alert_case.customer_id,
         "status": result.status,
         "sent": False,
         "external_delivery_attempted": False,
@@ -274,6 +276,7 @@ def _activity_event_view(event: AuditEvent) -> Mapping[str, object]:
     return {
         "sequence": event.sequence,
         "event_id": event.event_id,
+        "event_type": event.event_type,
         "alert_id": event.alert_id,
         "customer_id": event.customer_id,
         "timestamp": event.timestamp.isoformat(),

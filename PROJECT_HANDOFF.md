@@ -1,12 +1,13 @@
 # Financial Path Twin Project Handoff
 
-## 0. Current implementation snapshot (2026-08-24)
+## 0. Current implementation snapshot (2026-08-26)
 
 The committed `main` baseline is
-`c68c8cc79561e1a33d9a3e5031a29285cb8342db`, and it already contains the P0
-implementation described below. At the 12-17 documentation review, `HEAD` and
-`origin/main` matched. Any later uncommitted feedback-closure work must be
-reported separately from this committed P0 baseline.
+`6744e962441ad56ffa17dfe24b13e04845e30be2`, and it already contains the P0
+implementation described below. At the current 14-07 gate start, `HEAD` and
+`origin/main` matched. The local 14-01~14-07 Guided Workflow/doc-sync work is
+uncommitted and must be reported separately from this committed P0 baseline.
+Any later uncommitted feedback-closure work follows the same separation rule.
 
 The dated verification record later in this handoff is retained as historical
 evidence for the original demo. It is not the latest P0 or Post-P0 regression
@@ -39,6 +40,11 @@ latest `reports/post_p0/` report instead.
 - A separate RM Workspace mode with Portfolio, Review Queue, Customer Review,
   and Activity/Audit tabs. General remains vertical and Presentation remains
   five tabs.
+- A compact five-step Guided Workflow display shell. It reads prepared RM
+  views and UI acknowledgements to explain Portfolio/Capacity, Queue,
+  Customer Review, RM Action, and Activity/Audit; it does not make decisions,
+  recalculate selection, or create a Case. Synthetic Workflow Demo remains an
+  optional isolated practice branch, not a normal Guided step or bypass.
 
 ### Post-P0 feedback-readiness additions
 
@@ -135,7 +141,9 @@ python scripts\start_streamlit.py --port 8519 --timeout 60
 ## 7. 최신 검증 결과
 
 `214 passed` 기록은 2026-08-20의 original-demo 검증 이력이다. P0와
-Post-P0 feedback-readiness 최신 검증은 아래처럼 별도 취급한다.
+Post-P0 feedback-readiness 최신 검증은 아래처럼 별도 취급한다. Guided
+Workflow의 현재 결과는 `reports/post_p0/14-07_rm_guided_workflow_final_gate.md`
+와 그 보고서에 기록된 fresh commands를 우선한다.
 
 - 12-16 synthetic RM pilot dry run 직전 전체 회귀: `459 passed in 229.49s`.
 - 같은 단계의 focused workflow/capacity/audit/notification suite: `59 passed`.
@@ -168,6 +176,9 @@ Post-P0 feedback-readiness 최신 검증은 아래처럼 별도 취급한다.
 - `src/ui_components.py`, `src/visualizations.py`, `src/formatters.py`, `src/labels.py`, `src/i18n.py`는 표시와 문구를 담당합니다.
 - 분석 계산은 데이터 생성, 특징, 매칭, 결과 집계, 분기점, What-if 모듈에 남깁니다.
 - 발표 모드는 메인 고객의 사전 계산 결과를 우선 사용하며, 탭 전환과 언어 전환에서 준비된 결과를 재사용합니다.
+- RM Workspace는 정확히 네 탭을 유지합니다. 그 위의 Guided shell은
+  `현재 단계 / 완료 조건 / 다음 행동 / 차단 사유`를 보여주는 display-only
+  orchestration이며, capacity, Queue, Alert/Case를 변경하지 않습니다.
 
 ## 10. DB 연결 전 결정할 항목
 

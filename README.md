@@ -62,6 +62,26 @@ See [the feedback-security sync report](reports/post_p0/12-17_feedback_security_
 for evidence references and remaining open items. Any actual-data work may
 occur only in an approved secure environment outside this public repository.
 
+## Guided RM workflow (display-only)
+
+`RM Workspace` keeps its four tabs—Portfolio, Review Queue, Customer Review,
+and Activity/Audit—and adds a compact **five-step guidance shell**, not a
+decision or selection engine. It reads the saved view models and explains the
+current step, completion condition, next action, and safe block reason:
+
+1. Portfolio and human-entered capacity comparison acknowledgement
+2. Visible selected/routed operational Queue row
+3. Customer Review evidence acknowledgement (Selection Reason and Why Now)
+4. Existing Case RM action, or the honest `selected · Case not created` block
+5. Activity/Audit acknowledgement and offline Preview review
+
+Capacity is comparison-only and does not change saved rank, Queue IDs, Alert
+creation, or approve a workload. The optional **Synthetic Workflow Demo** is a
+separate practice branch with at most three synthetic Cases; it does not
+replace, bypass, or mutate the normal Guided RM flow. Returning from the Demo
+keeps the RM filter, capacity acknowledgement, customer context, and review
+acknowledgement intact.
+
 To regenerate the checked-in demo selection artifact without changing the
 canonical seed-42 analytics inputs, run:
 

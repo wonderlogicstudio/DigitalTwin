@@ -178,3 +178,18 @@
   repository.
 - Impact files: `RM_PILOT_VALIDATION_PROTOCOL.md`, `src/rm_pilot_protocol.py`,
   `src/synthetic_rm_pilot_dry_run.py`, `artifacts/post_p0/pilot_dry_run/`.
+
+## DEC-024 Guided Workflow is guidance, not a decision engine
+- Date: 2026-08-26
+- Status: accepted
+- Decision: RM Workspace may present a five-step, display-only Guided Workflow
+  that explains current state, completion conditions, next action, and block
+  reasons from existing artifacts, view models, session acknowledgements, and
+  Banker/audit metadata. It cannot score, rank, approve capacity, create a
+  Case, alter Queue eligibility, or make a financial decision.
+- Reason: New RM users need an understandable operational sequence without
+  widening the existing Policy → Triage → Alert → Banker responsibility split.
+- Impact files: `src/rm_guided_workflow.py`, `app.py`, `src/rm_workspace.py`,
+  `src/rm_customer_review.py`, `tests/test_rm_guided_*.py`.
+- Alternative: Make the Guide an operational state machine or a fifth RM tab;
+  rejected because either approach would conflate explanation with decisions.

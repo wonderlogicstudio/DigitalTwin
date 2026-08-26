@@ -259,6 +259,25 @@ Relevant modules include `test_capacity_scenarios.py`,
 `test_validation_metrics_report.py`, `test_rm_pilot_protocol.py`,
 `test_synthetic_rm_pilot_dry_run.py`, and `test_documentation_sync.py`.
 
+## Guided RM final regression gate
+
+The Guided RM suite additionally verifies the five-step state matrix, current
+step/completion/next-action/block copy, KR/EN AppTest access, and preservation
+of three app modes, five Presentation tabs, and four RM tabs. It locks:
+
+- human-entered capacity acknowledgement against the exact value while Queue
+  IDs, saved rank digest, and Alert creation remain unchanged;
+- selected/routed-only Queue eligibility, safe Queue-to-Customer Review
+  handoff, excluded-disposition rejection, and representative comparison
+  blocking;
+- evidence acknowledgement before RM Action, honest no-Case/service/audit
+  blocks, Banker-only actions, append-only audit, and offline Preview;
+- Synthetic Workflow Demo entry/action/reset/exit isolation, three-Case cap,
+  default-root digest preservation, and Guided state restoration; and
+- documentation/manual generator wording for the display-only Guide and the
+  manual Edge capture checklist. Pixel-perfect viewport sign-off remains a
+  human Edge result (`PASS` / `FAIL` / `NOT_RUN`), never an AppTest claim.
+
 ## 13. 완료 기준
 
 ```bash

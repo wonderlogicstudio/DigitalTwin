@@ -332,3 +332,23 @@ these additional operational boundaries:
   offline. No provider credential, endpoint, webhook, direct identifier, raw
   feedback, or row-level real-data artifact belongs in source, tests, logs,
   artifacts, or reports.
+
+## Guided RM workflow boundaries
+
+- **Guidance only:** The five Guided steps explain an already-prepared RM
+  context. They are not a policy, scoring, ranking, selection, capacity
+  approval, Alert-creation, or financial-decision engine.
+- **Capacity:** A human enters a comparison value and acknowledges that exact
+  value. The saved Queue IDs and ranking digest remain unchanged; a new value
+  invalidates the acknowledgement rather than changing the Queue.
+- **Queue to review:** Only a visible `selected/routed` operational Queue row
+  may establish an operational Customer Review context. Representative,
+  Monitor, No actionable signal, Insufficient evidence, and deferred records
+  never become an operational Guided completion by matching customer ID alone.
+- **No Case is normal:** `NO_OPEN_ALERT`, `SELECTED_CASE_PENDING`, and
+  `selected · Case not created` are safe, honest states. Guided UI must block
+  the RM Action step and must not create a Case to remove that block.
+- **Action/Audit:** An existing Case uses the Banker application boundary and
+  append-only audit only. Preview remains `PREVIEW`, not sent, and offline.
+- **Demo:** Synthetic Workflow Demo is optional practice, capped at three
+  synthetic Cases, and retains normal RM/Guided session state on exit.

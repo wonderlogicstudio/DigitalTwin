@@ -74,6 +74,35 @@ python scripts\generate_operating_manual.py
 - Presentation: `C002608`의 ① 현재 상태, ② 유사 경로, ③ 과거 landmark, ④ What-if
 - RM: `C000001` Priority Review, `C000007` Review, `C000003` Monitor 비교 사례
 
+## Guided Workflow image status: Korean reference capture complete / device sign-off pending
+
+The embedded General, Presentation, and RM PNGs were refreshed from the
+current local app with a temporary Edge profile in Korean at 1440×1500. The
+captions and source artifacts were rechecked after capture. The following
+presentation-device checklist remains **NOT_RUN**: it is the required visual
+sign-off for the actual device, 1366×768 and 1920×1080 viewports, and both
+Korean and English.
+
+For **1366×768** and **1920×1080**, repeat the checklist in both Korean and
+English. Record `PASS` or `FAIL`, the operator, device/browser version, and
+any overlap, clipping, or confusing copy. Do not overwrite existing PNGs
+unless the newly captured viewport is actually reviewed.
+
+1. Open RM Workspace and confirm the compact five-step Guided shell shows the
+   current step, completion condition, next action, and an honest block.
+2. Enter a capacity value, acknowledge it, then change it; confirm the
+   acknowledgement invalidates and the Queue/rank remain unchanged.
+3. Select a visible operational Queue row and verify Customer Review starts
+   with Selection Reason and Why Now, followed by the review acknowledgement.
+4. Confirm `selected · Case not created` is an honest RM Action block when no
+   default Case exists; it must not offer automatic Case creation.
+5. Check Activity/Audit and Offline Preview wording: Preview is not sent and
+   uses no external delivery.
+6. Open the optional Synthetic Workflow Demo, confirm its breadcrumb/banner,
+   three-Case cap, and return button; return and verify normal RM filters,
+   capacity acknowledgement, customer context, and review acknowledgement are
+   retained.
+
 ## 캡처하면 안 되는 것
 
 - 실제 고객 ID, 개인정보, API key, 비밀값이 보이는 화면

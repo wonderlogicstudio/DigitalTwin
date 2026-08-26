@@ -37,6 +37,27 @@ Key boundaries:
   `src/rm_workflow_ui.py` are display/application boundaries. They do not
   re-run analytics or mutate repository files directly from Streamlit.
 
+## Guided RM display/orchestration boundary
+
+`src/rm_guided_workflow.py` is a pure display-state module. It consumes only
+prepared RM view models, explicit session acknowledgements, and existing
+service/audit metadata to describe five steps: Portfolio/Capacity, Queue
+Selection, Customer Evidence Review, RM Action, and Activity/Audit Preview.
+It does not import Streamlit, recompute analytics or triage, select capacity,
+create a Case, mutate a repository, or use future labels.
+
+`app.py` renders this compact guidance shell above the existing four RM tabs.
+The tabs remain Portfolio, Review Queue, Customer Review, and Activity/Audit;
+the shell is not a fifth tab. Capacity remains a caller-supplied,
+comparison-only input over the saved rank. A selected customer can enter the
+operational Guided path only from a visible selected/routed Queue row.
+
+`src/workflow_demo.py` and `src/workflow_demo_ui.py` remain an optional
+secondary practice branch. Their runtime is isolated under
+`artifacts/workflow_demo/` and their session keys use `rm_workflow_demo_*`.
+Demo entry, actions, reset, and exit must not alter normal RM filters, Guided
+acknowledgements, customer context, or default workflow/audit roots.
+
 Separate prototype roots are `artifacts/population/`,
 `artifacts/validation/`, `artifacts/triage/`, and `artifacts/workflow/`.
 Canonical `data/raw`, `data/processed`, and `data/demo` artifacts retain their

@@ -900,7 +900,9 @@ TRANSLATIONS["en"].update(
 TRANSLATIONS["ko"].update(
     {
         "rm.workflow_demo.cta": "\ud569\uc131 Workflow Demo \uc5f4\uae30",
+        "rm.workflow_demo.separation": "\uae30\ubcf8 RM \uc5c5\ubb34\uc640 \ubd84\ub9ac\ub41c \uc5f0\uc2b5\uc6a9 \ud654\uba74\uc785\ub2c8\ub2e4.",
         "rm.workflow_demo.cta_caption": "\ucd5c\ub300 3\uac74\uc758 \ud569\uc131 Case \u00b7 \uc2e4\uc81c \uc6b4\uc601 Alert \uc544\ub2d8 \u00b7 \uc2e4\uc81c \ubc1c\uc1a1 \uc5c6\uc74c",
+        "rm.workflow_demo.breadcrumb": "RM Workspace > \ud569\uc131 Workflow Demo",
         "rm.workflow_demo.title": "\ud569\uc131 Workflow Demo",
         "rm.workflow_demo.banner": "\ud569\uc131 Workflow Demo \u00b7 Synthetic fixture \u00b7 \uc2e4\uc81c \uc6b4\uc601 \uc544\ub2d8",
         "rm.workflow_demo.banner.preview": "Notification Preview only \u00b7 \uc2e4\uc81c \ubc1c\uc1a1 \uc544\ub2d8",
@@ -937,7 +939,9 @@ TRANSLATIONS["ko"].update(
 TRANSLATIONS["en"].update(
     {
         "rm.workflow_demo.cta": "Open Synthetic Workflow Demo",
+        "rm.workflow_demo.separation": "A practice context separate from default RM work.",
         "rm.workflow_demo.cta_caption": "Maximum 3 synthetic Cases · not live operational Alerts · no actual delivery",
+        "rm.workflow_demo.breadcrumb": "RM Workspace > Synthetic Workflow Demo",
         "rm.workflow_demo.title": "Synthetic Workflow Demo",
         "rm.workflow_demo.banner": "Synthetic Workflow Demo · Synthetic fixture · not live operations",
         "rm.workflow_demo.banner.preview": "Notification Preview only · no actual delivery",
@@ -1031,6 +1035,7 @@ TRANSLATIONS["ko"].update(
         "rm.capacity.enable": "\uc0ac\ub78c\uc774 \uc785\ub825\ud55c \uc6a9\ub7c9\uc73c\ub85c \ube44\uad50\ud558\uae30",
         "rm.capacity.input": "\ud68c\ucc28\ub2f9 \ube44\uad50 \uac80\ud1a0 \uac74\uc218",
         "rm.capacity.comparison_only": "\uc785\ub825\uac12\uc740 draft \ube44\uad50 \uc2dc\ub098\ub9ac\uc624\uc77c \ubfd0, \uc801\uc815 \uc5c5\ubb34\ub7c9\uc744 \uc790\ub3d9 \uacb0\uc815\ud558\uac70\ub098 \uc2b9\uc778\ud558\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4.",
+        "rm.capacity.queue_unchanged": "\ube44\uad50\uc6a9\uc774\uba70 Review Queue\ub294 \ubcc0\uacbd\ub418\uc9c0 \uc54a\uace0, \uc2b9\uc778\ub41c \uc5c5\ubb34\ub7c9\uc774 \uc544\ub2d9\ub2c8\ub2e4.",
         "rm.capacity.rank_invariant": "\ub3d9\uc77c\ud55c \uc800\uc7a5\ub41c \uc21c\uc704\ub97c \uc7ac\uacc4\uc0b0\ud558\uc9c0 \uc54a\uace0, \uc785\ub825 \uc6a9\ub7c9\ub9cc\ud07c \uc0c1\uc704 \uc21c\uc704\ub97c \ube44\uad50\ud569\ub2c8\ub2e4.",
         "rm.capacity.column.scenario": "\ube44\uad50 \uc2dc\ub098\ub9ac\uc624",
         "rm.capacity.column.status": "\uc0c1\ud0dc",
@@ -1051,6 +1056,7 @@ TRANSLATIONS["en"].update(
         "rm.capacity.enable": "Compare a human-entered capacity",
         "rm.capacity.input": "Comparison reviews per cycle",
         "rm.capacity.comparison_only": "The entered value is a draft comparison scenario only; it does not automatically choose or approve an appropriate workload.",
+        "rm.capacity.queue_unchanged": "Comparison only. The Review Queue is unchanged; this is not an approved workload.",
         "rm.capacity.rank_invariant": "The saved rank order is not recalculated; the comparison changes only its cutoff.",
         "rm.capacity.column.scenario": "Comparison scenario",
         "rm.capacity.column.status": "Status",
@@ -1184,6 +1190,8 @@ TRANSLATIONS["ko"].update(
         "rm.review.whatif.disclaimer": "What-if는 가정적 현금흐름 맥락일 뿐이며 RM 조치의 효과를 추정하거나 보장하지 않습니다.",
         "rm.review.section.actions": "RM 조치",
         "rm.action.no_case": "이 검토 컨텍스트에는 Alert/Case가 없습니다. Alert 생성은 Triage cycle의 책임으로 유지됩니다.",
+        "rm.action.no_case_selected": "선정됨 · Case 미생성",
+        "rm.action.no_case_owner": "Alert/Case 생성은 selected/routed workflow 책임입니다. 이 화면에서는 Case를 생성하지 않습니다.",
         "rm.action.service_unavailable": "RM 업무 서비스를 사용할 수 없습니다. 상태 변경은 시도되지 않았습니다.",
         "rm.action.service_boundary": "조치는 expected-state 및 재시도 보호가 있는 Banker Application Service를 통해서만 실행됩니다.",
         "rm.action.acknowledge": "확인",
@@ -1212,6 +1220,8 @@ TRANSLATIONS["ko"].update(
         "rm.audit.unavailable": "감사 이력을 사용할 수 없습니다. 감사 데이터는 변경되지 않았습니다.",
         "rm.audit.empty": "이 컨텍스트에 기록된 append-only RM 활동이 없습니다.",
         "rm.audit.caption": "활동은 시간순 append-only 순서로 표시됩니다.",
+        "rm.audit.no_case": "현재 고객의 기존 Alert/Case가 없어 Activity/Audit을 표시할 수 없습니다.",
+        "rm.audit.last_action": "마지막 RM 조치: {operation} · 현재 Case 상태: {state}",
         "rm.notification.preview_heading": "알림 미리보기(오프라인)",
         "rm.notification.preview_not_sent": "미리보기 전용이며 발송되지 않았습니다. 네트워크 또는 전달 채널을 사용하지 않습니다.",
         "rm.notification.preview_generate": "오프라인 미리보기 생성",
@@ -1246,6 +1256,8 @@ TRANSLATIONS["en"].update(
         "rm.review.whatif.disclaimer": "What-if is hypothetical cash-flow context only; it does not estimate or guarantee the effect of an RM action.",
         "rm.review.section.actions": "RM Actions",
         "rm.action.no_case": "No Alert/Case exists for this review context. Alert creation remains a triage-cycle responsibility.",
+        "rm.action.no_case_selected": "Selected · Case not created",
+        "rm.action.no_case_owner": "Alert/Case creation is the selected/routed workflow's responsibility. This screen does not create a Case.",
         "rm.action.service_unavailable": "The RM workflow service is unavailable. No state change was attempted.",
         "rm.action.service_boundary": "Actions use the Banker Application Service with expected-state and retry protection.",
         "rm.action.acknowledge": "Acknowledge",
@@ -1274,6 +1286,8 @@ TRANSLATIONS["en"].update(
         "rm.audit.unavailable": "Audit history is unavailable. No audit data was changed.",
         "rm.audit.empty": "No append-only RM activity is recorded for this context.",
         "rm.audit.caption": "Activity is displayed in chronological append-only order.",
+        "rm.audit.no_case": "Activity/Audit is unavailable because the current customer has no existing Alert/Case.",
+        "rm.audit.last_action": "Latest RM action: {operation} · current Case state: {state}",
         "rm.notification.preview_heading": "Notification preview (offline)",
         "rm.notification.preview_not_sent": "Preview only — not sent. No network or delivery channel is used.",
         "rm.notification.preview_generate": "Generate offline preview",
@@ -1397,6 +1411,122 @@ TRANSLATIONS["en"].update(
         "rm.ranking.rank_semantics": "Review rank is versioned queue ordering, not an individual risk or credit score.",
         "rm.ranking.reason.unknown": "An unrecognized declared reason is unavailable for human-readable display.",
         "rm.review.ranking.details": "Selection order and evidence details",
+    }
+)
+
+
+# Guided Workflow uses keys only in its pure view model.  Keep display copy
+# here so the later Streamlit shell never needs to make state decisions.
+TRANSLATIONS["ko"].update(
+    {
+        "rm.guided.title.portfolio_capacity": "\uD3EC\uD2B8\uD3F4\uB9AC\uC624 \uBC0F \uC6A9\uB7C9",
+        "rm.guided.title.queue_selection": "\uAC80\uD1A0 \uD050 \uC120\uD0DD",
+        "rm.guided.title.customer_evidence_review": "\uACE0\uAC1D \uADFC\uAC70 \uAC80\uD1A0",
+        "rm.guided.title.rm_action": "RM \uC870\uCE58",
+        "rm.guided.title.audit_preview": "\uD65C\uB3D9 / \uAC10\uC0AC \uBC0F \uBBF8\uB9AC\uBCF4\uAE30",
+        "rm.guided.status.complete": "\uC644\uB8CC",
+        "rm.guided.status.current": "\uD604\uC7AC",
+        "rm.guided.status.available": "\uC0AC\uC6A9 \uAC00\uB2A5",
+        "rm.guided.status.blocked": "\uCC28\uB2E8\uB428",
+        "rm.guided.status.not_applicable": "\uD574\uB2F9 \uC5C6\uC74C",
+        "rm.guided.complete.portfolio_capacity": "\uC800\uC7A5\uB41C \uC120\uD0DD \uACB0\uACFC\uC640 \uC6A9\uB7C9 \uBE44\uAD50 \uC778\uC815 \uD655\uC778",
+        "rm.guided.complete.queue_selection": "\uBCF4\uC774\uB294 \uC6B4\uC601 \uAC80\uD1A0 \uD050 \uD589\uC744 \uC120\uD0DD",
+        "rm.guided.complete.customer_evidence_review": "\uC120\uD0DD \uC0AC\uC720\uC640 Why Now \uADFC\uAC70\uB97C \uD655\uC778",
+        "rm.guided.complete.rm_action": "\uAE30\uC874 Case\uC758 RM \uC870\uCE58 \uADFC\uAC70 \uD655\uC778",
+        "rm.guided.complete.audit_preview": "\uD65C\uB3D9 / \uAC10\uC0AC \uAE30\uB85D \uD655\uC778",
+        "rm.guided.next.open_capacity": "\uC0AC\uB78C\uC774 \uC785\uB825\uD55C \uC6A9\uB7C9 \uBE44\uAD50\uB97C \uD655\uC778\uD558\uC138\uC694.",
+        "rm.guided.next.select_queue_customer": "\uBCF4\uC774\uB294 \uC6B4\uC601 \uAC80\uD1A0 \uD050\uC5D0\uC11C \uACE0\uAC1D\uC744 \uC120\uD0DD\uD558\uC138\uC694.",
+        "rm.guided.next.review_evidence": "\uC120\uD0DD \uC0AC\uC720\uC640 Why Now \uADFC\uAC70\uB97C \uD655\uC778\uD558\uC138\uC694.",
+        "rm.guided.next.record_action": "\uAE30\uC874 Case\uC758 RM \uC870\uCE58\uB97C \uAE30\uB85D\uD558\uC138\uC694.",
+        "rm.guided.next.review_audit": "\uD65C\uB3D9 / \uAC10\uC0AC \uAE30\uB85D\uC744 \uD655\uC778\uD558\uC138\uC694.",
+        "rm.guided.block.artifact_unavailable": "\uC800\uC7A5\uB41C RM \uC0B0\uCD9C\uBB3C\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
+        "rm.guided.block.reconciliation_failed": "\uC800\uC7A5\uB41C \uC120\uD0DD \uACB0\uACFC\uC758 \uC7AC\uC870\uC815\uC774 \uC77C\uCE58\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.",
+        "rm.guided.block.capacity_contract_invalid": "\uC6A9\uB7C9 \uBE44\uAD50\uAC00 comparison-only \uACBD\uACC4\uB97C \uCDA9\uC871\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.",
+        "rm.guided.block.queue_empty": "\uBCF4\uC774\uB294 \uC6B4\uC601 \uAC80\uD1A0 \uD050\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.",
+        "rm.guided.block.representative_not_operational": "\uB300\uD45C \uBE44\uAD50 \uACE0\uAC1D\uC740 \uC6B4\uC601 \uAC80\uD1A0 \uD050 \uC120\uD0DD\uC774 \uC544\uB2D9\uB2C8\uB2E4.",
+        "rm.guided.block.queue_customer_not_visible": "\uC120\uD0DD\uB41C \uACE0\uAC1D\uC774 \uBCF4\uC774\uB294 \uC6B4\uC601 \uAC80\uD1A0 \uD050\uC5D0 \uC5C6\uC2B5\uB2C8\uB2E4.",
+        "rm.guided.block.customer_origin_invalid": "\uACE0\uAC1D \uC120\uD0DD \uCD9C\uCC98\uB97C \uAC80\uC99D\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
+        "rm.guided.block.review_unavailable": "\uACE0\uAC1D \uADFC\uAC70 \uAC80\uD1A0\uB97C \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uAC70\uB098 \uC624\uB798\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
+        "rm.guided.block.no_case": "\uC120\uD0DD\uB41C \uACE0\uAC1D\uC5D0\uAC8C \uAE30\uC874 Alert/Case\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.",
+        "rm.guided.block.service_unavailable": "RM workflow service\ub97c \uc0ac\uc6a9\ud560 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4. \uc0c1\ud0dc \ubcc0\uacbd \uc5c6\uc774 \uc11c\ube44\uc2a4 \ubcf5\uad6c\ub97c \ud655\uc778\ud558\uc138\uc694.",
+        "rm.guided.block.audit_unavailable": "\uD65C\uB3D9 / \uAC10\uC0AC \uAE30\uB85D\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
+        "rm.guided.block.prerequisite_incomplete": "\uC774\uC804 \uB2E8\uACC4\uC758 \uC644\uB8CC \uC870\uAC74\uC774 \uCDA9\uC871\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.",
+        "rm.guided.block.upstream_blocked": "\uC120\uD589 \uB2E8\uACC4\uAC00 \uCC28\uB2E8\uB418\uC5C8\uC2B5\uB2C8\uB2E4."
+    }
+)
+TRANSLATIONS["en"].update(
+    {
+        "rm.guided.title.portfolio_capacity": "Portfolio and capacity",
+        "rm.guided.title.queue_selection": "Queue selection",
+        "rm.guided.title.customer_evidence_review": "Customer evidence review",
+        "rm.guided.title.rm_action": "RM action",
+        "rm.guided.title.audit_preview": "Activity / audit and preview",
+        "rm.guided.status.complete": "Complete",
+        "rm.guided.status.current": "Current",
+        "rm.guided.status.available": "Available",
+        "rm.guided.status.blocked": "Blocked",
+        "rm.guided.status.not_applicable": "Not applicable",
+        "rm.guided.complete.portfolio_capacity": "Confirm the saved selection and capacity comparison acknowledgement",
+        "rm.guided.complete.queue_selection": "Select a visible operational queue row",
+        "rm.guided.complete.customer_evidence_review": "Acknowledge Selection Reason and Why Now evidence",
+        "rm.guided.complete.rm_action": "Confirm an existing Case RM-action record",
+        "rm.guided.complete.audit_preview": "Acknowledge the Activity / Audit record",
+        "rm.guided.next.open_capacity": "Review the human-entered capacity comparison.",
+        "rm.guided.next.select_queue_customer": "Select a customer from the visible operational review queue.",
+        "rm.guided.next.review_evidence": "Review Selection Reason and Why Now evidence.",
+        "rm.guided.next.record_action": "Record an RM action for the existing Case.",
+        "rm.guided.next.review_audit": "Review the Activity / Audit record.",
+        "rm.guided.block.artifact_unavailable": "The saved RM artifact is unavailable.",
+        "rm.guided.block.reconciliation_failed": "The saved selection artifact does not reconcile exactly.",
+        "rm.guided.block.capacity_contract_invalid": "The capacity comparison does not satisfy the comparison-only boundary.",
+        "rm.guided.block.queue_empty": "No visible operational review-queue row is available.",
+        "rm.guided.block.representative_not_operational": "A representative comparison is not an operational queue selection.",
+        "rm.guided.block.queue_customer_not_visible": "The selected customer is not in the visible operational queue.",
+        "rm.guided.block.customer_origin_invalid": "The customer-selection origin cannot be verified.",
+        "rm.guided.block.review_unavailable": "Customer evidence review is unavailable or stale.",
+        "rm.guided.block.no_case": "No existing Alert/Case is available for the selected customer.",
+        "rm.guided.block.service_unavailable": "The RM workflow service is unavailable. Confirm service recovery without changing state.",
+        "rm.guided.block.audit_unavailable": "Activity / Audit evidence is unavailable.",
+        "rm.guided.block.prerequisite_incomplete": "A preceding step has not met its completion condition.",
+        "rm.guided.block.upstream_blocked": "A preceding step is blocked."
+    }
+)
+TRANSLATIONS["ko"].update(
+    {
+        "rm.guided.shell.title": "\uC548\uB0B4\uB41C RM \uC5C5\uBB34 \uD750\uB984",
+        "rm.guided.shell.current_step": "\uD604\uC7AC \uB2E8\uACC4: {ordinal}. {title} ({status})",
+        "rm.guided.shell.completion": "\uC644\uB8CC \uC870\uAC74: {completion}",
+        "rm.guided.shell.next_action": "\uB2E4\uC74C \uD589\uB3D9: {next_action} \uB300\uC0C1 \uD0ED: {target}",
+        "rm.guided.shell.block_reason": "\uCC28\uB2E8 \uC0AC\uC720: {reason}",
+        "rm.guided.tab.current_instruction": "\uD604\uC7AC \uC548\uB0B4 \uB2E8\uACC4({step})\uB97C \uC774 \uD0ED\uC5D0\uC11C \uC9C4\uD589\uD558\uC138\uC694.",
+        "rm.guided.tab.instruction": "\uD604\uC7AC \uC548\uB0B4 \uB2E8\uACC4: {step}. \uB300\uC0C1 \uD0ED: {target}.",
+        "rm.guided.ack.capacity": "\uc774 \ube44\uad50 \uc2dc\ub098\ub9ac\uc624 \ud655\uc778 \uc644\ub8cc",
+        "rm.guided.ack.capacity_help": "\uBA3C\uC800 Portfolio \uD0ED\uC5D0\uC11C \uC6A9\uB7C9 \uBE44\uAD50\uB97C \uC5F4\uACE0 \uAC12\uC744 \uC785\uB825\uD558\uC138\uC694.",
+        "rm.guided.ack.evidence": "\uc120\uc815 \uadfc\uac70\uc640 Why Now \ud655\uc778 \uc644\ub8cc",
+        "rm.guided.ack.audit": "\uae30\ub85d \ud655\uc778 \uc644\ub8cc",
+        "rm.guided.session.retained": "\uC548\uB0B4 \uD655\uC778 \uC0C1\uD0DC\uB294 \uC5B8\uC5B4 \uBCF4\uAE30 \uBCC0\uACBD \uC2DC \uC720\uC9C0\uB418\uBA70, RM \uBAA8\uB4DC\uC5D0 \uB2E4\uC2DC \uB4E4\uC5B4\uC624\uBA74 \uC6A9\uB7C9 \uC785\uB825\uACFC \uBCF4\uC774\uB294 \uC6B4\uC601 \uD050\uB97C \uB2E4\uC2DC \uAC80\uC99D\uD569\uB2C8\uB2E4.",
+        "rm.guided.representative.notice": "\ube44\uad50 \uc0ac\ub840 \u2014 operational Review Queue \uc5c5\ubb34\uac00 \uc544\ub2d9\ub2c8\ub2e4.",
+        "rm.guided.handoff.capacity_next": "\ub2e4\uc74c: Review Queue\uc5d0\uc11c \ubcf4\uc774\ub294 \uc6b4\uc601 \uac80\ud1a0 \uace0\uac1d\uc744 \uc120\ud0dd\ud558\uc138\uc694.",
+        "rm.guided.handoff.operational_next": "\ub2e4\uc74c: Customer Review\uc5d0\uc11c \uc120\uc815 \uadfc\uac70\uc640 Why Now\ub97c \ud655\uc778\ud558\uc138\uc694."
+    }
+)
+TRANSLATIONS["en"].update(
+    {
+        "rm.guided.shell.title": "Guided RM workflow",
+        "rm.guided.shell.current_step": "Current step: {ordinal}. {title} ({status})",
+        "rm.guided.shell.completion": "Completion condition: {completion}",
+        "rm.guided.shell.next_action": "Next action: {next_action} Target tab: {target}",
+        "rm.guided.shell.block_reason": "Block reason: {reason}",
+        "rm.guided.tab.current_instruction": "Complete the current guided step ({step}) in this tab.",
+        "rm.guided.tab.instruction": "Current guided step: {step}. Target tab: {target}.",
+        "rm.guided.ack.capacity": "I have checked this comparison scenario.",
+        "rm.guided.ack.capacity_help": "Open the capacity comparison and enter a value in the Portfolio tab first.",
+        "rm.guided.ack.evidence": "Selection Reason and Why Now checked.",
+        "rm.guided.ack.audit": "Record checked.",
+        "rm.guided.session.retained": "Guided acknowledgements persist through language changes. On RM re-entry, capacity entry and visible Queue validity are rechecked.",
+        "rm.guided.representative.notice": "Comparison case — not operational Review Queue work.",
+        "rm.guided.handoff.capacity_next": "Next: select a visible operational customer from Review Queue.",
+        "rm.guided.handoff.operational_next": "Next: review Selection Reason and Why Now in Customer Review."
     }
 )
 

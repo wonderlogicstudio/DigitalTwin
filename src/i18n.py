@@ -894,6 +894,84 @@ TRANSLATIONS["en"].update(
     }
 )
 
+# The synthetic Workflow Demo is a secondary RM context, not a fourth app
+# mode or an extra RM tab.  Its copy makes the fixture and delivery boundary
+# explicit before a user can initialize the isolated demo runtime.
+TRANSLATIONS["ko"].update(
+    {
+        "rm.workflow_demo.cta": "\ud569\uc131 Workflow Demo \uc5f4\uae30",
+        "rm.workflow_demo.cta_caption": "\ucd5c\ub300 3\uac74\uc758 \ud569\uc131 Case \u00b7 \uc2e4\uc81c \uc6b4\uc601 Alert \uc544\ub2d8 \u00b7 \uc2e4\uc81c \ubc1c\uc1a1 \uc5c6\uc74c",
+        "rm.workflow_demo.title": "\ud569\uc131 Workflow Demo",
+        "rm.workflow_demo.banner": "\ud569\uc131 Workflow Demo \u00b7 Synthetic fixture \u00b7 \uc2e4\uc81c \uc6b4\uc601 \uc544\ub2d8",
+        "rm.workflow_demo.banner.preview": "Notification Preview only \u00b7 \uc2e4\uc81c \ubc1c\uc1a1 \uc544\ub2d8",
+        "rm.workflow_demo.back": "\uae30\ubcf8 RM \uc5c5\ubb34\ub85c \ub3cc\uc544\uac00\uae30",
+        "rm.workflow_demo.sidebar": "\ud569\uc131 Workflow Demo\uac00 \uc5f4\ub824 \uc788\uc2b5\ub2c8\ub2e4. \uae30\ubcf8 RM \ud544\ud130\ub294 \ubcc0\uacbd\ub418\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4.",
+        "rm.workflow_demo.initialize": "\ud569\uc131 Case \ucd08\uae30\ud654",
+        "rm.workflow_demo.reset": "\ud569\uc131 Case \ucd08\uae30 \uc0c1\ud0dc\ub85c reset",
+        "rm.workflow_demo.status.not_initialized": "\ud569\uc131 Case\uac00 \uc544\uc9c1 \ucd08\uae30\ud654\ub418\uc9c0 \uc54a\uc558\uc2b5\ub2c8\ub2e4. \uc704 \ubc84\ud2bc\uc744 \ub208\uc73c\ub85c \ud655\uc778\ud55c \ud6c4 \uba85\uc2dc\uc801\uc73c\ub85c \ucd08\uae30\ud654\ud558\uc138\uc694.",
+        "rm.workflow_demo.status.fixture_unavailable": "\ud569\uc131 fixture\ub97c \uc77d\uc744 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4. \uae30\ubcf8 RM workflow\ub85c \ub300\uccb4\ud558\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4.",
+        "rm.workflow_demo.status.corrupt": "\ud569\uc131 demo runtime\uc774 \uc815\uc0c1\uc801\uc73c\ub85c \uc77d\ud788\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4. \uae30\ubcf8 RM workflow\ub85c fallback\ud558\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4.",
+        "rm.workflow_demo.status.stale_selection": "\uc120\ud0dd\ud55c \ud569\uc131 Case\uac00 \ud604\uc7ac runtime\uc5d0 \uc5c6\uc2b5\ub2c8\ub2e4. \uc0c8 Case\ub97c \uc120\ud0dd\ud558\uc138\uc694.",
+        "rm.workflow_demo.selector": "\ud569\uc131 Case \uc120\ud0dd",
+        "rm.workflow_demo.case.customer": "\ud569\uc131 customer ID",
+        "rm.workflow_demo.case.state": "\ud604\uc7ac Case \uc0c1\ud0dc",
+        "rm.workflow_demo.case.provenance": "Provenance: {policy} \u00b7 as-of {as_of}\uac1c\uc6d4 \u00b7 signal run {signal_run}",
+        "rm.workflow_demo.case.scope": "\uc774 \ud654\uba74\uc740 \ucd08\uae30\ud654\ub41c \ud569\uc131 fixture\uc640 \uacbd\ub85c \uc815\ubcf4\ub9cc \ubcf4\uc5ec \uc90d\ub2c8\ub2e4. RM action/audit/preview \uc81c\ucd9c\uc740 \ub2e4\uc74c \ub2e8\uacc4\uc5d0\uc11c \uc5f0\uacb0\ub429\ub2c8\ub2e4.",
+        "rm.workflow_demo.case.none": "\ud45c\uc2dc\ud560 \ud569\uc131 Case\uac00 \uc5c6\uc2b5\ub2c8\ub2e4.",
+        "rm.workflow_demo.reset_failed": "\ud569\uc131 Case reset\uc774 \uc644\ub8cc\ub418\uc9c0 \uc54a\uc558\uc2b5\ub2c8\ub2e4. \uae30\ubcf8 RM workflow\ub294 \ubcc0\uacbd\ub418\uc9c0 \uc54a\uc558\uc2b5\ub2c8\ub2e4.",
+        "rm.workflow_demo.action.service_unavailable": "합성 demo service를 안전하게 열 수 없습니다. 기본 RM service로 대체하지 않습니다.",
+        "rm.workflow_demo.action.title": "합성 RM Action",
+        "rm.workflow_demo.action.boundary": "모든 변경은 분리된 합성 runtime에서만 Banker Application Service를 통해 실행됩니다.",
+        "rm.workflow_demo.action.closed_scope": "재오픈은 최대 3건 fixture 계약에서 시연하지 않습니다. 처음 상태로 보려면 reset하세요.",
+        "rm.workflow_demo.follow_up.title": "Recommended Follow-up",
+        "rm.workflow_demo.follow_up.unavailable": "현재 합성 Case의 권장 후속조치를 표시할 수 없습니다.",
+        "rm.workflow_demo.follow_up.actions": "권장 후속조치(선택은 RM): {actions}",
+        "rm.workflow_demo.follow_up.scope": "이 항목은 자동 실행과 자동 금융결정이 아닌 인간 검토 제안입니다.",
+        "rm.workflow_demo.whatif.scope": "What-if는 시뮬레이션 보조 근거일 뿐, RM 행동의 효과를 보장하지 않습니다.",
+        "rm.workflow_demo.timing.scope": "Historical landmark는 유사 과거 집단의 회고 근거이며, 이 합성 Case의 Alert trigger나 미래 날짜 예측으로 사용하지 않습니다.",
+        "rm.workflow_demo.audit.title": "합성 Activity / Audit",
+        "rm.workflow_demo.audit.empty": "이 합성 Case에 기록된 action/audit가 없습니다.",
+        "rm.workflow_demo.audit.caption": "시간순으로 정렬된 분리 demo audit입니다. UI가 직접 쓰지 않습니다.",
+    }
+)
+TRANSLATIONS["en"].update(
+    {
+        "rm.workflow_demo.cta": "Open Synthetic Workflow Demo",
+        "rm.workflow_demo.cta_caption": "Maximum 3 synthetic Cases · not live operational Alerts · no actual delivery",
+        "rm.workflow_demo.title": "Synthetic Workflow Demo",
+        "rm.workflow_demo.banner": "Synthetic Workflow Demo · Synthetic fixture · not live operations",
+        "rm.workflow_demo.banner.preview": "Notification Preview only · no actual delivery",
+        "rm.workflow_demo.back": "Return to default RM workspace",
+        "rm.workflow_demo.sidebar": "Synthetic Workflow Demo is open. Default RM filters remain unchanged.",
+        "rm.workflow_demo.initialize": "Initialize synthetic Cases",
+        "rm.workflow_demo.reset": "Reset synthetic Cases to initial state",
+        "rm.workflow_demo.status.not_initialized": "Synthetic Cases are not initialized. Use the explicit button above only after reviewing this demo boundary.",
+        "rm.workflow_demo.status.fixture_unavailable": "The synthetic fixture cannot be read. The default RM workflow is not used as a substitute.",
+        "rm.workflow_demo.status.corrupt": "The synthetic demo runtime cannot be read safely. The default RM workflow is not used as a fallback.",
+        "rm.workflow_demo.status.stale_selection": "The selected synthetic Case is not present in the current runtime. Choose an available Case.",
+        "rm.workflow_demo.selector": "Select synthetic Case",
+        "rm.workflow_demo.case.customer": "Synthetic customer ID",
+        "rm.workflow_demo.case.state": "Current Case state",
+        "rm.workflow_demo.case.provenance": "Provenance: {policy} · as-of month {as_of} · signal run {signal_run}",
+        "rm.workflow_demo.case.scope": "This step shows only the initialized synthetic fixture and provenance. RM action, audit, and preview submission will be connected in the next step.",
+        "rm.workflow_demo.case.none": "No synthetic Case is available to display.",
+        "rm.workflow_demo.reset_failed": "Synthetic Case reset did not complete. The default RM workflow was not changed.",
+        "rm.workflow_demo.action.service_unavailable": "The synthetic demo service cannot be opened safely. The default RM service is not used as a substitute.",
+        "rm.workflow_demo.action.title": "Synthetic RM Action",
+        "rm.workflow_demo.action.boundary": "Every change is executed only through Banker Application Service against the isolated synthetic runtime.",
+        "rm.workflow_demo.action.closed_scope": "Reopen is not demonstrated under the maximum-three-Case fixture contract. Reset to return to the initial state.",
+        "rm.workflow_demo.follow_up.title": "Recommended Follow-up",
+        "rm.workflow_demo.follow_up.unavailable": "Recommended follow-up is unavailable for this synthetic Case.",
+        "rm.workflow_demo.follow_up.actions": "Suggested follow-up (RM chooses): {actions}",
+        "rm.workflow_demo.follow_up.scope": "This is a human-review proposal, not automatic execution or an automated financial decision.",
+        "rm.workflow_demo.whatif.scope": "What-if is simulation-only supporting evidence; it does not guarantee an RM action will work.",
+        "rm.workflow_demo.timing.scope": "A historical landmark is retrospective peer evidence; it is not an Alert trigger or a predicted future date for this synthetic Case.",
+        "rm.workflow_demo.audit.title": "Synthetic Activity / Audit",
+        "rm.workflow_demo.audit.empty": "No action or audit event is recorded for this synthetic Case.",
+        "rm.workflow_demo.audit.caption": "Time-ordered audit from the isolated demo store. The UI does not write it directly.",
+    }
+)
+
 
 # Recommended Follow-up remains a display of persisted review evidence.  These
 # strings explain the human action boundary without changing selection, policy,

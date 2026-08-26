@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import hashlib
 import json
 import os
 import re
@@ -35,7 +36,6 @@ from pathlib import Path
 from typing import Iterable
 
 from docx import Document
-from docx.enum.section import WD_SECTION
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
@@ -554,6 +554,138 @@ def create_default_vs_rehearsal_workflow(path: Path) -> None:
     image.save(path)
 
 
+def create_workflow_demo_boundary_diagram(path: Path) -> None:
+    """Draw the isolated Workflow Demo write boundary for the operating manual."""
+
+    image = Image.new("RGB", (1900, 1200), "FFFFFF")
+    draw = ImageDraw.Draw(image)
+    draw.rectangle((0, 0, 1900, 150), fill=NAVY)
+    draw.text(
+        (65, 42),
+        "Workflow Demo: RM action으로 바뀌는 것과 보호되는 것",
+        fill="FFFFFF",
+        font=_font(38, bold=True),
+    )
+    draw.text(
+        (67, 104),
+        "명시적으로 Demo를 열고 초기화한 뒤에만 별도 synthetic runtime이 바뀝니다. 분석 원본과 기본 RM 화면은 바뀌지 않습니다.",
+        fill="DCEBFA",
+        font=_font(19),
+    )
+
+    left = (65, 230, 900, 920)
+    right = (1000, 230, 1835, 920)
+    for bounds, title, accent in (
+        (left, "A. Demo에서만 변경 가능", TEAL),
+        (right, "B. 항상 보호되는 분석/운영 기준", RED),
+    ):
+        x0, y0, x1, y1 = bounds
+        draw.rounded_rectangle(bounds, radius=28, fill="FFFFFF", outline=LINE, width=3)
+        draw.rounded_rectangle((x0, y0, x1, y0 + 94), radius=28, fill=accent)
+        draw.text((x0 + 34, y0 + 27), title, fill="FFFFFF", font=_font(29, bold=True))
+
+    left_rows = (
+        (
+            "1. Demo runtime case",
+            "artifacts/workflow_demo/runtime/workflow\nalert_cases.json\n\nNEW -> ACKNOWLEDGED -> IN_REVIEW -> FOLLOW_UP/CLOSED\n상태와 RM action 기록만 변경",
+            "EEF8F6",
+        ),
+        (
+            "2. Append-only audit",
+            "artifacts/workflow_demo/runtime/audit\naudit_events.jsonl\n\n행동, 이전/새 상태, actor, policy/signal reference를 추가 기록",
+            "EAF2FB",
+        ),
+        (
+            "3. Demo session/preview",
+            "rm_workflow_demo_* session key\n\n선택 Case, 화면 feedback, Preview request만 유지\nPreview는 not sent이며 network 호출이 없음",
+            "FFF8E9",
+        ),
+    )
+    for index, (title, body, fill) in enumerate(left_rows):
+        y0 = 340 + index * 180
+        draw.rounded_rectangle((115, y0, 850, y0 + 160), radius=18, fill=fill, outline=LINE, width=2)
+        draw.text((145, y0 + 16), title, fill=NAVY, font=_font(22, bold=True))
+        draw.multiline_text((145, y0 + 53), body, fill=GRAY, font=_font(16), spacing=4)
+
+    right_rows = (
+        "5,000명 원본/월별 synthetic data와 canonical CSV/JSON",
+        "feature, matcher, historical outcome, breakpoint, What-if 계산",
+        "policy eligibility, triage ranking, capacity, selection manifest, queue membership",
+        "기본 artifacts/workflow 및 artifacts/audit, General/Presentation/RM 기본 상태",
+        "외부 메시지, provider, credential, network, 실제 금융 의사결정",
+    )
+    for index, body in enumerate(right_rows):
+        y0 = 330 + index * 112
+        draw.rounded_rectangle((1050, y0, 1785, y0 + 92), radius=16, fill="FFF1F3", outline="E9B6C0", width=2)
+        draw.text((1080, y0 + 26), f"{index + 1}", fill=RED, font=_font(23, bold=True))
+        draw.multiline_text((1130, y0 + 19), _wrapped_lines(body, 42), fill="6C3940", font=_font(17), spacing=4)
+
+    draw.rounded_rectangle((140, 990, 1760, 1140), radius=24, fill="EAF2FB", outline="B7CEE5", width=2)
+    draw.text((190, 1028), "발표에서 반드시 말할 경계", fill=NAVY, font=_font(24, bold=True))
+    draw.multiline_text(
+        (500, 1026),
+        "RM action demo는 Case 상태와 audit evidence를 보여줍니다. 고객의 savings/DSR/월별 거래,\n선정 순위, queue 포함 여부, 분석 결과를 다시 계산하거나 바꾸지 않습니다.",
+        fill=GRAY,
+        font=_font(18),
+        spacing=5,
+    )
+    image.save(path)
+
+
+def create_workflow_demo_presentation_flow(path: Path) -> None:
+    """Draw the app-first internal presentation flow including the Workflow Demo."""
+
+    image = Image.new("RGB", (1900, 1280), "FFFFFF")
+    draw = ImageDraw.Draw(image)
+    draw.rectangle((0, 0, 1900, 150), fill=NAVY)
+    draw.text((65, 42), "권장 발표 흐름: 5,000명 분석에서 RM action까지", fill="FFFFFF", font=_font(39, bold=True))
+    draw.text(
+        (67, 104),
+        "앱을 먼저 보여주고, Method와 limitation은 근거로만 짧게 연결합니다. 모든 Case와 action은 synthetic demo입니다.",
+        fill="DCEBFA",
+        font=_font(19),
+    )
+
+    stages = (
+        ("0", "시작 전", "기본 RM의 Alert 0 / Case 0은 정상\n03_run_app.bat 실행 후 기본 상태 캡처", TEAL),
+        ("1", "Portfolio", "5,000 -> 1,522 eligible/selected\nMonitor 371, No actionable 3,107", BLUE),
+        ("2", "Capacity", "capacity=3 비교: 3 selected\n1,519 deferred. 적정 인력 자동결정 아님", GOLD),
+        ("3", "Customer Review", "C000001: 왜 선정되었나, 왜 지금인가\nprospective timing과 historical landmark 분리", TEAL),
+        ("4", "Workflow Demo 열기", "RM 안의 별도 secondary context\nSynthetic / not live / not sent banner 확인", BLUE),
+        ("5", "Action + Audit", "정확히 3 Case 초기화\nAcknowledge, Review, Follow-up, Close와 audit 확인", GOLD),
+        ("6", "Preview + Return", "Notification Preview는 not sent / network 0\nReset/Back 후 기본 RM이 그대로인지 확인", TEAL),
+    )
+    positions = (
+        (70, 245), (660, 245), (1250, 245),
+        (70, 605), (660, 605), (1250, 605),
+        (660, 920),
+    )
+    for (number, title, body, color), (x0, y0) in zip(stages, positions):
+        x1, y1 = x0 + 535, y0 + 255
+        draw.rounded_rectangle((x0, y0, x1, y1), radius=25, fill="FFFFFF", outline=LINE, width=3)
+        draw.ellipse((x0 + 28, y0 + 28, x0 + 97, y0 + 97), fill=color)
+        draw.text((x0 + 52, y0 + 40), number, fill="FFFFFF", font=_font(26, bold=True))
+        draw.text((x0 + 123, y0 + 37), title, fill=NAVY, font=_font(26, bold=True))
+        draw.multiline_text((x0 + 47, y0 + 126), _wrapped_lines(body, 28), fill=GRAY, font=_font(19), spacing=8)
+
+    arrows = (
+        ((605, 370), (640, 370)), ((1195, 370), (1230, 370)),
+        ((1520, 510), (1520, 570)), ((1240, 730), (1210, 730)),
+        ((650, 730), (620, 730)), ((1520, 875), (930, 900)),
+    )
+    for start, end in arrows:
+        _arrow(draw, start, end, color="9CB7D1")
+
+    draw.rounded_rectangle((145, 1165, 1755, 1235), radius=18, fill="FFF1F3", outline="E9B6C0", width=2)
+    draw.text(
+        (195, 1188),
+        "권장 비중: 앱 화면 60% / 방법론·검증 25% / 한계와 다음 검증 15%. 실제 전달, 개입 효과, 실제 은행 성과는 주장하지 않습니다.",
+        fill="6C3940",
+        font=_font(18, bold=True),
+    )
+    image.save(path)
+
+
 def create_capture_card(path: Path, *, mode: str, steps: tuple[str, ...], accent: str) -> None:
     """Create an honest visual placeholder for a user-session screenshot.
 
@@ -594,6 +726,8 @@ def create_diagrams() -> dict[str, Path]:
         "feedback_response": ASSET_DIR / "11_evaluator_feedback_response_map.png",
         "capacity_example": ASSET_DIR / "12_capacity_comparison_example.png",
         "default_vs_rehearsal": ASSET_DIR / "14_default_rm_vs_synthetic_rehearsal.png",
+        "workflow_demo_boundary": ASSET_DIR / "20_workflow_demo_data_boundary.png",
+        "workflow_demo_presentation": ASSET_DIR / "21_workflow_demo_presentation_flow.png",
     }
     create_mode_overview(diagram_paths["modes"])
     create_operation_flow(diagram_paths["flow"])
@@ -603,6 +737,8 @@ def create_diagrams() -> dict[str, Path]:
     create_feedback_response_map(diagram_paths["feedback_response"])
     create_capacity_comparison_example(diagram_paths["capacity_example"])
     create_default_vs_rehearsal_workflow(diagram_paths["default_vs_rehearsal"])
+    create_workflow_demo_boundary_diagram(diagram_paths["workflow_demo_boundary"])
+    create_workflow_demo_presentation_flow(diagram_paths["workflow_demo_presentation"])
     return diagram_paths
 
 
@@ -724,6 +860,87 @@ def create_rm_alert_case_status_annotation(source: Path, destination: Path) -> P
     for index, explanation in enumerate(explanations):
         fill = "E6EEF8" if index < 3 else "FFD9DF"
         draw.text((65, panel_top + 100 + index * 49), explanation, fill=fill, font=_font(19, bold=index >= 3))
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    canvas.save(destination)
+    return destination
+
+
+def create_workflow_demo_before_after_annotation(
+    before_source: Path,
+    after_source: Path,
+    destination: Path,
+) -> Path:
+    """Compare real Edge captures without implying an analytics-data change.
+
+    The explanatory labels are intentionally separate from the captured UI.
+    They make the state/audit boundary readable in an internal training room,
+    while the accompanying full-size screenshots retain the original screen
+    details.
+    """
+
+    before = Image.open(before_source).convert("RGB")
+    after = Image.open(after_source).convert("RGB")
+    before_crop = before.crop((0, min(390, before.height - 1), before.width, min(before.height, 1600)))
+    after_crop = after.crop((0, min(80, after.height - 1), after.width, min(after.height, 1560)))
+
+    canvas = Image.new("RGB", (2100, 1450), "FFFFFF")
+    draw = ImageDraw.Draw(canvas)
+    draw.rectangle((0, 0, canvas.width, 160), fill=NAVY)
+    draw.text((65, 37), "RM Action 전 · 후 — 실제 Edge 화면에서 바뀌는 것", fill="FFFFFF", font=_font(37, bold=True))
+    draw.text(
+        (68, 101),
+        "화면 crop은 실제 합성 Workflow Demo 캡처이며, 색상 라벨은 교육용 설명입니다.",
+        fill="DCEBFA",
+        font=_font(19),
+    )
+
+    panels = (
+        (
+            (55, 225, 1020, 1025),
+            before_crop,
+            "전 · 초기화 직후",
+            "C000001 · NEW · demo audit 0",
+            GOLD,
+        ),
+        (
+            (1080, 225, 2045, 1025),
+            after_crop,
+            "후 · Acknowledge 후",
+            "C000001 · ACKNOWLEDGED · demo audit 1",
+            TEAL,
+        ),
+    )
+    for bounds, crop, title, status, accent in panels:
+        x0, y0, x1, y1 = bounds
+        draw.rounded_rectangle(bounds, radius=28, fill=LIGHT, outline=LINE, width=3)
+        draw.rounded_rectangle((x0, y0, x1, y0 + 84), radius=28, fill=accent)
+        draw.text((x0 + 28, y0 + 18), title, fill="FFFFFF", font=_font(28, bold=True))
+        draw.text((x0 + 28, y0 + 110), status, fill=NAVY, font=_font(22, bold=True))
+        image = crop.copy()
+        image.thumbnail((x1 - x0 - 52, y1 - y0 - 190))
+        image_x = x0 + (x1 - x0 - image.width) // 2
+        image_y = y0 + 165
+        draw.rounded_rectangle(
+            (image_x - 4, image_y - 4, image_x + image.width + 4, image_y + image.height + 4),
+            radius=12,
+            fill="FFFFFF",
+            outline=LINE,
+            width=2,
+        )
+        canvas.paste(image, (image_x, image_y))
+
+    draw.rounded_rectangle((55, 1080, 2045, 1385), radius=28, fill="F6F9FC", outline=LINE, width=3)
+    draw.text((88, 1118), "교육 핵심: 무엇이 바뀌고, 무엇이 그대로인가", fill=NAVY, font=_font(28, bold=True))
+    lines = (
+        ("변경", "분리된 synthetic Case 상태(NEW → ACKNOWLEDGED)와 append-only demo audit 1건만 변경됩니다.", TEAL),
+        ("그대로", "5,000명 population · 고객 재무 데이터 · matcher/outcome/breakpoint · triage/rank · 기본 RM workflow/audit", BLUE),
+        ("Preview", "미리보기는 not sent이며 network=0입니다. Case/audit을 추가로 바꾸지 않습니다.", GOLD),
+    )
+    for index, (label, body, accent) in enumerate(lines):
+        y = 1175 + index * 63
+        draw.rounded_rectangle((88, y, 250, y + 42), radius=15, fill=accent)
+        draw.text((112, y + 8), label, fill="FFFFFF", font=_font(18, bold=True))
+        draw.text((280, y + 7), body, fill=GRAY, font=_font(19))
     destination.parent.mkdir(parents=True, exist_ok=True)
     canvas.save(destination)
     return destination
@@ -977,6 +1194,19 @@ def create_manual_annotations(screens: dict[str, Path]) -> dict[str, Path]:
             rm_screen,
             ASSET_DIR / "13_rm_alert_case_status_explained.png",
         )
+    workflow_before = screens.get("workflow_demo_new")
+    workflow_after = screens.get("workflow_demo_ack")
+    if (
+        workflow_before is not None
+        and workflow_before.exists()
+        and workflow_after is not None
+        and workflow_after.exists()
+    ):
+        annotations["workflow_demo_before_after"] = create_workflow_demo_before_after_annotation(
+            workflow_before,
+            workflow_after,
+            ASSET_DIR / "22_workflow_demo_action_before_after.png",
+        )
     annotations.update(create_status_faq_images(screens, annotations))
     return annotations
 
@@ -990,6 +1220,87 @@ from pathlib import Path
 import streamlit as st
 
 project_root = Path(os.environ[\"FPT_PROJECT_ROOT\"])
+sys.path.insert(0, str(project_root))
+
+# The documentation renderer can request a short-lived Workflow Demo timeline.
+# Patch only this child Streamlit process so every call to default() uses an
+# immutable workspace fixture plus a runtime outside the repository. The normal
+# application never receives either environment value and keeps its default path.
+workflow_demo_runtime_root = os.environ.get(\"FPT_CAPTURE_WORKFLOW_DEMO_RUNTIME_ROOT\")
+workflow_demo_fixture_path = os.environ.get(\"FPT_CAPTURE_WORKFLOW_DEMO_FIXTURE_PATH\")
+if workflow_demo_runtime_root and workflow_demo_fixture_path:
+    from src.workflow_demo import WorkflowDemoPaths
+
+    _capture_workflow_demo_paths = WorkflowDemoPaths(
+        fixture_path=Path(workflow_demo_fixture_path),
+        runtime_root=Path(workflow_demo_runtime_root),
+    )
+
+    def _capture_workflow_demo_default(cls):
+        return _capture_workflow_demo_paths
+
+    WorkflowDemoPaths.default = classmethod(_capture_workflow_demo_default)
+
+workflow_demo_stage = os.environ.get(\"FPT_CAPTURE_WORKFLOW_DEMO_STAGE\")
+if workflow_demo_stage:
+    from datetime import datetime, timezone
+
+    from src.rm_workflow_ui import (
+        build_offline_notification_preview,
+        create_file_backed_rm_workflow_ui_service,
+        load_rm_workflow_case,
+        perform_rm_workflow_operation,
+    )
+    from src.workflow_demo import reset_demo
+    from src.workflow_demo_ui import (
+        WORKFLOW_DEMO_FEEDBACK_KEY,
+        WORKFLOW_DEMO_OPEN_KEY,
+        WORKFLOW_DEMO_PREVIEW_KEY,
+    )
+
+    if not (workflow_demo_runtime_root and workflow_demo_fixture_path):
+        raise RuntimeError(\"workflow-demo capture stage requires temporary paths\")
+    st.session_state[WORKFLOW_DEMO_OPEN_KEY] = True
+    if workflow_demo_stage != \"entry\":
+        capture_paths = WorkflowDemoPaths.default()
+        reset_demo(capture_paths)
+        if workflow_demo_stage in {\"acknowledged\", \"preview\"}:
+            service = create_file_backed_rm_workflow_ui_service(
+                workflow_root=capture_paths.workflow_root,
+                audit_root=capture_paths.audit_root,
+            )
+            response = perform_rm_workflow_operation(
+                service,
+                operation=\"ACKNOWLEDGE\",
+                alert_id=\"ALT-DEMO-C000001\",
+                expected_state=\"NEW\",
+                occurred_at=datetime(2026, 8, 25, 10, 0, tzinfo=timezone.utc),
+                actor_reference=\"synthetic-workflow-demo-capture\",
+                idempotency_token=\"operating-manual-capture-acknowledge-v1\",
+            )
+            st.session_state[WORKFLOW_DEMO_FEEDBACK_KEY] = {
+                \"alert_id\": response.alert_case.alert_id,
+                \"message\": \"RM 업무 조치와 감사 이벤트가 기록되었습니다.\",
+                \"operation\": response.operation,
+                \"current_state\": response.current_state,
+                \"audit_event_id\": response.audit_event.event_id,
+            }
+            if workflow_demo_stage == \"preview\":
+                alert_case = load_rm_workflow_case(
+                    service,
+                    alert_id=\"ALT-DEMO-C000001\",
+                )
+                if alert_case is None:
+                    raise RuntimeError(\"workflow-demo capture case is unavailable\")
+                st.session_state[WORKFLOW_DEMO_PREVIEW_KEY] = {
+                    \"alert_id\": alert_case.alert_id,
+                    \"result\": build_offline_notification_preview(
+                        service,
+                        alert_case=alert_case,
+                    ),
+                }
+                st.session_state[\"rm_workflow_demo_capture_preview_expanded\"] = True
+
 mode = os.environ.get(\"FPT_CAPTURE_MODE\")
 if mode:
     st.session_state[\"app_mode\"] = mode
@@ -1002,8 +1313,14 @@ if capacity:
     st.session_state[\"rm_capacity_comparison_enabled\"] = True
     st.session_state[\"rm_capacity_comparison_value\"] = int(capacity)
 customer_id = os.environ.get(\"FPT_CAPTURE_CUSTOMER_ID\")
+direct_input_customer_id = os.environ.get(\"FPT_CAPTURE_DIRECT_INPUT_CUSTOMER_ID\")
 presentation_option = os.environ.get(\"FPT_CAPTURE_PRESENTATION_OPTION\")
-if customer_id:
+if direct_input_customer_id:
+    # This documentation-only session follows the same explicit Manual input
+    # route a learner uses in the real app.  It never changes source data.
+    st.session_state[\"customer_selector\"] = \"__manual_customer_id__\"
+    st.session_state[\"customer_id_input\"] = direct_input_customer_id
+elif customer_id:
     # These values live only in the short-lived Streamlit capture session.  The
     # normal app remains responsible for validating the selected demo option.
     if presentation_option:
@@ -1020,7 +1337,6 @@ if queue_search:
     st.session_state[\"rm_queue_search\"] = queue_search
 if mode == \"RM 업무 모드\":
     st.session_state.setdefault(\"rm_customer_context\", \"C000001\")
-sys.path.insert(0, str(project_root))
 runpy.run_path(str(project_root / \"app.py\"), run_name=\"__main__\")
 """
 
@@ -1244,6 +1560,7 @@ def _capture_one_edge_screen(
     interaction_scripts: tuple[str, ...] = (),
     session_capacity: int | None = None,
     session_customer_id: str | None = None,
+    session_direct_input_customer_id: str | None = None,
     session_presentation_option: str | None = None,
     session_representative_category: str | None = None,
     session_queue_search: str | None = None,
@@ -1272,6 +1589,7 @@ def _capture_one_edge_screen(
             "FPT_CAPTURE_LANGUAGE": "ko",
             "FPT_CAPTURE_CAPACITY": "" if session_capacity is None else str(session_capacity),
             "FPT_CAPTURE_CUSTOMER_ID": session_customer_id or "",
+            "FPT_CAPTURE_DIRECT_INPUT_CUSTOMER_ID": session_direct_input_customer_id or "",
             "FPT_CAPTURE_PRESENTATION_OPTION": session_presentation_option or "",
             "FPT_CAPTURE_RM_REPRESENTATIVE_CATEGORY": session_representative_category or "",
             "FPT_CAPTURE_RM_QUEUE_SEARCH": session_queue_search or "",
@@ -1303,8 +1621,8 @@ def _capture_one_edge_screen(
             creationflags=creation_flags,
         )
         _wait_for_streamlit(streamlit_port)
-        # This is intentionally a visible app window: it lets the user see the
-        # exact rendering being recorded while CDP stores the PNG.
+        # Headless Edge still uses the production Edge rendering engine while
+        # keeping the temporary capture isolated from the user's active window.
         edge_process = subprocess.Popen(
             [
                 str(edge),
@@ -1405,6 +1723,566 @@ def _capture_one_edge_screen(
         shutil.rmtree(profile_dir, ignore_errors=True)
 
 
+def _tree_digest(path: Path) -> str:
+    """Return a stable digest for one protected local artifact root."""
+
+    if not path.exists():
+        return "MISSING"
+    digest = hashlib.sha256()
+    if path.is_file():
+        digest.update(path.name.encode("utf-8"))
+        digest.update(path.read_bytes())
+        return digest.hexdigest()
+    for child in sorted(path.rglob("*"), key=lambda item: item.as_posix()):
+        relative = child.relative_to(path).as_posix()
+        digest.update(relative.encode("utf-8"))
+        if child.is_file():
+            digest.update(child.read_bytes())
+    return digest.hexdigest()
+
+
+def _capture_cdp_viewport(
+    connection: websocket.WebSocket,
+    command_id: int,
+    destination: Path,
+) -> int:
+    """Save one real, current Edge viewport from a bounded local capture session."""
+
+    result = _cdp_command(
+        connection,
+        command_id,
+        "Page.captureScreenshot",
+        {"format": "png", "captureBeyondViewport": False, "fromSurface": True},
+    )
+    encoded = result.get("data")
+    if not isinstance(encoded, str):
+        raise RuntimeError("Edge returned no PNG data from Page.captureScreenshot.")
+    destination.write_bytes(base64.b64decode(encoded))
+    if destination.stat().st_size < 1024:
+        raise RuntimeError(f"Edge did not create a usable screenshot: {destination}")
+    return command_id + 1
+
+
+def _button_click_script(label: str) -> str:
+    """Build a text-exact button click for a deterministic Korean capture."""
+
+    encoded_label = json.dumps(label, ensure_ascii=False)
+    return f"""(() => {{
+        const label = {encoded_label};
+        const button = Array.from(document.querySelectorAll('button')).find((item) =>
+            ((item.innerText || '').trim() === label) ||
+            ((item.getAttribute('aria-label') || '').trim() === label)
+        );
+        if (!button) return 'missing-button:' + label;
+        button.scrollIntoView({{block: 'center', behavior: 'instant'}});
+        button.click();
+        return 'clicked-button:' + label;
+    }})()"""
+
+
+def _scroll_to_text_script(label: str) -> str:
+    """Scroll to the first visible text node containing a stable training label."""
+
+    encoded_label = json.dumps(label, ensure_ascii=False)
+    return f"""(() => {{
+        const label = {encoded_label};
+        const nodes = Array.from(document.querySelectorAll('h1,h2,h3,h4,h5,p,span,div,summary'));
+        const target = nodes.find((item) => (item.innerText || '').trim() === label) ||
+            nodes.find((item) => (item.innerText || '').includes(label));
+        if (!target) return 'missing-text:' + label;
+        target.scrollIntoView({{block: 'start', behavior: 'instant'}});
+        return 'scrolled:' + label;
+    }})()"""
+
+
+def _open_expander_script(label: str) -> str:
+    """Open one Streamlit expander without changing the workflow model."""
+
+    encoded_label = json.dumps(label, ensure_ascii=False)
+    return f"""(() => {{
+        const label = {encoded_label};
+        const summary = Array.from(document.querySelectorAll('details summary')).find((item) =>
+            (item.innerText || '').includes(label)
+        );
+        if (!summary) return 'missing-expander:' + label;
+        const details = summary.closest('details');
+        if (details && !details.open) summary.click();
+        summary.scrollIntoView({{block: 'start', behavior: 'instant'}});
+        return 'opened-expander:' + label;
+    }})()"""
+
+
+def _assert_cdp_interaction(result: dict[str, object]) -> None:
+    """Fail rather than silently save a screenshot from the wrong app state."""
+
+    remote_result = result.get("result")
+    value = remote_result.get("value") if isinstance(remote_result, dict) else None
+    if isinstance(value, str) and value.startswith("missing-"):
+        raise RuntimeError(f"Workflow Demo capture interaction failed: {value}")
+
+
+def _run_timeline_interaction(
+    connection: websocket.WebSocket,
+    command_id: int,
+    *,
+    expression: str,
+    expected_text: str,
+) -> int:
+    """Run one user-equivalent DOM interaction and wait through Streamlit reruns."""
+
+    result = _cdp_command(
+        connection,
+        command_id,
+        "Runtime.evaluate",
+        {"expression": expression, "returnByValue": True},
+    )
+    _assert_cdp_interaction(result)
+    command_id += 1
+    time.sleep(3)
+    return _wait_for_rendered_text(
+        connection,
+        command_id,
+        expected_text=expected_text,
+    )
+
+
+def _run_timeline_view_interaction(
+    connection: websocket.WebSocket,
+    command_id: int,
+    *,
+    expression: str,
+) -> int:
+    """Run a scroll/expander interaction that does not write a Case or audit."""
+
+    result = _cdp_command(
+        connection,
+        command_id,
+        "Runtime.evaluate",
+        {"expression": expression, "returnByValue": True},
+    )
+    _assert_cdp_interaction(result)
+    time.sleep(1)
+    return command_id + 1
+
+
+def _capture_workflow_demo_timeline_with_cdp_legacy() -> dict[str, Path]:
+    """Capture the Workflow Demo in one real Edge session and temporary runtime.
+
+    The sequence intentionally uses the UI itself for Open, Initialize,
+    Acknowledge, Preview, Reset, and Return.  Its mutable Case/audit files live
+    only below a temporary directory injected into the capture child process.
+    Default workflow/audit roots and the workspace demo fixture are hash-checked
+    before and after capture.
+    """
+
+    edge = _find_edge()
+    if edge is None:
+        raise RuntimeError("Microsoft Edge was not found; Workflow Demo screenshots cannot be captured.")
+
+    SCREEN_DIR.mkdir(parents=True, exist_ok=True)
+    wrapper_path = OUTPUT_DIR / "_capture_app.py"
+    wrapper_path.write_text(CAPTURE_WRAPPER, encoding="utf-8")
+    streamlit_port = _pick_free_port()
+    devtools_port = _pick_free_port()
+    app_url = f"http://127.0.0.1:{streamlit_port}"
+    fixture_path = (
+        PROJECT_ROOT
+        / "artifacts"
+        / "workflow_demo"
+        / "fixture_v1"
+        / "workflow_demo_fixture.json"
+    )
+    if not fixture_path.is_file():
+        raise RuntimeError(f"Workflow Demo fixture is missing: {fixture_path}")
+
+    protected_paths = {
+        "default_workflow": PROJECT_ROOT / "artifacts" / "workflow",
+        "default_audit": PROJECT_ROOT / "artifacts" / "audit",
+        "workspace_workflow_demo": PROJECT_ROOT / "artifacts" / "workflow_demo",
+    }
+    protected_before = {name: _tree_digest(path) for name, path in protected_paths.items()}
+    timeline_root = Path(tempfile.mkdtemp(prefix="financial_path_twin_workflow_demo_timeline_"))
+    runtime_root = timeline_root / "runtime"
+    profile_dir = Path(tempfile.mkdtemp(prefix="financial_path_twin_edge_capture_"))
+    environment = os.environ.copy()
+    environment.update(
+        {
+            "FPT_PROJECT_ROOT": str(PROJECT_ROOT),
+            "FPT_CAPTURE_MODE": APP_MODE_RM,
+            "FPT_CAPTURE_LANGUAGE": "ko",
+            "FPT_CAPTURE_WORKFLOW_DEMO_RUNTIME_ROOT": str(runtime_root),
+            "FPT_CAPTURE_WORKFLOW_DEMO_FIXTURE_PATH": str(fixture_path),
+        }
+    )
+
+    streamlit_process: subprocess.Popen[str] | None = None
+    edge_process: subprocess.Popen[bytes] | None = None
+    captured: dict[str, Path] = {}
+    try:
+        creation_flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+        streamlit_process = subprocess.Popen(
+            [
+                sys.executable,
+                "-m",
+                "streamlit",
+                "run",
+                str(wrapper_path),
+                "--server.headless=true",
+                f"--server.port={streamlit_port}",
+                "--server.address=127.0.0.1",
+                "--browser.gatherUsageStats=false",
+            ],
+            cwd=PROJECT_ROOT,
+            env=environment,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            creationflags=creation_flags,
+        )
+        _wait_for_streamlit(streamlit_port)
+        edge_process = subprocess.Popen(
+            [
+                str(edge),
+                "--new-window",
+                "--no-first-run",
+                "--no-default-browser-check",
+                f"--user-data-dir={profile_dir}",
+                f"--remote-debugging-port={devtools_port}",
+                "--remote-allow-origins=http://localhost",
+                "--window-position=30,30",
+                "--window-size=1440,1500",
+                app_url,
+            ],
+            cwd=PROJECT_ROOT,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        websocket_url = _edge_page_websocket(devtools_port, app_url)
+        connection = websocket.create_connection(websocket_url, timeout=12, origin="http://localhost")
+        try:
+            command_id = 1
+            _cdp_command(connection, command_id, "Page.enable")
+            command_id += 1
+            _cdp_command(connection, command_id, "Page.bringToFront")
+            command_id += 1
+            time.sleep(8)
+            command_id = _wait_for_rendered_text(
+                connection,
+                command_id,
+                expected_text="RM 업무 공간",
+            )
+
+            command_id = _run_timeline_interaction(
+                connection,
+                command_id,
+                expression=_button_click_script("합성 Workflow Demo 열기"),
+                expected_text="합성 Workflow Demo",
+            )
+            captured["workflow_demo_entry"] = SCREEN_DIR / "12_workflow_demo_entry_uninitialized.png"
+            command_id = _capture_cdp_viewport(
+                connection,
+                command_id,
+                captured["workflow_demo_entry"],
+            )
+
+            command_id = _run_timeline_interaction(
+                connection,
+                command_id,
+                expression=_button_click_script("합성 Case 초기화"),
+                expected_text="C000001",
+            )
+            captured["workflow_demo_new"] = SCREEN_DIR / "13_workflow_demo_new_before_action.png"
+            command_id = _capture_cdp_viewport(
+                connection,
+                command_id,
+                captured["workflow_demo_new"],
+            )
+
+            command_id = _run_timeline_interaction(
+                connection,
+                command_id,
+                expression=_button_click_script("확인"),
+                expected_text="확인됨",
+            )
+            captured["workflow_demo_ack"] = SCREEN_DIR / "14_workflow_demo_ack_after_action.png"
+            command_id = _capture_cdp_viewport(
+                connection,
+                command_id,
+                captured["workflow_demo_ack"],
+            )
+
+            command_id = _run_timeline_view_interaction(
+                connection,
+                command_id,
+                expression=_scroll_to_text_script("합성 Activity / Audit"),
+            )
+            captured["workflow_demo_audit"] = SCREEN_DIR / "15_workflow_demo_audit_after_action.png"
+            command_id = _capture_cdp_viewport(
+                connection,
+                command_id,
+                captured["workflow_demo_audit"],
+            )
+
+            command_id = _run_timeline_view_interaction(
+                connection,
+                command_id,
+                expression=_scroll_to_text_script("알림 미리보기(오프라인)"),
+            )
+            command_id = _run_timeline_view_interaction(
+                connection,
+                command_id,
+                expression=_open_expander_script("알림 미리보기(오프라인)"),
+            )
+            command_id = _run_timeline_interaction(
+                connection,
+                command_id,
+                expression=_button_click_script("오프라인 미리보기 생성"),
+                expected_text="Offline preview only for an existing RM review case.",
+            )
+            command_id = _run_timeline_view_interaction(
+                connection,
+                command_id,
+                expression=_open_expander_script("알림 미리보기(오프라인)"),
+            )
+            captured["workflow_demo_preview"] = SCREEN_DIR / "16_workflow_demo_preview_not_sent.png"
+            command_id = _capture_cdp_viewport(
+                connection,
+                command_id,
+                captured["workflow_demo_preview"],
+            )
+
+            command_id = _run_timeline_interaction(
+                connection,
+                command_id,
+                expression=_button_click_script("합성 Case 초기 상태로 reset"),
+                expected_text="신규",
+            )
+            command_id = _run_timeline_view_interaction(
+                connection,
+                command_id,
+                expression="window.scrollTo({top: 0, behavior: 'instant'}); 'scrolled-top';",
+            )
+            captured["workflow_demo_reset"] = SCREEN_DIR / "17_workflow_demo_reset_new.png"
+            command_id = _capture_cdp_viewport(
+                connection,
+                command_id,
+                captured["workflow_demo_reset"],
+            )
+
+            command_id = _run_timeline_interaction(
+                connection,
+                command_id,
+                expression=_button_click_script("기본 RM 업무로 돌아가기"),
+                expected_text="RM 업무 공간",
+            )
+            captured["workflow_demo_return"] = SCREEN_DIR / "18_workflow_demo_return_baseline.png"
+            _capture_cdp_viewport(
+                connection,
+                command_id,
+                captured["workflow_demo_return"],
+            )
+        finally:
+            connection.close()
+
+        protected_after = {name: _tree_digest(path) for name, path in protected_paths.items()}
+        if protected_before != protected_after:
+            changed = sorted(
+                name
+                for name in protected_before
+                if protected_before[name] != protected_after[name]
+            )
+            raise RuntimeError(
+                "Workflow Demo capture changed protected workspace artifacts: " + ", ".join(changed)
+            )
+        return captured
+    finally:
+        for process in (edge_process, streamlit_process):
+            if process is not None and process.poll() is None:
+                process.terminate()
+                try:
+                    process.wait(timeout=12)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait(timeout=5)
+        wrapper_path.unlink(missing_ok=True)
+        shutil.rmtree(profile_dir, ignore_errors=True)
+        shutil.rmtree(timeline_root, ignore_errors=True)
+
+
+def _capture_workflow_demo_stage_with_edge(*, stage: str, filename: str) -> Path:
+    """Render one deterministic Workflow Demo state through a temporary Edge app."""
+
+    edge = _find_edge()
+    if edge is None:
+        raise RuntimeError("Microsoft Edge was not found; Workflow Demo screenshots cannot be captured.")
+    fixture_path = (
+        PROJECT_ROOT
+        / "artifacts"
+        / "workflow_demo"
+        / "fixture_v1"
+        / "workflow_demo_fixture.json"
+    )
+    if not fixture_path.is_file():
+        raise RuntimeError(f"Workflow Demo fixture is missing: {fixture_path}")
+
+    SCREEN_DIR.mkdir(parents=True, exist_ok=True)
+    wrapper_path = OUTPUT_DIR / "_capture_app.py"
+    wrapper_path.write_text(CAPTURE_WRAPPER, encoding="utf-8")
+    streamlit_port = _pick_free_port()
+    devtools_port = _pick_free_port()
+    app_url = f"http://127.0.0.1:{streamlit_port}"
+    timeline_root = Path(tempfile.mkdtemp(prefix="financial_path_twin_workflow_demo_stage_"))
+    runtime_root = timeline_root / "runtime"
+    profile_dir = Path(tempfile.mkdtemp(prefix="financial_path_twin_edge_capture_"))
+    destination = SCREEN_DIR / filename
+    protected_paths = {
+        "default_workflow": PROJECT_ROOT / "artifacts" / "workflow",
+        "default_audit": PROJECT_ROOT / "artifacts" / "audit",
+        "workspace_workflow_demo": PROJECT_ROOT / "artifacts" / "workflow_demo",
+    }
+    protected_before = {name: _tree_digest(path) for name, path in protected_paths.items()}
+    environment = os.environ.copy()
+    environment.update(
+        {
+            "FPT_PROJECT_ROOT": str(PROJECT_ROOT),
+            "FPT_CAPTURE_MODE": APP_MODE_RM,
+            "FPT_CAPTURE_LANGUAGE": "ko",
+            "FPT_CAPTURE_WORKFLOW_DEMO_RUNTIME_ROOT": str(runtime_root),
+            "FPT_CAPTURE_WORKFLOW_DEMO_FIXTURE_PATH": str(fixture_path),
+            "FPT_CAPTURE_WORKFLOW_DEMO_STAGE": stage,
+        }
+    )
+    streamlit_process: subprocess.Popen[str] | None = None
+    edge_process: subprocess.Popen[bytes] | None = None
+    try:
+        creation_flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+        streamlit_process = subprocess.Popen(
+            [
+                sys.executable,
+                "-m",
+                "streamlit",
+                "run",
+                str(wrapper_path),
+                "--server.headless=true",
+                f"--server.port={streamlit_port}",
+                "--server.address=127.0.0.1",
+                "--browser.gatherUsageStats=false",
+            ],
+            cwd=PROJECT_ROOT,
+            env=environment,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            creationflags=creation_flags,
+        )
+        _wait_for_streamlit(streamlit_port)
+        edge_process = subprocess.Popen(
+            [
+                str(edge),
+                "--new-window",
+                "--disable-crash-reporter",
+                "--noerrdialogs",
+                "--no-first-run",
+                "--no-default-browser-check",
+                f"--user-data-dir={profile_dir}",
+                f"--remote-debugging-port={devtools_port}",
+                "--remote-allow-origins=http://localhost",
+                "--window-position=30,30",
+                "--window-size=1440,1500",
+                app_url,
+            ],
+            cwd=PROJECT_ROOT,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        websocket_url = _edge_page_websocket(devtools_port, app_url)
+        connection = websocket.create_connection(websocket_url, timeout=12, origin="http://localhost")
+        try:
+            command_id = 1
+            _cdp_command(connection, command_id, "Page.enable")
+            command_id += 1
+            _cdp_command(connection, command_id, "Page.bringToFront")
+            command_id += 1
+            time.sleep(8)
+            command_id = _wait_for_rendered_text(
+                connection,
+                command_id,
+                expected_text="Workflow Demo",
+            )
+            focus_by_stage = {
+                "entry": "Workflow Demo",
+                "new": "RM Action",
+                "acknowledged": "Activity / Audit",
+                "preview": "알림 미리보기",
+            }
+            focus = focus_by_stage.get(stage, "Workflow Demo")
+            focus_script = f"""(() => {{
+                const targetText = {json.dumps(focus, ensure_ascii=False)};
+                const candidates = Array.from(document.querySelectorAll('h1,h2,h3,h4,h5,p,span,div,summary'));
+                const exact = candidates.filter((item) => (item.innerText || '').trim() === targetText);
+                const partial = candidates.filter((item) => (item.innerText || '').includes(targetText));
+                const target = (exact.length ? exact : partial).sort(
+                    (left, right) => (left.innerText || '').length - (right.innerText || '').length
+                )[0];
+                if (!target) return 'missing-focus:' + targetText;
+                target.scrollIntoView({{block: 'start', behavior: 'instant'}});
+                return 'focused:' + targetText;
+            }})()"""
+            result = _cdp_command(
+                connection,
+                command_id,
+                "Runtime.evaluate",
+                {"expression": focus_script, "returnByValue": True},
+            )
+            _assert_cdp_interaction(result)
+            command_id += 1
+            time.sleep(2)
+            _capture_cdp_viewport(connection, command_id, destination)
+        finally:
+            connection.close()
+        if not destination.is_file() or destination.stat().st_size < 1024:
+            raise RuntimeError(f"Edge stage {stage!r} did not create a usable screenshot.")
+
+        protected_after = {name: _tree_digest(path) for name, path in protected_paths.items()}
+        if protected_before != protected_after:
+            changed = sorted(
+                name
+                for name in protected_before
+                if protected_before[name] != protected_after[name]
+            )
+            raise RuntimeError(
+                "Workflow Demo capture changed protected workspace artifacts: " + ", ".join(changed)
+            )
+        return destination
+    finally:
+        for process in (edge_process, streamlit_process):
+            if process is not None and process.poll() is None:
+                process.terminate()
+                try:
+                    process.wait(timeout=12)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait(timeout=5)
+        wrapper_path.unlink(missing_ok=True)
+        shutil.rmtree(profile_dir, ignore_errors=True)
+        shutil.rmtree(timeline_root, ignore_errors=True)
+
+
+def capture_workflow_demo_timeline_with_edge() -> dict[str, Path]:
+    """Capture four real Edge-rendered teaching states without touching workspace data."""
+
+    stages = (
+        ("workflow_demo_entry", "entry", "12_workflow_demo_entry_uninitialized.png"),
+        ("workflow_demo_new", "new", "13_workflow_demo_new_before_action.png"),
+        ("workflow_demo_ack", "acknowledged", "14_workflow_demo_ack_after_action.png"),
+        ("workflow_demo_preview", "preview", "16_workflow_demo_preview_not_sent.png"),
+    )
+    return {
+        key: _capture_workflow_demo_stage_with_edge(stage=stage, filename=filename)
+        for key, stage, filename in stages
+    }
+
+
 def capture_screens_with_edge() -> dict[str, Path]:
     """Capture the three primary modes from actual Edge-rendered app sessions."""
 
@@ -1462,11 +2340,20 @@ _SCROLL_TO_RM_CAPACITY_COMPARISON = """(() => {
     target.scrollIntoView({block: 'start', behavior: 'instant'});
     return 'rm-capacity-scrolled';
 })()"""
+_SCROLL_TO_RM_WORKFLOW_DEMO_CTA = """(() => {
+    const target = Array.from(document.querySelectorAll('button')).find((item) =>
+        (item.innerText || '').includes('Workflow Demo')
+    );
+    if (!target) return 'missing-rm-workflow-demo-cta';
+    target.scrollIntoView({block: 'center', behavior: 'instant'});
+    return 'rm-workflow-demo-cta-scrolled';
+})()"""
 
 
 EDGE_SCENARIOS: dict[str, tuple[str, str, tuple[str, ...]]] = {
     "presentation": (APP_MODE_PRESENTATION, "01_presentation_mode.png", ()),
     "general": (APP_MODE_GENERAL, "02_general_mode.png", ()),
+    "general_direct_c000001": (APP_MODE_GENERAL, "02a_general_direct_c000001.png", ()),
     "rm": (APP_MODE_RM, "03_rm_portfolio.png", ()),
     "presentation_landmark": (
         APP_MODE_PRESENTATION,
@@ -1482,6 +2369,11 @@ EDGE_SCENARIOS: dict[str, tuple[str, str, tuple[str, ...]]] = {
         APP_MODE_RM,
         "06_rm_human_capacity_3.png",
         (_SCROLL_TO_RM_CAPACITY_COMPARISON,),
+    ),
+    "rm_workflow_demo_entry_cta": (
+        APP_MODE_RM,
+        "11a_rm_workflow_demo_entry_cta.png",
+        (_SCROLL_TO_RM_WORKFLOW_DEMO_CTA,),
     ),
     "rm_queue": (
         APP_MODE_RM,
@@ -1514,6 +2406,9 @@ EDGE_SCENARIO_SESSION_CUSTOMER = {
     "presentation_c002082_insufficient": "C002082",
     "rm_monitor_c000003": "C000003",
 }
+EDGE_SCENARIO_DIRECT_INPUT_CUSTOMER = {
+    "general_direct_c000001": "C000001",
+}
 EDGE_SCENARIO_PRESENTATION_OPTION = {
     "presentation_c002082_insufficient": "demo:1:C002082",
 }
@@ -1537,6 +2432,7 @@ def capture_evidence_screens_with_edge() -> dict[str, Path]:
                 interaction_scripts=interaction_scripts,
                 session_capacity=EDGE_SCENARIO_SESSION_CAPACITY.get(scenario),
                 session_customer_id=EDGE_SCENARIO_SESSION_CUSTOMER.get(scenario),
+                session_direct_input_customer_id=EDGE_SCENARIO_DIRECT_INPUT_CUSTOMER.get(scenario),
                 session_presentation_option=EDGE_SCENARIO_PRESENTATION_OPTION.get(scenario),
                 session_representative_category=EDGE_SCENARIO_REPRESENTATIVE_CATEGORY.get(scenario),
                 session_queue_search=EDGE_SCENARIO_QUEUE_SEARCH.get(scenario),
@@ -2044,6 +2940,7 @@ def create_document(
     *,
     git_head: str,
     dirty: bool,
+    output_path: Path | None = None,
 ) -> Path:
     document = Document()
     _set_document_defaults(document)
@@ -2160,6 +3057,132 @@ def create_document(
     )
     _add_picture(document, annotations["sample_map"], "그림 4. 일반 모드에서 안전하게 쓸 수 있는 합성 고객 샘플의 역할입니다.")
 
+    document.add_page_break()
+    document.add_heading("6.1 C000001 직접 입력부터 RM 검토까지: 그림으로 따라 하는 실습", level=2)
+    document.add_paragraph(
+        "이 실습은 일반 모드의 상세 분석과 RM 업무 모드의 선정 근거를 연결해 이해하기 위한 것입니다. "
+        "일반 모드에서 C000001을 입력하거나 분석을 실행해도 RM 선정, Queue, Alert/Case는 새로 만들어지거나 바뀌지 않습니다."
+    )
+    _add_table(
+        document,
+        ("순서", "클릭 / 입력", "값", "화면에서 확인할 것과 변경 범위"),
+        (
+            ("1", "화면 모드", "일반 모드", "왼쪽 sidebar가 고객·지표 입력 화면으로 바뀜. 저장 원본은 바뀌지 않음."),
+            ("2", "고객 선택", "직접 입력", "고객 ID 입력칸이 나타남. 저장 원본은 바뀌지 않음."),
+            ("3", "고객 ID", "C000001", "이전 고객의 화면 분석 캐시가 비워지고 C000001 현재 상태를 읽을 준비. 분석 artifact는 바뀌지 않음."),
+            ("4", "표시 지표 + 유사 고객 찾기", "저축률 + 버튼 클릭", "유사 과거 cohort, historical outcome, landmark 결과와 근거 충분성 상태를 확인. 세션 분석 결과만 준비됨."),
+            ("5", "화면 모드", "RM 업무 모드", "RM Portfolio의 5,000명 funnel로 전환. 일반 모드 고객 입력과 Queue 상태는 독립."),
+            ("6", "Review Queue", "C000001 검색 후 행 선택", "Customer Review에서 선정 이유와 Why Now를 확인. 고객 검토 문맥만 선택됨."),
+        ),
+    )
+    _add_callout(
+        document,
+        "한 문장으로 설명하기",
+        "C000001을 일반 모드에 입력하는 것은 분석을 자세히 읽기 위한 것이고, RM 업무 모드에서 C000001을 선택하는 것은 이미 정해진 5,000명 triage의 선정 이유와 Why Now를 검토하기 위한 것입니다. "
+        "둘은 고객 ID가 같아도 역할이 다르며, 일반 모드의 입력이나 What-if는 RM Queue·Alert·Case를 바꾸지 않습니다. "
+        "C000001의 일반 모드 landmark가 근거 부족으로 표시되면 오류가 아니라 historical cohort 근거의 unavailable 결과이며, RM Customer Review의 선정 이유·Why Now와는 별도입니다.",
+        color="EAF2FB",
+    )
+
+    document.add_page_break()
+    direct_input_visual = screens.get("general_direct_c000001", annotations.get("general_inputs"))
+    if direct_input_visual is not None:
+        _add_picture(
+            document,
+            direct_input_visual,
+            "화면 4-1. 일반 모드에서 ‘고객 ID 직접 입력’을 선택하고 C000001을 넣은 실제 Edge 화면. 이 단계는 입력값을 읽는 단계이며, 다음으로 ‘유사 고객 찾기’를 눌러 분석을 시작합니다.",
+            width=6.85,
+        )
+    document.add_page_break()
+    queue_visual = screens.get("rm_queue")
+    if queue_visual is not None:
+        _add_picture(
+            document,
+            queue_visual,
+            "화면 4-2. RM 업무 모드의 검토 큐. C000001은 5,000명 triage에서 1위로 이미 선정됐지만, 기본 상태에서는 ‘열린 Alert 없음 · 선정됨 · Case 미생성’으로 읽기 전용입니다.",
+            width=6.85,
+        )
+    document.add_page_break()
+    customer_review_visual = screens.get("rm_customer_review")
+    if customer_review_visual is not None:
+        _add_picture(
+            document,
+            customer_review_visual,
+            "화면 4-3. C000001 Customer Review. ‘선정 이유’와 ‘왜 지금’을 읽고, prospective timing과 historical landmark를 같은 의미로 섞지 않습니다.",
+            width=6.85,
+        )
+
+    document.add_page_break()
+    document.add_heading("6.2 Synthetic Workflow Demo: 초기화 → Action → Audit → Reset 실습", level=2)
+    document.add_paragraph(
+        "이 실습은 기본 RM 화면을 바꾸지 않은 채 Alert/Case/RM Action/Audit의 업무 흐름만 교육하기 위한 별도 합성 Demo입니다. "
+        "§6.1의 일반 분석·RM 검토와 달리, 여기서는 사용자가 명시적으로 초기화한 뒤에만 분리된 합성 runtime이 바뀝니다."
+    )
+    _add_table(
+        document,
+        ("순서", "클릭", "바뀌는 것", "절대 바뀌지 않는 것"),
+        (
+            ("1", "RM Portfolio에서 ‘합성 Workflow Demo 열기’", "rm_workflow_demo_* 화면 문맥만 열림", "5,000명 원본·triage·기본 Alert/Case"),
+            ("2", "‘합성 Case 초기화’", "분리된 demo runtime에 합성 Case 3건이 NEW 상태로 준비되고 demo audit이 시작 상태로 reset", "기본 workflow/audit 저장소와 분석 CSV/JSON"),
+            ("3", "C000001의 ‘확인’ 또는 ‘검토 시작’", "해당 합성 Case 상태와 append-only demo audit event", "고객 재무 수치·선정 순위·실제 Alert·결과 label"),
+            ("4", "‘알림 미리보기(오프라인)’", "화면의 preview만 생성", "Case/audit 상태, 외부 전송, network, sent 결과"),
+            ("5", "‘합성 Case 초기 상태로 reset’", "합성 Case 3건과 demo audit을 같은 NEW 시작 상태로 복원", "기본 RM 화면과 §6.1에서 본 분석 결과"),
+            ("6", "‘기본 RM 업무로 돌아가기’", "Demo 세션 문맥만 정리", "분리 runtime 파일과 기본 RM의 0 Alert/0 Case 안전 기본값"),
+        ),
+    )
+    _add_callout(
+        document,
+        "반복 실습의 핵심",
+        "초기화와 reset은 같은 3건의 synthetic Case를 같은 NEW 상태로 되돌립니다. 따라서 발표자나 교육 참여자는 ‘초기화 → Action → Audit 확인 → reset’을 반복할 수 있습니다. 이 과정은 실제 고객 Case를 만들거나, 실제 알림을 보내거나, 5,000명 분석 결과를 바꾸지 않습니다.",
+        color="FFF8E9",
+    )
+    entry_cta_visual = screens.get("rm_workflow_demo_entry_cta")
+    if entry_cta_visual is not None:
+        _add_picture(
+            document,
+            entry_cta_visual,
+            "화면 4-4. 기본 RM Portfolio에서 ‘합성 Workflow Demo 열기’를 누르는 위치. 이 버튼을 누르기 전에는 기본 RM의 Alert/Case가 자동 생성되지 않습니다.",
+            width=6.85,
+        )
+
+    document.add_page_break()
+    workflow_entry_visual = screens.get("workflow_demo_entry")
+    if workflow_entry_visual is not None:
+        _add_picture(
+            document,
+            workflow_entry_visual,
+            "화면 4-5. Demo 진입 직후. ‘합성 Case 초기화’를 명시적으로 누르기 전에는 Case가 생성되지 않으며, Synthetic fixture·실제 운영 아님·실제 발송 아님 경고를 먼저 확인합니다.",
+            width=6.85,
+        )
+    workflow_new_visual = screens.get("workflow_demo_new")
+    if workflow_new_visual is not None:
+        _add_picture(
+            document,
+            workflow_new_visual,
+            "화면 4-6. 초기화 직후 C000001 합성 Case는 NEW입니다. ‘확인’을 누르면 합성 Case 상태와 demo audit만 다음 상태로 진행합니다.",
+            width=6.85,
+        )
+
+    document.add_page_break()
+    workflow_ack_visual = screens.get("workflow_demo_ack")
+    if workflow_ack_visual is not None:
+        _add_picture(
+            document,
+            workflow_ack_visual,
+            "화면 4-7. 확인 후: Case는 ACKNOWLEDGED가 되고 Activity/Audit에 append-only event가 한 건 기록됩니다. 하단의 reset 버튼으로 언제든 시작 상태로 되돌릴 수 있습니다.",
+            width=6.85,
+        )
+    workflow_preview_visual = screens.get("workflow_demo_preview")
+    if workflow_preview_visual is not None:
+        _add_picture(
+            document,
+            workflow_preview_visual,
+            "화면 4-8. 알림 미리보기는 offline preview이며 not sent입니다. 전송 채널 선택·외부 network·Case/Audit 변경은 없습니다.",
+            width=6.85,
+        )
+    document.add_paragraph("심화 설명과 데이터 경계 표는 §21~§22를 참고합니다.")
+
+    document.add_page_break()
     document.add_heading("7. 발표 모드 사용법", level=1)
     document.add_paragraph("목적: 한 고객의 분석 근거를 5개의 고정 탭으로 일관되게 전달합니다. 기본 발표 샘플은 C002608입니다.")
     _add_table(
@@ -2183,6 +3206,7 @@ def create_document(
         width=6.85,
     )
 
+    document.add_page_break()
     document.add_heading("8. RM 업무 모드 사용법", level=1)
     document.add_paragraph("목적: 한 명을 먼저 보여주는 대신 5,000명 전체에서 어떤 경로로 검토 대상이 됐는지 보여줍니다. 첫 화면은 항상 Portfolio입니다.")
     _add_table(
@@ -2245,11 +3269,15 @@ def create_document(
 
     add_detailed_operating_sections(document, diagrams=diagrams, screens=screens)
     add_status_faq_section(document, annotations=annotations)
+    add_workflow_demo_sections(document, diagrams=diagrams, screens=screens, annotations=annotations)
 
-    section = document.add_section(WD_SECTION.NEW_PAGE)
+    # Apply the footer to the existing final section. Adding a new-page section
+    # here creates trailing blank pages after the operating guide.
+    section = document.sections[-1]
     section.footer.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
     section.footer.paragraphs[0].add_run("Financial Path Twin · Synthetic data PoC · 운영 사용자 매뉴얼")
-    output = OUTPUT_DIR / MANUAL_NAME
+    output = output_path or OUTPUT_DIR / MANUAL_NAME
+    output.parent.mkdir(parents=True, exist_ok=True)
     document.save(output)
     return output
 
@@ -2648,8 +3676,275 @@ def add_status_faq_section(document: Document, *, annotations: dict[str, Path]) 
         _add_table(document, ("항목", "설명"), rows)
 
 
+def add_workflow_demo_sections(
+    document: Document,
+    *,
+    diagrams: dict[str, Path],
+    screens: dict[str, Path],
+    annotations: dict[str, Path],
+) -> None:
+    """Append the explicit synthetic Workflow Demo operator and presentation guide."""
+
+    document.add_page_break()
+    document.add_heading("21. 새 기능: 분리된 Synthetic Workflow Demo", level=1)
+    document.add_paragraph(
+        "Workflow Demo는 기본 RM 화면의 Case 0 상태를 바꾸지 않은 채, Alert/Case/RM Action/Audit의 전체 흐름을 "
+        "안전하게 시연하기 위해 추가된 별도 문맥입니다. 네 번째 앱 모드, 다섯 번째 RM 탭, 별도 브라우저 또는 별도 "
+        "Streamlit 앱이 아닙니다. RM Workspace 안에서 사용자가 Open Synthetic Workflow Demo를 명시적으로 눌렀을 때만 열립니다."
+    )
+    _add_callout(
+        document,
+        "기본 RM과 Demo를 먼저 구분합니다",
+        "기본 RM의 열린 Alert=0, Case=0, 선정됨·Case 미생성은 정상적인 안전 기본값입니다. Workflow Demo는 그 "
+        "기본값을 우회하거나 실제 Case를 만들지 않습니다. Demo 내부의 3건은 미리 정한 synthetic fixture이며, "
+        "모든 화면에서 Synthetic, not live, Preview only라는 경계를 유지해야 합니다.",
+        color="FFF8E9",
+    )
+    _add_table(
+        document,
+        ("구분", "기본 RM Workspace", "Workflow Demo secondary context"),
+        (
+            ("진입", "일반/발표/RM 3개 앱 모드 중 RM을 선택하면 바로 열림", "RM 내부 Open Synthetic Workflow Demo를 명시적으로 선택한 뒤에만 열림"),
+            ("시작 상태", "기본 workflow/audit repository가 없으면 Case=0, Audit=0", "DEMO_NOT_INITIALIZED. 진입만으로 파일이나 Case를 만들지 않음"),
+            ("초기화", "기본 RM은 자동 Case 생성 기능을 제공하지 않음", "Initialize synthetic Cases를 누르면 정확히 3개의 synthetic Case를 별도 runtime에 생성"),
+            ("종료", "RM Portfolio/Queue/Customer Review의 읽기 전용 기준 화면", "Return to default RM workspace는 demo session key만 지우며, runtime 파일을 삭제하지 않음"),
+        ),
+    )
+
+    document.add_heading("21.1 실제 화면으로 보는 명시적 진입과 초기화", level=2)
+    document.add_paragraph(
+        "아래 두 화면은 이 매뉴얼 생성 시 임시 Edge 프로필과 임시 synthetic runtime에서 캡처했습니다. "
+        "첫 화면은 Demo에 들어가기만 한 상태이고, 두 번째 화면은 정확히 3건의 synthetic Case를 초기화한 상태입니다. "
+        "두 화면 모두 기본 RM workflow/audit과 5,000명 분석 artifact에는 쓰지 않습니다."
+    )
+    workflow_entry = screens.get("workflow_demo_entry")
+    if workflow_entry is not None and workflow_entry.exists():
+        _add_picture(
+            document,
+            workflow_entry,
+            "화면 12. 실제 Edge 화면 — Demo 진입 직후: Case가 아직 초기화되지 않았으며, 명시적 ‘합성 Case 초기화’ 버튼만 보입니다.",
+            width=6.85,
+        )
+    workflow_new = screens.get("workflow_demo_new")
+    if workflow_new is not None and workflow_new.exists():
+        _add_picture(
+            document,
+            workflow_new,
+            "화면 13. 실제 Edge 화면 — 초기화 직후: C000001은 NEW이며, 세 Case 고정 fixture 중 하나로 표시됩니다.",
+            width=6.85,
+        )
+    if workflow_entry is None or workflow_new is None or not workflow_entry.exists() or not workflow_new.exists():
+        _add_callout(
+            document,
+            "화면 캡처가 없는 경우",
+            "이 문서의 그림 11 경계 다이어그램과 섹션 23의 수동 리허설 절차로 대신 확인합니다. 캡처가 없다고 Demo가 자동으로 초기화되거나 기본 RM Case가 생성되는 것은 아닙니다.",
+            color="FFF8E9",
+        )
+
+    document.add_heading("21.2 Demo fixture의 고정 범위", level=2)
+    document.add_paragraph(
+        "초기화 직후의 Case는 다음 3건으로 고정됩니다. 이는 5,000명 전체를 다시 선택하는 엔진이 아니라, "
+        "저장된 selection-rank provenance를 가진 작은 synthetic 시연 fixture입니다. 최대 3건을 넘으면 fail-closed입니다."
+    )
+    _add_table(
+        document,
+        ("순서", "Customer ID", "Alert ID", "초기 상태", "업무 우선순위"),
+        (
+            ("1", "C000001", "ALT-DEMO-C000001", "NEW", "PRIORITY_REVIEW"),
+            ("2", "C000008", "ALT-DEMO-C000008", "NEW", "PRIORITY_REVIEW"),
+            ("3", "C000010", "ALT-DEMO-C000010", "NEW", "PRIORITY_REVIEW"),
+        ),
+    )
+
+    _add_callout(
+        document,
+        "이 fixture가 사용하지 않는 정보",
+        "세 Case의 선택은 as_of_month=12 시점의 저장된 selection provenance만 사용합니다. target의 month 13~36, "
+        "final_outcome, persona, evaluator label은 Case 선택이나 화면 이유 생성에 사용하지 않습니다.",
+        color="EAF2FB",
+    )
+
+    document.add_heading("22. 가장 중요한 운영 기준: RM action이 바꾸는 데이터", level=1)
+    document.add_paragraph(
+        "RM Action은 분석을 다시 돌리는 기능이 아닙니다. 사용자가 명시적으로 Demo를 초기화하고 action을 실행할 때, "
+        "분리된 synthetic Case 상태와 append-only audit만 바뀝니다. 이 경계는 발표에서 가장 먼저 설명할 안전장치입니다."
+    )
+    _add_picture(
+        document,
+        diagrams["workflow_demo_boundary"],
+        "그림 11. 새 Workflow Demo의 데이터 변경 경계. 이 그림은 실제 UI 캡처가 아니라 artifact 경계를 설명하는 운영 다이어그램입니다.",
+        width=6.9,
+    )
+    _add_table(
+        document,
+        ("사용자 동작", "변경될 수 있는 Demo 데이터", "절대 변경하지 않는 데이터"),
+        (
+            ("Open Synthetic Workflow Demo", "rm_workflow_demo_* session namespace만 생성. Case/Audit/runtime 파일은 읽기 전용", "기본 RM 필터/고객 문맥, 5,000명 분석, 기본 workflow/audit 저장소"),
+            ("Initialize synthetic Cases 또는 Reset", "artifacts/workflow_demo/runtime/runtime_manifest.json, workflow/alert_cases.json을 원자적으로 다시 생성. 3건을 NEW로 복원하고 demo audit을 초기화", "원본/처리 CSV/JSON, feature/matcher/outcome/breakpoint/What-if, triage/ranking/capacity, 기본 artifacts/workflow 및 artifacts/audit"),
+            ("Acknowledge / Start Review / Follow-up / Close", "demo alert_cases.json의 해당 Case 상태와 업무 closure 정보, audit/audit_events.jsonl의 append-only event", "고객의 savings, DSR, 고정지출, 상태, historical outcome, 선정 순위, queue 포함 여부, 실제 Alert"),
+            ("Record Action", "Demo Case의 RM action 기록과 audit event. 예: Contact planned", "금융 승인/거절/재조정/상품 판매 결정, intervention efficacy, 고객 결과"),
+            ("Notification Preview", "화면의 preview request/feedback만. Case와 audit에는 새 기록이 생기지 않음", "외부 provider, credential, network, 실제 메시지, sent 상태"),
+        ),
+    )
+    _add_callout(
+        document,
+        "한 문장으로 설명하기",
+        "우리는 RM이 어떤 evidence를 보고 어떤 업무 상태를 남길 수 있는지는 시연하지만, RM action이 고객의 재무 데이터, "
+        "선정 결과 또는 미래 outcome을 바꾼다고 주장하지 않습니다.",
+        color="FFF1F3",
+    )
+
+    document.add_heading("22.1 Action별 확인 포인트", level=2)
+    _add_table(
+        document,
+        ("동작", "Case 상태", "Audit", "발표에서 확인할 것"),
+        (
+            ("Acknowledge", "NEW -> ACKNOWLEDGED", "1건 append", "담당자가 Case를 인지했다는 업무 상태만 변경"),
+            ("Start Review", "ACKNOWLEDGED -> IN_REVIEW", "1건 append", "고객 재무 분석을 재계산하지 않는지"),
+            ("Set Follow-up", "IN_REVIEW -> FOLLOW_UP", "1건 append", "권장 후속조치는 제안이며 자동 금융결정이 아님"),
+            ("Record Action", "상태 유지", "1건 append", "예: Contact planned 기록. 고객 outcome 변경 없음"),
+            ("Close", "CLOSED", "1건 append", "Case outcome과 analytical final_outcome은 별개"),
+            ("Preview", "변경 없음", "변경 없음", "not sent, network=0을 함께 말함"),
+            ("Reset", "3건 모두 NEW", "demo audit 초기화", "기본 RM과 5,000명 funnel이 그대로인지 확인"),
+        ),
+    )
+
+    document.add_heading("22.2 실제 화면으로 보는 RM Action 전·후", level=2)
+    document.add_paragraph(
+        "Acknowledge는 이 합성 Case를 인지했다는 업무 상태만 남깁니다. 아래 비교에서 핵심은 ‘상태와 audit은 변하지만, "
+        "분석·선정·고객 재무 데이터는 그대로’라는 점입니다. 이 비교는 실제 Edge 화면 crop에 교육용 라벨을 더한 것입니다."
+    )
+    before_after = annotations.get("workflow_demo_before_after")
+    if before_after is not None and before_after.exists():
+        _add_picture(
+            document,
+            before_after,
+            "그림 13. 실제 Edge 화면 crop 비교 — NEW에서 ACKNOWLEDGED로, 분리된 demo audit 0건에서 1건으로만 바뀝니다.",
+            width=6.85,
+        )
+    workflow_ack = screens.get("workflow_demo_ack")
+    if workflow_ack is not None and workflow_ack.exists():
+        _add_picture(
+            document,
+            workflow_ack,
+            "화면 14. 실제 Edge 화면 — Acknowledge 후: 성공 메시지, 현재 상태, 그리고 append-only Activity/Audit 행을 함께 확인합니다.",
+            width=6.85,
+        )
+    _add_callout(
+        document,
+        "교육자가 반드시 물어볼 질문",
+        "‘이 클릭 뒤에 고객의 저축률·DSR·선정 순위·historical outcome·5,000명 funnel 중 무엇이 바뀌었나요?’ 정답은 ‘아무 것도 바뀌지 않았습니다’입니다. "
+        "변경 대상은 분리된 demo Case 상태와 audit뿐입니다.",
+        color="EAF2FB",
+    )
+
+    document.add_heading("23. 운영자용 시연 절차", level=1)
+    document.add_paragraph(
+        "아래 순서는 발표자와 내부 검토자가 동일한 상태를 재현하기 위한 절차입니다. 실제 발표 전에 1366x768 또는 "
+        "1920x1080 Edge에서 직접 실행하여 캡처와 문구를 확인합니다. 이 문서에는 loopback-only 임시 Edge 캡처가 포함되어 있지만, "
+        "실제 발표 장비에서 사람이 수행하는 수동 리허설은 아직 NOT_RUN입니다. 따라서 매뉴얼은 READY_WITH_WARNINGS 상태를 정직하게 유지합니다."
+    )
+    steps = (
+        ("1", "03_run_app.bat 실행", "일반, 발표, RM의 세 모드가 보이는지 확인합니다. 기본 RM은 먼저 열지 않아도 됩니다."),
+        ("2", "기본 RM Portfolio 확인", "열린 Alert 없음, RM 업무 Case 0, 선정됨·Case 미생성이 정상 안전 상태임을 확인하고 필요하면 캡처합니다."),
+        ("3", "Portfolio와 Customer Review 시연", "5,000명 funnel, C000001의 선정 이유와 Why Now를 먼저 보여줍니다. Historical landmark는 별도 과거 근거로 설명합니다."),
+        ("4", "Open Synthetic Workflow Demo 선택", "RM 내부의 명시적 진입을 누릅니다. Synthetic, not live, not sent/Preview only 경고를 먼저 읽습니다."),
+        ("5", "Initialize synthetic Cases 선택", "정확히 3건만 생성되는지, 세 Case가 NEW인지, C000001이 첫 Case로 선택되는지 확인합니다."),
+        ("6", "Case 1 업무 흐름", "Acknowledge -> Start Review -> Set Follow-up 또는 Record Action -> Close 순으로 시연합니다. 각 클릭 후 상태와 activity/audit이 같이 갱신되는지 봅니다."),
+        ("7", "Recommended Follow-up 검토", "follow-up은 검토/연락/관찰/의뢰를 제안할 뿐 승인/거절/재조정 결정을 자동 실행하지 않는다고 말합니다."),
+        ("8", "Notification Preview 열기", "Preview body와 deep-link context만 확인합니다. channel selector, sent 결과, network 호출이 없어야 합니다."),
+        ("9", "Activity/Audit 확인", "시간 순서의 append-only history와 현재 Case 상태가 일치하는지 확인합니다."),
+        ("10", "Reset 실행", "세 Case가 다시 NEW가 되고 demo audit이 초기화되는 것을 확인합니다. Reset은 demo runtime에만 적용됩니다."),
+        ("11", "Return to default RM workspace", "demo session key만 정리됩니다. 기본 RM의 Alert/Case=0과 선정 funnel이 그대로인지 확인합니다."),
+        ("12", "리허설 기록", "화면 크기, 언어(KR/EN), 담당자, 결과(PASS/FAIL), 발견한 문구/viewport 이슈를 기록합니다."),
+    )
+    _add_table(document, ("순서", "화면/동작", "확인할 내용"), steps)
+
+    document.add_page_break()
+    document.add_heading("23.1 캡처를 이용한 내부 교육 진행법", level=2)
+    document.add_paragraph(
+        "화면을 순서대로 넘기며 설명하면, 교육 대상자가 ‘기본 RM의 0 Case’와 ‘격리 Demo의 3 Case’를 혼동하지 않습니다. "
+        "캡처는 교육용 증거이며 실제 고객 업무 처리 기록이 아닙니다."
+    )
+    training_steps = (
+        ("1분", "화면 12", "진입만으로는 Case가 생기지 않음을 읽습니다. synthetic/not live/not sent 경고와 초기화 버튼을 함께 확인합니다."),
+        ("1분", "화면 13", "C000001 / NEW와 최대 3건 고정 fixture를 확인합니다. 이 세 Case는 5,000명 전체를 새로 선별한 결과가 아닙니다."),
+        ("1분", "그림 13 + 화면 14", "NEW→ACKNOWLEDGED 및 audit 0→1만 찾게 합니다. ‘변하지 않은 데이터’를 교육 대상자가 직접 말하게 합니다."),
+        ("40초", "화면 16", "Offline Preview body와 deep-link context만 확인합니다. sent, channel selector, network는 없다고 명시합니다."),
+        ("40초", "기본 RM 화면", "Return/Reset 뒤 기본 Portfolio의 Alert=0, Case=0, 선정됨·Case 미생성이 계속 정상임을 다시 확인합니다."),
+    )
+    _add_table(document, ("권장 시간", "사용할 화면", "교육 진행 문장"), training_steps)
+    workflow_preview = screens.get("workflow_demo_preview")
+    if workflow_preview is not None and workflow_preview.exists():
+        _add_picture(
+            document,
+            workflow_preview,
+            "화면 16. 실제 Edge 화면 — Offline Preview: not sent와 network/전달 채널 미사용 문구, deep-link context만 보입니다.",
+            width=6.85,
+        )
+
+    document.add_heading("24. 내부 공유용 발표 흐름", level=1)
+    document.add_paragraph(
+        "평가 피드백의 핵심은 슬라이드보다 앱을 더 많이 보여주고, 분석 insight가 RM 업무 흐름으로 이어지는 모습을 "
+        "명확하게 만드는 것입니다. 아래 순서는 분석의 강점을 유지하면서도 workflow를 과장하지 않는 2분 30초 내외의 "
+        "앱 중심 시연안입니다."
+    )
+    _add_picture(
+        document,
+        diagrams["workflow_demo_presentation"],
+        "그림 12. 5,000명 population에서 Workflow Demo까지 이어지는 내부 발표 흐름. 실제 UI 캡처가 아니라 발표 순서를 설명하는 운영 다이어그램입니다.",
+        width=6.9,
+    )
+    document.add_page_break()
+    _add_table(
+        document,
+        ("시간", "앱 화면", "핵심 문장", "피해야 할 주장"),
+        (
+            ("0:00-0:20", "RM Portfolio", "한 명의 이야기가 아니라 5,000명 전체 분석에서 시작합니다.", "1,522명이 실제 RM 업무량이다."),
+            ("0:20-0:35", "Capacity 비교", "사람이 입력한 capacity에서 Selected/Deferred trade-off를 비교합니다.", "시스템이 적정 인력이나 SLA를 결정한다."),
+            ("0:35-0:55", "Customer Review C000001", "왜 이 고객이 선정됐고 왜 지금 검토해야 하는지 현재/과거 evidence로 설명합니다.", "historical landmark가 이 고객의 미래 날짜를 예측한다."),
+            ("0:55-1:25", "Synthetic Workflow Demo", "별도 runtime에서 3개 synthetic Case의 action, audit, preview를 시연합니다.", "실제 고객 Alert를 생성하거나 메시지를 발송했다."),
+            ("1:25-1:45", "C000008/C000010과 Reset", "고정 fixture, idempotent action, reset 후 기본 RM 보존을 보여줍니다.", "RM action이 outcome을 개선했다."),
+            ("1:45-2:10", "Presentation C002608", "weighted nearest-neighbour cohort, historical landmark, rule-based What-if의 분석 근거를 보여줍니다.", "historical outcome share를 prediction probability로 부른다."),
+            ("2:10-2:30", "한계와 다음 검증", "synthetic PoC이며 governance, approved data adapter, RM pilot은 준비 또는 미검증 상태입니다.", "실제 은행 성과나 실제 고객 검증이 완료됐다."),
+        ),
+    )
+
+    document.add_heading("25. 내부 Q&A와 증거 정리", level=1)
+    _add_table(
+        document,
+        ("예상 질문", "정직한 답변", "바로 보여줄 증거"),
+        (
+            ("왜 기본 RM은 Alert/Case가 0개인가?", "Triage selection과 Alert creation을 분리한 안전 기본값입니다. 화면 탐색만으로 Case가 생성되지 않습니다.", "RM Portfolio의 0 Case와 섹션 18-19"),
+            ("Workflow Demo의 버튼은 무엇을 바꾸나?", "분리된 synthetic Case 상태와 demo audit만 바꿉니다. 분석, ranking, 고객 재무 데이터는 바꾸지 않습니다.", "그림 11과 섹션 22"),
+            ("알림을 실제로 보냈나?", "아닙니다. Preview/Null만 있으며 sent=false, network=0입니다.", "Preview panel과 activity/audit"),
+            ("왜 3건만 보여주나?", "작고 재현 가능한 offline workflow fixture입니다. 5,000명 전체 selection 증거와 별도로 workflow 계약을 시연합니다.", "Portfolio funnel과 섹션 21.1"),
+            ("RM action이 고객 결과를 바꾸나?", "이 PoC는 업무 흐름과 evidence usability를 시연합니다. intervention efficacy와 실제 RM 성과는 검증하지 않았습니다.", "섹션 22, 24의 한계 문구"),
+        ),
+    )
+    capture_note = document.add_paragraph()
+    capture_note_run = capture_note.add_run(
+        "캡처 정직성: 기존 app screen PNG와 화면 12·13·14·16은 loopback-only 임시 Edge 프로필에서 캡처했습니다. "
+        "화면 12·13·14·16은 immutable workspace fixture와 임시 synthetic runtime만 사용했고, 기본 workflow/audit 및 workspace fixture 경로를 전·후 해시로 확인했습니다. "
+        "그림 11–12는 운영 다이어그램, 그림 13은 실제 화면 crop에 교육용 라벨을 더한 비교 이미지입니다. 실제 발표 장비에서의 사람이 수행하는 수동 리허설은 별도로 기록해야 합니다."
+    )
+    capture_note_run.italic = True
+    capture_note_run.font.size = Pt(9)
+    capture_note_run.font.color.rgb = RGBColor(93, 107, 120)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--docx-only",
+        action="store_true",
+        help="Regenerate the Word operating manual without rewriting the existing Excel summary.",
+    )
+    parser.add_argument(
+        "--output-docx",
+        type=Path,
+        help="Write the Word manual to this alternate path instead of replacing the default manual.",
+    )
     parser.add_argument(
         "--try-capture-screens",
         action="store_true",
@@ -2687,6 +3982,15 @@ def main() -> int:
             "Each temporary local Streamlit/Edge session is terminated after its PNG is saved."
         ),
     )
+    parser.add_argument(
+        "--try-edge-workflow-demo-timeline",
+        action="store_true",
+        help=(
+            "Capture four Workflow Demo teaching states using a temporary loopback-only Edge profile and "
+            "temporary synthetic runtime. The default workflow/audit, demo fixture, and analytics paths are "
+            "digest-checked and never used as mutable capture output."
+        ),
+    )
     args = parser.parse_args()
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -2698,18 +4002,30 @@ def main() -> int:
     known_screens = {
         "presentation": SCREEN_DIR / "01_presentation_mode.png",
         "general": SCREEN_DIR / "02_general_mode.png",
+        "general_direct_c000001": SCREEN_DIR / "02a_general_direct_c000001.png",
         "rm": SCREEN_DIR / "03_rm_portfolio.png",
         "presentation_landmark": SCREEN_DIR / "04_presentation_historical_landmark.png",
         "presentation_whatif": SCREEN_DIR / "05_presentation_whatif.png",
         "rm_capacity_3": SCREEN_DIR / "06_rm_human_capacity_3.png",
+        "rm_workflow_demo_entry_cta": SCREEN_DIR / "11a_rm_workflow_demo_entry_cta.png",
         "rm_queue": SCREEN_DIR / "07_rm_review_queue.png",
         "rm_customer_review": SCREEN_DIR / "08_rm_customer_review_c000001.png",
         "presentation_c002082_insufficient": SCREEN_DIR / "09_presentation_c002082_landmark_insufficient.png",
         "rm_monitor_c000003": SCREEN_DIR / "10_rm_monitor_c000003.png",
         "rm_queue_c000003_excluded": SCREEN_DIR / "11_rm_queue_c000003_excluded.png",
+        "workflow_demo_entry": SCREEN_DIR / "12_workflow_demo_entry_uninitialized.png",
+        "workflow_demo_new": SCREEN_DIR / "13_workflow_demo_new_before_action.png",
+        "workflow_demo_ack": SCREEN_DIR / "14_workflow_demo_ack_after_action.png",
+        "workflow_demo_preview": SCREEN_DIR / "16_workflow_demo_preview_not_sent.png",
     }
     screens = {key: path for key, path in known_screens.items() if path.exists()}
-    if args.edge_scenario:
+    if args.try_edge_workflow_demo_timeline:
+        try:
+            screens.update(capture_workflow_demo_timeline_with_edge())
+        except (OSError, RuntimeError, subprocess.SubprocessError, websocket.WebSocketException) as error:
+            print(f"WARNING: Workflow Demo Edge timeline capture was skipped: {error}")
+            print("The manual retains existing captures and clearly-labelled workflow diagrams.")
+    elif args.edge_scenario:
         try:
             mode_value, filename, interaction_scripts = EDGE_SCENARIOS[args.edge_scenario]
             screens[args.edge_scenario] = _capture_one_edge_screen(
@@ -2718,6 +4034,7 @@ def main() -> int:
                 interaction_scripts=interaction_scripts,
                 session_capacity=EDGE_SCENARIO_SESSION_CAPACITY.get(args.edge_scenario),
                 session_customer_id=EDGE_SCENARIO_SESSION_CUSTOMER.get(args.edge_scenario),
+                session_direct_input_customer_id=EDGE_SCENARIO_DIRECT_INPUT_CUSTOMER.get(args.edge_scenario),
                 session_presentation_option=EDGE_SCENARIO_PRESENTATION_OPTION.get(args.edge_scenario),
                 session_representative_category=EDGE_SCENARIO_REPRESENTATIVE_CATEGORY.get(args.edge_scenario),
                 session_queue_search=EDGE_SCENARIO_QUEUE_SEARCH.get(args.edge_scenario),
@@ -2756,10 +4073,21 @@ def main() -> int:
             print(f"WARNING: live screen capture was skipped: {error}")
             print("The manual contains clearly-labelled manual capture guides instead.")
     annotations = create_manual_annotations(screens)
-    document_path = create_document(diagrams, capture_cards, annotations, screens, git_head=git_head, dirty=dirty)
-    workbook_path = create_workbook(diagrams, capture_cards, annotations, screens, git_head=git_head, dirty=dirty)
+    document_path = create_document(
+        diagrams,
+        capture_cards,
+        annotations,
+        screens,
+        git_head=git_head,
+        dirty=dirty,
+        output_path=args.output_docx,
+    )
+    workbook_path: Path | None = None
+    if not args.docx_only:
+        workbook_path = create_workbook(diagrams, capture_cards, annotations, screens, git_head=git_head, dirty=dirty)
     print(f"Word manual: {document_path}")
-    print(f"Excel summary: {workbook_path}")
+    if workbook_path is not None:
+        print(f"Excel summary: {workbook_path}")
     for key, path in screens.items():
         print(f"Screen capture ({key}): {path}")
     return 0

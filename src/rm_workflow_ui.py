@@ -243,10 +243,13 @@ def make_submission_token(
     expected_state: AlertCaseState,
     operation: RMUIOperation,
     action: str | None = None,
+    namespace: str = "rm",
 ) -> str:
     """Return a stable UI retry token for the same intended submission."""
 
-    material = "|".join((alert_id, expected_state, operation, action or ""))
+    if not str(namespace).strip():
+        raise ValueError("namespace must be non-empty")
+    material = "|".join((namespace, alert_id, expected_state, operation, action or ""))
     return "ui-" + sha256(material.encode("utf-8")).hexdigest()[:24]
 
 

@@ -1,0 +1,84 @@
+{
+  "schema_version": "workflow_demo_final_gate.v1",
+  "step": "13-07",
+  "code_ref": "63e8751a091e8c6dcbb8117c9d3d9ec444bb38bf",
+  "gate_result": "PARTIAL",
+  "readiness_decision": "READY_WITH_WARNINGS",
+  "scope": "offline synthetic workflow-demo release evidence only",
+  "critical_gate_failures": [],
+  "warnings": [
+    "manual Edge rehearsal is NOT_RUN in this execution environment",
+    "Python 3.10.9 differs from the project target Python 3.11",
+    "OPENAI_API_KEY is unset; the optional template fallback is used",
+    "port 8501 was already in use during readiness; it was not stopped"
+  ],
+  "app_contract": {
+    "app_modes": 3,
+    "presentation_tabs": 5,
+    "rm_workspace_tabs": 4,
+    "default_rm_case_creation": false,
+    "default_workflow_root_exists": false,
+    "default_audit_root_exists": false,
+    "default_workflow_cases": 0,
+    "default_audit_events": 0
+  },
+  "fixture_contract": {
+    "fixture_case_count": 3,
+    "fixture_customer_ids": [
+      "C000001",
+      "C000008",
+      "C000010"
+    ],
+    "initial_states": [
+      "NEW",
+      "NEW",
+      "NEW"
+    ],
+    "future_label_selection": false,
+    "external_delivery_attempted": false,
+    "network_called": false,
+    "sent": false,
+    "default_runtime_status": "DEMO_NOT_INITIALIZED",
+    "default_runtime_case_count": 0
+  },
+  "existing_isolated_dry_run_evidence": {
+    "case_count": 3,
+    "audit_event_count": 10,
+    "network_called": false,
+    "sent": false
+  },
+  "protected_artifacts": {
+    "baseline_contract_path": "artifacts/post_p0/workflow_demo_contract/contract_manifest.json",
+    "hash_matches": 8,
+    "hash_expected": 8,
+    "canonical_and_triage_unchanged": true
+  },
+  "population_reconciliation": {
+    "expected_customer_ids": 5000,
+    "output_customer_ids": 5000,
+    "missing_customer_ids": 0,
+    "duplicate_customer_ids": 0,
+    "unexpected_customer_ids": 0,
+    "eligible_total": 1522,
+    "selected_queue_ready": 1522,
+    "monitor_only": 371,
+    "no_actionable_signal": 3107
+  },
+  "verification": {
+    "focused_tests": "86 passed in 42.88s",
+    "full_pytest": "486 passed in 245.06s",
+    "readiness": "READY_WITH_WARNINGS",
+    "bounded_health": "PASS; port 8519; temporary server stopped",
+    "git_diff_check": "PASS",
+    "tracked_secret_file_scan": 0,
+    "source_secret_pattern_scan": 0,
+    "edge_rehearsal": "NOT_RUN"
+  },
+  "claims_boundary": {
+    "synthetic_only": true,
+    "real_customer_or_bank_performance_claim": false,
+    "actual_external_delivery": false,
+    "database_or_provider_dependency": false,
+    "automatic_financial_decision": false
+  }
+}

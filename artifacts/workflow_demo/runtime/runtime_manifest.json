@@ -1,0 +1,47 @@
+{
+  "alert_ids": [
+    "ALT-DEMO-C000001",
+    "ALT-DEMO-C000008",
+    "ALT-DEMO-C000010"
+  ],
+  "audit_log_sha256": null,
+  "case_repository_sha256": "4541711d02578fffb9b8cae0e6f6aea68a6af3f7dda37490e06c3fbd60cc4387",
+  "customer_ids": [
+    "C000001",
+    "C000008",
+    "C000010"
+  ],
+  "default_audit_root_used": false,
+  "default_workflow_root_used": false,
+  "deterministic_time_policy": {
+    "created_at_reference": "2026-08-24T09:00:00+00:00",
+    "due_at_policy": "fixed_utc_offsets_by_fixture_order",
+    "timezone": "UTC"
+  },
+  "external_delivery_attempted": false,
+  "fixture_id": "seed42_workflow_demo_fixture",
+  "fixture_sha256": "e7671638c96a0b425fba6381d298662ca8aef64536adee61da8b5972b2e91f7c",
+  "fixture_version": "1",
+  "future_label_selection": false,
+  "initial_states": {
+    "ALT-DEMO-C000001": "NEW",
+    "ALT-DEMO-C000008": "NEW",
+    "ALT-DEMO-C000010": "NEW"
+  },
+  "network_called": false,
+  "runtime_case_count": 3,
+  "runtime_status": "DEMO_READY",
+  "schema_version": "workflow_demo_runtime.v1",
+  "sent": false,
+  "source_digest": "e725b4848edac128cc2c2a2e0f04a1d81bf0c7b7477e0d4fc6a5c2364d844aa2",
+  "source_reference": {
+    "customer_universe_path": "data/raw/customer_master.csv",
+    "customer_universe_sha256": "4b37b93865b24c80a7e6f24761b5bc7a3a35b46fe1d88e3fef063f854c8b74e9",
+    "dry_run_manifest_path": "artifacts/post_p0/pilot_dry_run/seed42_capacity_3/run_manifest.json",
+    "selection_manifest_path": "artifacts/triage/seed42_crossfit_5fold_asof12_unbounded/rm_selection_manifest.json",
+    "selection_manifest_sha256": "6489707f12f9fc2cfe9e7e5e8fde8d5b8bbca11813c5fa4d43e6f06f39f3c5bf",
+    "selection_method": "persisted_saved_rank_prefix_provenance_only"
+  },
+  "synthetic_actor_reference": "synthetic-workflow-demo",
+  "synthetic_demo": true
+}

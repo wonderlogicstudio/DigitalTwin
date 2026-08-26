@@ -1,0 +1,142 @@
+{
+  "schema_version": "workflow_demo_baseline_contract.v1",
+  "step": "13-01",
+  "contract_status": "go",
+  "code_ref": "63e8751a091e8c6dcbb8117c9d3d9ec444bb38bf",
+  "baseline": {
+    "app_mode_count": 3,
+    "app_modes": [
+      "일반 모드",
+      "발표 모드",
+      "RM 업무 모드"
+    ],
+    "presentation_tab_count": 5,
+    "rm_workspace_tab_count": 4,
+    "default_rm_entry_creates_case": false,
+    "default_rm_entry_writes_workflow_or_audit": false
+  },
+  "default_workflow": {
+    "workflow_root": "artifacts/workflow",
+    "audit_root": "artifacts/audit",
+    "workflow_root_exists": false,
+    "audit_root_exists": false,
+    "case_count": 0,
+    "audit_event_count": 0,
+    "ownership": "default RM remains read-only until a separately approved Alert cycle creates a case"
+  },
+  "isolated_dry_run_source": {
+    "run_manifest_path": "artifacts/post_p0/pilot_dry_run/seed42_capacity_3/run_manifest.json",
+    "workflow_path": "artifacts/post_p0/pilot_dry_run/seed42_capacity_3/workflow/alert_cases.json",
+    "audit_path": "artifacts/post_p0/pilot_dry_run/seed42_capacity_3/audit/audit_events.jsonl",
+    "run_mode": "synthetic_operational_rehearsal_only",
+    "case_count": 3,
+    "audit_event_count": 10,
+    "external_delivery_attempted": false,
+    "network_called": false,
+    "sent": false,
+    "canonical_source_artifacts_unchanged": true,
+    "source_selection_method": "saved_rank_prefix_cutoff_only",
+    "source_capacity": 3,
+    "selected_customer_ids": [
+      "C000001",
+      "C000008",
+      "C000010"
+    ],
+    "selected_rank_prefix": [
+      1,
+      2,
+      3
+    ]
+  },
+  "future_demo_context_contract": {
+    "is_new_app_mode": false,
+    "is_new_rm_tab": false,
+    "entry_ko": "합성 Workflow Demo 열기",
+    "entry_en": "Open Synthetic Workflow Demo",
+    "exit_ko": "기본 RM 업무로 돌아가기",
+    "banner_ko": "합성 Workflow Demo · 실제 운영/발송 아님",
+    "entry_initializes_or_writes_runtime": false,
+    "session_key_prefix": "rm_workflow_demo_",
+    "forbidden_session_key_namespaces": [
+      "app_mode",
+      "presentation_",
+      "customer_selector",
+      "rm_workflow_ui_service"
+    ],
+    "maximum_case_count": 3,
+    "fixture_selection_source": "persisted triage manifest saved-rank prefix plus dry-run provenance only",
+    "forbidden_fixture_selection_inputs": [
+      "target_month_13_36",
+      "final_outcome",
+      "persona",
+      "evaluator_label"
+    ],
+    "reset_initial_case_state": "NEW",
+    "demonstrable_lifecycle": [
+      "NEW",
+      "ACKNOWLEDGED",
+      "IN_REVIEW",
+      "RECORD_ACTION_OR_FOLLOW_UP",
+      "AUDIT",
+      "PREVIEW_NOT_SENT"
+    ]
+  },
+  "proposed_isolated_paths": {
+    "fixture_root": "artifacts/workflow_demo/fixture_v1",
+    "runtime_workflow_root": "artifacts/workflow_demo/runtime/workflow",
+    "runtime_audit_root": "artifacts/workflow_demo/runtime/audit",
+    "runtime_manifest_path": "artifacts/workflow_demo/runtime/runtime_manifest.json",
+    "fixture_root_exists_at_baseline": false,
+    "runtime_root_exists_at_baseline": false,
+    "shares_default_workflow_root": false,
+    "shares_default_audit_root": false,
+    "allowed_mutation": "only an explicit demo load/reset or BankerApplicationService action may mutate the runtime child paths"
+  },
+  "protected_sources": [
+    {
+      "path": "data/raw/customer_master.csv",
+      "sha256": "4b37b93865b24c80a7e6f24761b5bc7a3a35b46fe1d88e3fef063f854c8b74e9"
+    },
+    {
+      "path": "data/raw/customer_monthly_5000.csv",
+      "sha256": "2dbf9c2deee845b6f11396fcfb604f2045f61ef7ff85d4934374c6cf8b80cc4c"
+    },
+    {
+      "path": "data/processed/trajectory_features.csv",
+      "sha256": "50a51a42bf420c5bf7589213754eecebb1dc652f28f946c05d2e6b480e797a13"
+    },
+    {
+      "path": "data/demo/demo_customers.csv",
+      "sha256": "4131308dcce90c8f0a0beb184cb6e464d8c435049c142fc677a944aac65c24f8"
+    },
+    {
+      "path": "artifacts/triage/seed42_crossfit_5fold_asof12_unbounded/rm_selection_manifest.json",
+      "sha256": "6489707f12f9fc2cfe9e7e5e8fde8d5b8bbca11813c5fa4d43e6f06f39f3c5bf"
+    },
+    {
+      "path": "artifacts/triage/seed42_crossfit_5fold_asof12_unbounded/rm_representative_cohort.json",
+      "sha256": "374e6f0896f3f060ef6592a535851c5d03169fb2485d5eacf59b274f2d60532d"
+    },
+    {
+      "path": "artifacts/post_p0/pilot_dry_run/seed42_capacity_3/workflow/alert_cases.json",
+      "sha256": "863069439dd9bf4c3776b5934edb17840d7a5f437e52ccead48a637e2af815a4"
+    },
+    {
+      "path": "artifacts/post_p0/pilot_dry_run/seed42_capacity_3/audit/audit_events.jsonl",
+      "sha256": "fbbe79f3916015f2304a55dae1272bced0def6714c8106121c2d21cc1025c4af"
+    }
+  ],
+  "verification_requirements_for_steps_13_02_to_13_07": [
+    "protected source hashes must remain unchanged",
+    "default workflow and audit roots must remain separate from demo runtime roots",
+    "default RM entry must create zero cases and write zero audit events",
+    "demo fixture must never exceed three cases",
+    "reset/reload must be deterministic and idempotent",
+    "Preview/Null must remain not_sent with network_called=false",
+    "Presentation must retain five tabs and RM Workspace must retain four tabs"
+  ],
+  "known_nonblocking_documentation_drift": {
+    "path": "PROJECT_HANDOFF.md",
+    "detail": "Its opening snapshot still names c68c8cc as the committed baseline and describes later feedback-closure work as uncommitted, while current HEAD 63e8751 has committed that work. This does not change runtime behavior or the isolation contract, but requires a later documentation sync."
+  }
+}

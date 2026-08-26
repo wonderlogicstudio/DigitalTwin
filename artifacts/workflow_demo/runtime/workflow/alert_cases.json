@@ -1,0 +1,167 @@
+{
+  "cases": [
+    {
+      "alert_id": "ALT-DEMO-C000001",
+      "case_resolution": "RESOLVED_NO_ACTION",
+      "created_at": "2026-08-24T09:00:00+00:00",
+      "customer_id": "C000001",
+      "due_at": "2026-08-25T09:00:00+00:00",
+      "episode_key": "workflow-demo-v1:C000001:month-12",
+      "last_state_change_reason": "BANKER_CLOSE:synthetic-workflow-demo",
+      "operational_priority": "PRIORITY_REVIEW",
+      "owner_reference": null,
+      "policy_reference": {
+        "policy_id": "synthetic_early_warning_demo",
+        "policy_version": "0.1.0"
+      },
+      "schema_version": "alert_case.v1",
+      "scope": {
+        "external_delivery_implemented": false,
+        "persistence_implemented": false,
+        "synthetic_analytics_attached": false
+      },
+      "selection_reference": {
+        "selection_policy_id": "workflow_demo_saved_rank_prefix",
+        "selection_policy_version": "1",
+        "selection_reason_codes": [
+          "PRIORITY_BAND_PRIORITY_REVIEW",
+          "TIMING_PROSPECTIVE_SIGNAL_AVAILABLE",
+          "PERSISTENCE_NOT_PRESENT",
+          "STABILITY_INITIAL",
+          "EVIDENCE_SUFFICIENT",
+          "CAPACITY_UNBOUNDED",
+          "CREATE_NEW_CASE"
+        ]
+      },
+      "signal_reference": {
+        "signal_as_of_month": 12,
+        "signal_run_id": "crossfit_seed42_5fold_asof12",
+        "signal_version": "prospective_signal_snapshot.v1"
+      },
+      "snoozed_until": null,
+      "state": "CLOSED",
+      "timing_evidence_reference": {
+        "candidate_month": 12,
+        "evaluation_status": "not_evaluated",
+        "lead_time_months": null,
+        "lead_time_unit": "months",
+        "source": "prospective_signal"
+      },
+      "updated_at": "2026-08-25T02:08:31.137907+00:00",
+      "why_now_reason_codes": [
+        "CURRENT_STATUS_CONCERNING",
+        "MULTIPLE_CURRENT_FINANCIAL_STRESS_FACTORS",
+        "CURRENT_FINANCIAL_STRESS_FACTOR"
+      ]
+    },
+    {
+      "alert_id": "ALT-DEMO-C000008",
+      "case_resolution": null,
+      "created_at": "2026-08-24T09:00:00+00:00",
+      "customer_id": "C000008",
+      "due_at": "2026-08-26T09:00:00+00:00",
+      "episode_key": "workflow-demo-v1:C000008:month-12",
+      "last_state_change_reason": "BANKER_START_REVIEW:synthetic-workflow-demo",
+      "operational_priority": "PRIORITY_REVIEW",
+      "owner_reference": null,
+      "policy_reference": {
+        "policy_id": "synthetic_early_warning_demo",
+        "policy_version": "0.1.0"
+      },
+      "schema_version": "alert_case.v1",
+      "scope": {
+        "external_delivery_implemented": false,
+        "persistence_implemented": false,
+        "synthetic_analytics_attached": false
+      },
+      "selection_reference": {
+        "selection_policy_id": "workflow_demo_saved_rank_prefix",
+        "selection_policy_version": "1",
+        "selection_reason_codes": [
+          "PRIORITY_BAND_PRIORITY_REVIEW",
+          "TIMING_PROSPECTIVE_SIGNAL_AVAILABLE",
+          "PERSISTENCE_NOT_PRESENT",
+          "STABILITY_INITIAL",
+          "EVIDENCE_SUFFICIENT",
+          "CAPACITY_UNBOUNDED",
+          "CREATE_NEW_CASE"
+        ]
+      },
+      "signal_reference": {
+        "signal_as_of_month": 12,
+        "signal_run_id": "crossfit_seed42_5fold_asof12",
+        "signal_version": "prospective_signal_snapshot.v1"
+      },
+      "snoozed_until": null,
+      "state": "IN_REVIEW",
+      "timing_evidence_reference": {
+        "candidate_month": 12,
+        "evaluation_status": "not_evaluated",
+        "lead_time_months": null,
+        "lead_time_unit": "months",
+        "source": "prospective_signal"
+      },
+      "updated_at": "2026-08-25T13:53:37.731891+00:00",
+      "why_now_reason_codes": [
+        "CURRENT_STATUS_CONCERNING",
+        "MULTIPLE_CURRENT_FINANCIAL_STRESS_FACTORS",
+        "CURRENT_FINANCIAL_STRESS_FACTOR"
+      ]
+    },
+    {
+      "alert_id": "ALT-DEMO-C000010",
+      "case_resolution": null,
+      "created_at": "2026-08-24T09:00:00+00:00",
+      "customer_id": "C000010",
+      "due_at": "2026-08-27T09:00:00+00:00",
+      "episode_key": "workflow-demo-v1:C000010:month-12",
+      "last_state_change_reason": "CASE_CREATED",
+      "operational_priority": "PRIORITY_REVIEW",
+      "owner_reference": null,
+      "policy_reference": {
+        "policy_id": "synthetic_early_warning_demo",
+        "policy_version": "0.1.0"
+      },
+      "schema_version": "alert_case.v1",
+      "scope": {
+        "external_delivery_implemented": false,
+        "persistence_implemented": false,
+        "synthetic_analytics_attached": false
+      },
+      "selection_reference": {
+        "selection_policy_id": "workflow_demo_saved_rank_prefix",
+        "selection_policy_version": "1",
+        "selection_reason_codes": [
+          "PRIORITY_BAND_PRIORITY_REVIEW",
+          "TIMING_PROSPECTIVE_SIGNAL_AVAILABLE",
+          "PERSISTENCE_NOT_PRESENT",
+          "STABILITY_INITIAL",
+          "EVIDENCE_SUFFICIENT",
+          "CAPACITY_UNBOUNDED",
+          "CREATE_NEW_CASE"
+        ]
+      },
+      "signal_reference": {
+        "signal_as_of_month": 12,
+        "signal_run_id": "crossfit_seed42_5fold_asof12",
+        "signal_version": "prospective_signal_snapshot.v1"
+      },
+      "snoozed_until": null,
+      "state": "NEW",
+      "timing_evidence_reference": {
+        "candidate_month": 12,
+        "evaluation_status": "not_evaluated",
+        "lead_time_months": null,
+        "lead_time_unit": "months",
+        "source": "prospective_signal"
+      },
+      "updated_at": "2026-08-24T09:00:00+00:00",
+      "why_now_reason_codes": [
+        "CURRENT_STATUS_CONCERNING",
+        "MULTIPLE_CURRENT_FINANCIAL_STRESS_FACTORS",
+        "CURRENT_FINANCIAL_STRESS_FACTOR"
+      ]
+    }
+  ],
+  "schema_version": "alert_case_repository.v1"
+}

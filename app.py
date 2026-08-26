@@ -86,7 +86,7 @@ from src.rm_customer_review import (  # noqa: E402
     load_customer_observation,
     load_population_result_index,
 )
-from src.recommended_followup import RM_ACTIONS  # noqa: E402
+from src.recommended_followup import RM_ACTIONS, build_recommended_follow_up  # noqa: E402
 from src.triage_explainability import humanize_reason_codes  # noqa: E402
 from src.rm_workflow_ui import (  # noqa: E402
     RMWorkflowUIService,
@@ -97,6 +97,21 @@ from src.rm_workflow_ui import (  # noqa: E402
     make_submission_token,
     perform_rm_workflow_operation,
     utc_now,
+)
+from src.workflow_demo_ui import (  # noqa: E402
+    WORKFLOW_DEMO_OPEN_KEY,
+    WORKFLOW_DEMO_FEEDBACK_KEY,
+    WORKFLOW_DEMO_PREVIEW_KEY,
+    WORKFLOW_DEMO_RESET_ERROR_KEY,
+    WORKFLOW_DEMO_SELECTED_ALERT_KEY,
+    enter_workflow_demo,
+    exit_workflow_demo,
+    get_workflow_demo_ui_service,
+    initialize_or_reset_workflow_demo,
+    is_workflow_demo_open,
+    load_workflow_demo_shell,
+    perform_workflow_demo_operation,
+    prepare_workflow_demo_reset,
 )
 from src.visualizations import (  # noqa: E402
     create_breakpoint_comparison_chart,
@@ -543,29 +558,36 @@ def render_rm_workspace_sidebar(*, app_mode: str, language: str) -> SidebarSelec
     """Render RM-only shell filters with distinct session-state keys."""
 
     st.sidebar.caption(t("rm.sidebar.caption", language))
+    demo_open = is_workflow_demo_open(st.session_state)
+    if demo_open:
+        st.sidebar.caption(t("rm.workflow_demo.sidebar", language))
     queue_scope = st.sidebar.selectbox(
         t("rm.sidebar.queue", language),
         ("all", "selected"),
         format_func=lambda value: t(f"rm.filter.{value}", language),
         key="rm_queue_scope",
+        disabled=demo_open,
     )
     priority_scope = st.sidebar.selectbox(
         t("rm.sidebar.priority", language),
         ("all", "priority", "review"),
         format_func=lambda value: t(f"rm.filter.{value}", language),
         key="rm_priority_scope",
+        disabled=demo_open,
     )
     owner_scope = st.sidebar.selectbox(
         t("rm.sidebar.owner", language),
         ("all", "unassigned"),
         format_func=lambda value: t(f"rm.filter.{value}", language),
         key="rm_owner_scope",
+        disabled=demo_open,
     )
     due_scope = st.sidebar.selectbox(
         t("rm.sidebar.due", language),
         ("all", "due_soon"),
         format_func=lambda value: t(f"rm.filter.{value}", language),
         key="rm_due_scope",
+        disabled=demo_open,
     )
     return SidebarSelection(
         customer_id="",
@@ -584,6 +606,10 @@ def render_rm_workspace_sidebar(*, app_mode: str, language: str) -> SidebarSelec
 
 def render_rm_workspace_mode(*, selection: SidebarSelection, language: str = "ko") -> None:
     """Render the read-only RM portfolio and selected-only review queue."""
+
+    if is_workflow_demo_open(st.session_state):
+        _render_workflow_demo_context(language=language)
+        return
 
     artifacts = load_rm_workspace_artifacts()
     alert_snapshot = load_rm_alert_cases()
@@ -700,6 +726,8 @@ def render_rm_workspace_mode(*, selection: SidebarSelection, language: str = "ko
         if alert_snapshot.load_error:
             st.warning(t("rm.repository.unavailable", language))
 
+        _render_workflow_demo_entry_cta(language=language)
+
         _render_rm_capacity_comparison(
             getattr(artifacts, "selection_manifest", None),
             available=bool(portfolio_model["available"]),
@@ -803,6 +831,391 @@ def render_rm_workspace_mode(*, selection: SidebarSelection, language: str = "ko
             language=language,
             workflow_service=workflow_service,
         )
+
+
+def _render_workflow_demo_entry_cta(*, language: str) -> None:
+    """Offer an explicit, zero-write route into the secondary demo context."""
+
+    st.markdown(f"#### {t('rm.workflow_demo.title', language)}")
+    st.caption(t("rm.workflow_demo.cta_caption", language))
+    if st.button(
+        t("rm.workflow_demo.cta", language),
+        key="rm_workflow_demo_open_cta",
+    ):
+        enter_workflow_demo(st.session_state)
+        st.rerun()
+
+
+def _render_workflow_demo_context(*, language: str) -> None:
+    """Render actions only against the explicitly initialized demo runtime."""
+
+    st.subheader(t("rm.workflow_demo.title", language))
+    header_columns = st.columns([3, 2])
+    with header_columns[1]:
+        if st.button(
+            t("rm.workflow_demo.back", language),
+            key="rm_workflow_demo_back",
+        ):
+            exit_workflow_demo(st.session_state)
+            st.rerun()
+    st.warning(t("rm.workflow_demo.banner", language))
+    st.caption(t("rm.workflow_demo.banner.preview", language))
+    st.caption(t("rm.workflow_demo.cta_caption", language))
+
+    shell = load_workflow_demo_shell(
+        selected_alert_id=st.session_state.get(WORKFLOW_DEMO_SELECTED_ALERT_KEY),
+    )
+    if shell.status == "DEMO_FIXTURE_UNAVAILABLE":
+        st.error(t("rm.workflow_demo.status.fixture_unavailable", language))
+        return
+    if shell.status == "DEMO_NOT_INITIALIZED":
+        st.info(t("rm.workflow_demo.status.not_initialized", language))
+        _render_workflow_demo_initialize_button(language=language, reset=False)
+        return
+    if shell.status == "DEMO_CORRUPT":
+        st.error(t("rm.workflow_demo.status.corrupt", language))
+        _render_workflow_demo_initialize_button(language=language, reset=True)
+        return
+    if shell.status == "DEMO_STALE_SELECTION":
+        st.warning(t("rm.workflow_demo.status.stale_selection", language))
+        st.session_state.pop(WORKFLOW_DEMO_SELECTED_ALERT_KEY, None)
+        shell = load_workflow_demo_shell()
+        if not shell.is_ready:
+            st.error(t("rm.workflow_demo.status.corrupt", language))
+            return
+    if not shell.cases or shell.selected_case is None or shell.fixture is None:
+        st.info(t("rm.workflow_demo.case.none", language))
+        return
+
+    case_by_alert_id = {case.alert_id: case for case in shell.cases}
+    selected_alert_id = st.selectbox(
+        t("rm.workflow_demo.selector", language),
+        tuple(case_by_alert_id),
+        format_func=lambda alert_id: _workflow_demo_case_option_label(
+            case_by_alert_id[alert_id], language=language
+        ),
+        key=WORKFLOW_DEMO_SELECTED_ALERT_KEY,
+    )
+    selected_case = case_by_alert_id[str(selected_alert_id)]
+    case_columns = st.columns(2)
+    case_columns[0].metric(t("rm.workflow_demo.case.customer", language), selected_case.customer_id)
+    case_columns[1].metric(
+        t("rm.workflow_demo.case.state", language),
+        _rm_queue_case_state_label(selected_case.state, language),
+    )
+    st.caption(
+        t(
+            "rm.workflow_demo.case.provenance",
+            language,
+            policy=f"{selected_case.policy_id} v{selected_case.policy_version}",
+            as_of=selected_case.signal_as_of_month,
+            signal_run=selected_case.signal_run_id,
+        )
+    )
+    _render_workflow_demo_follow_up(selected_case, language=language)
+    workflow_service = get_workflow_demo_ui_service(st.session_state)
+    if workflow_service is None:
+        st.warning(t("rm.workflow_demo.action.service_unavailable", language))
+    else:
+        _render_workflow_demo_action_controls(
+            selected_case,
+            language=language,
+            workflow_service=workflow_service,
+        )
+        _render_workflow_demo_activity_audit(
+            selected_case,
+            language=language,
+            workflow_service=workflow_service,
+        )
+    _render_workflow_demo_initialize_button(language=language, reset=True)
+
+
+def _render_workflow_demo_initialize_button(*, language: str, reset: bool) -> None:
+    """Perform the only write in this context through the demo adapter."""
+
+    label_key = "rm.workflow_demo.reset" if reset else "rm.workflow_demo.initialize"
+    button_key = "rm_workflow_demo_reset" if reset else "rm_workflow_demo_initialize"
+    if not st.button(t(label_key, language), key=button_key):
+        return
+    prepare_workflow_demo_reset(st.session_state)
+    shell = initialize_or_reset_workflow_demo()
+    if not shell.is_ready or shell.selected_alert_id is None:
+        st.session_state[WORKFLOW_DEMO_RESET_ERROR_KEY] = shell.detail or "reset_failed"
+        st.error(t("rm.workflow_demo.reset_failed", language))
+        return
+    st.session_state.pop(WORKFLOW_DEMO_RESET_ERROR_KEY, None)
+    st.session_state[WORKFLOW_DEMO_SELECTED_ALERT_KEY] = shell.selected_alert_id
+    st.rerun()
+
+
+def _render_workflow_demo_follow_up(selected_case: Any, *, language: str) -> None:
+    """Show a non-executing recommendation for one synthetic Case."""
+
+    st.markdown(f"#### {t('rm.workflow_demo.follow_up.title', language)}")
+    try:
+        follow_up = build_recommended_follow_up(selected_case)
+    except ValueError:
+        st.info(t("rm.workflow_demo.follow_up.unavailable", language))
+        return
+    actions = ", ".join(
+        _rm_action_code_label(action, language) for action in follow_up.recommended_actions
+    )
+    st.caption(
+        t(
+            "rm.workflow_demo.follow_up.actions",
+            language,
+            actions=actions,
+        )
+    )
+    st.caption(t("rm.workflow_demo.follow_up.scope", language))
+    st.caption(t("rm.workflow_demo.whatif.scope", language))
+    st.caption(t("rm.workflow_demo.timing.scope", language))
+
+
+def _render_workflow_demo_action_controls(
+    selected_case: Any,
+    *,
+    language: str,
+    workflow_service: RMWorkflowUIService,
+) -> None:
+    """Render state-aware actions through the isolated Banker service only."""
+
+    alert_id = str(selected_case.alert_id)
+    case_state = str(selected_case.state)
+    st.markdown(f"#### {t('rm.workflow_demo.action.title', language)}")
+    feedback = st.session_state.get(WORKFLOW_DEMO_FEEDBACK_KEY)
+    if isinstance(feedback, Mapping) and feedback.get("alert_id") == alert_id:
+        st.success(str(feedback.get("message", t("rm.action.completed", language))))
+        operation = str(feedback.get("operation", ""))
+        current_state = str(feedback.get("current_state", case_state))
+        if operation:
+            st.caption(
+                t(
+                    "rm.action.feedback_detail",
+                    language,
+                    operation=_rm_operation_label(operation, language),
+                    state=_rm_queue_case_state_label(current_state, language),
+                )
+            )
+    st.caption(t("rm.workflow_demo.action.boundary", language))
+
+    state_buttons: dict[str, tuple[str, str]] = {
+        "NEW": ("ACKNOWLEDGE", "rm.action.acknowledge"),
+        "ACKNOWLEDGED": ("START_REVIEW", "rm.action.start_review"),
+        "IN_REVIEW": ("SET_FOLLOW_UP", "rm.action.follow_up"),
+    }
+    state_button = state_buttons.get(case_state)
+    if state_button is not None:
+        operation, label_key = state_button
+        if st.button(
+            t(label_key, language),
+            key=f"rm_workflow_demo_action_{operation.lower()}_{alert_id}_{case_state}",
+            type="primary" if operation in {"ACKNOWLEDGE", "START_REVIEW"} else "secondary",
+        ):
+            _submit_workflow_demo_action(
+                workflow_service,
+                alert_id=alert_id,
+                expected_state=case_state,
+                operation=operation,
+                language=language,
+            )
+
+    if case_state != "CLOSED":
+        try:
+            follow_up = build_recommended_follow_up(selected_case)
+            suggested_actions = tuple(follow_up.recommended_actions)
+        except ValueError:
+            suggested_actions = ()
+        recordable_actions = _rm_recordable_action_codes(
+            {"available": True, "actions": suggested_actions},
+            case_state=case_state,
+        )
+        if recordable_actions:
+            st.caption(t("rm.action.record_scope", language))
+            action = st.selectbox(
+                t("rm.action.record_label", language),
+                recordable_actions,
+                format_func=lambda code: _rm_action_option_label(
+                    code,
+                    recommended_actions=suggested_actions,
+                    language=language,
+                ),
+                key=f"rm_workflow_demo_action_record_choice_{alert_id}_{case_state}",
+            )
+            if st.button(
+                t("rm.action.record", language),
+                key=f"rm_workflow_demo_action_record_{alert_id}_{case_state}_{action}",
+            ):
+                _submit_workflow_demo_action(
+                    workflow_service,
+                    alert_id=alert_id,
+                    expected_state=case_state,
+                    operation="RECORD_ACTION",
+                    action=str(action),
+                    language=language,
+                )
+        close_options: dict[str, str] = {
+            "REVIEW_DOCUMENTED": "REVIEW_COMPLETE_NO_FURTHER_ACTION",
+            "CONTACT_DOCUMENTED": "CONTACT_COMPLETED",
+            "NO_ACTION_REQUIRED": "REVIEW_COMPLETE_NO_FURTHER_ACTION",
+            "REFERRED": "REFERRED_TO_SPECIALIST",
+            "CLOSED_UNRESOLVED": "UNRESOLVED",
+        }
+        close_outcome = st.selectbox(
+            t("rm.action.close_label", language),
+            tuple(close_options),
+            format_func=lambda code: t(f"rm.action.outcome.{code}", language),
+            key=f"rm_workflow_demo_action_close_choice_{alert_id}_{case_state}",
+        )
+        if st.button(
+            t("rm.action.close", language),
+            key=f"rm_workflow_demo_action_close_{alert_id}_{case_state}_{close_outcome}",
+        ):
+            _submit_workflow_demo_action(
+                workflow_service,
+                alert_id=alert_id,
+                expected_state=case_state,
+                operation="CLOSE",
+                close_outcome=str(close_outcome),
+                closure_reason=close_options[str(close_outcome)],
+                language=language,
+            )
+    else:
+        st.caption(t("rm.workflow_demo.action.closed_scope", language))
+
+    with st.expander(
+        t("rm.notification.preview_heading", language),
+        expanded=bool(st.session_state.get("rm_workflow_demo_capture_preview_expanded", False)),
+    ):
+        st.caption(t("rm.notification.preview_not_sent", language))
+        if st.button(
+            t("rm.notification.preview_generate", language),
+            key=f"rm_workflow_demo_notification_preview_{alert_id}_{case_state}",
+        ):
+            try:
+                case = load_rm_workflow_case(workflow_service, alert_id=alert_id)
+                if case is None:
+                    raise KeyError(alert_id)
+                st.session_state[WORKFLOW_DEMO_PREVIEW_KEY] = {
+                    "alert_id": alert_id,
+                    "result": build_offline_notification_preview(workflow_service, alert_case=case),
+                }
+            except (KeyError, OSError, ValueError, RuntimeError):
+                st.warning(t("rm.notification.preview_unavailable", language))
+        preview_container = st.session_state.get(WORKFLOW_DEMO_PREVIEW_KEY)
+        preview = (
+            preview_container.get("result")
+            if isinstance(preview_container, Mapping)
+            and preview_container.get("alert_id") == alert_id
+            else None
+        )
+        if isinstance(preview, Mapping):
+            st.markdown(f"**{preview.get('title', '')}**")
+            st.write(str(preview.get("body", "")))
+            st.code(str(preview.get("deep_link", "")), language=None)
+            st.caption(t("rm.notification.preview_not_sent", language))
+
+
+def _submit_workflow_demo_action(
+    workflow_service: RMWorkflowUIService,
+    *,
+    alert_id: str,
+    expected_state: str,
+    operation: str,
+    language: str,
+    action: str | None = None,
+    close_outcome: str | None = None,
+    closure_reason: str | None = None,
+) -> None:
+    """Submit one synthetic-only action through the Banker UI adapter."""
+
+    action_value = action or close_outcome or ""
+    submission_key = ":".join(
+        (
+            "rm_workflow_demo_submission",
+            alert_id,
+            expected_state,
+            operation,
+            action_value,
+        )
+    )
+    submission = st.session_state.get(submission_key)
+    if not isinstance(submission, Mapping):
+        submission = {
+            "token": make_submission_token(
+                alert_id=alert_id,
+                expected_state=expected_state,  # type: ignore[arg-type]
+                operation=operation,  # type: ignore[arg-type]
+                action=action_value or None,
+                namespace="workflow_demo",
+            ),
+            "occurred_at": utc_now(),
+        }
+        st.session_state[submission_key] = submission
+    try:
+        response = perform_workflow_demo_operation(
+            st.session_state,
+            workflow_service,
+            operation=operation,  # type: ignore[arg-type]
+            alert_id=alert_id,
+            expected_state=expected_state,  # type: ignore[arg-type]
+            occurred_at=submission["occurred_at"],
+            actor_reference="synthetic-workflow-demo",
+            idempotency_token=str(submission["token"]),
+            action=action,  # type: ignore[arg-type]
+            close_outcome=close_outcome,  # type: ignore[arg-type]
+            closure_reason=closure_reason,  # type: ignore[arg-type]
+        )
+    except (KeyError, OSError, ValueError, RuntimeError) as error:
+        st.error(t("rm.action.failed", language, detail=str(error)))
+        return
+    st.session_state[WORKFLOW_DEMO_FEEDBACK_KEY] = {
+        "alert_id": response.alert_case.alert_id,
+        "message": t(
+            "rm.action.completed_replay" if response.idempotent_replay else "rm.action.completed",
+            language,
+        ),
+        "operation": response.operation,
+        "current_state": response.current_state,
+        "audit_event_id": response.audit_event.event_id,
+    }
+    st.rerun()
+
+
+def _render_workflow_demo_activity_audit(
+    selected_case: Any,
+    *,
+    language: str,
+    workflow_service: RMWorkflowUIService,
+) -> None:
+    """Render only append-only activity from the isolated demo audit store."""
+
+    st.markdown(f"#### {t('rm.workflow_demo.audit.title', language)}")
+    history = build_rm_activity_history(
+        workflow_service,
+        alert_id=str(selected_case.alert_id),
+        customer_id=str(selected_case.customer_id),
+    )
+    if not history["available"]:
+        st.warning(t("rm.audit.unavailable", language))
+        return
+    events = history["events"]
+    if not events:
+        st.info(t("rm.workflow_demo.audit.empty", language))
+        return
+    st.caption(t("rm.workflow_demo.audit.caption", language))
+    st.dataframe(pd.DataFrame(events), hide_index=True, width="stretch")
+
+
+def _workflow_demo_case_option_label(case: Any, *, language: str) -> str:
+    """Keep a maximum-three-case selector readable without exposing raw files."""
+
+    return " · ".join(
+        (
+            case.customer_id,
+            _rm_queue_case_state_label(case.state, language),
+        )
+    )
 
 
 def _render_rm_capacity_comparison(

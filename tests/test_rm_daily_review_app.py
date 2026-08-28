@@ -10,7 +10,7 @@ from pathlib import Path
 
 import app as app_module
 
-from src.rm_review_store import REVIEW_COMPLETED, create_review_event
+from src.rm_review_store import REVIEW_COMPLETED, REVIEW_FOLLOW_UP, create_review_event
 
 
 def _snapshot_artifact() -> dict[str, object]:
@@ -100,6 +100,50 @@ def test_rm_worklist_reads_saved_snapshot_and_manual_completion_events(
     assert worklist.today_items == ()
     assert [item.customer_id for item in worklist.completed_today] == ["C000001"]
     assert worklist.completed_today[0].timing_months == 1
+
+
+def test_completion_moves_only_that_customer_for_the_same_snapshot_and_day(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    artifact = _snapshot_artifact()
+    artifact["records"].append(
+        {
+            "customer_id": "C000002",
+            "snapshot_id": "monthly-2026-08",
+            "current_summary": {"current_status": "watch"},
+            "breakpoint": {
+                "status": "found",
+                "months_from_current": 1,
+                "primary_factor": "dsr",
+            },
+            "evidence": {"available": True},
+            "relationship_metadata": {
+                "relationship_priority": "STANDARD",
+                "relationship_label": "일반관리",
+            },
+        }
+    )
+    snapshot_path = tmp_path / "monthly-2026-08.json"
+    snapshot_path.write_text(json.dumps(artifact), encoding="utf-8")
+    event = create_review_event(
+        review_id="review-follow-up",
+        customer_id="C000001",
+        snapshot_id="monthly-2026-08",
+        reviewed_at=datetime(2026, 8, 29, 9, 0, tzinfo=timezone.utc),
+        result=REVIEW_FOLLOW_UP,
+    )
+    monkeypatch.setattr(app_module, "load_review_events", lambda: (event,))
+
+    worklist = app_module.build_rm_daily_review_worklist(
+        artifact,
+        snapshot_path=snapshot_path,
+        daily_date=date(2026, 8, 29),
+    )
+
+    assert [item.customer_id for item in worklist.today_items] == ["C000002"]
+    assert [item.customer_id for item in worklist.completed_today] == ["C000001"]
+    assert worklist.completed_today[0].snapshot_id == "monthly-2026-08"
 
 
 def test_rm_mode_without_snapshot_shows_cli_guidance_only(monkeypatch) -> None:
@@ -205,3 +249,23 @@ def test_customer_detail_keeps_timing_and_crm_information_visually_separate() ->
         "stepper",
     ):
         assert forbidden_text not in source.lower()
+
+
+def test_customer_detail_save_requests_rerun_and_keeps_follow_up_as_an_rm_record() -> None:
+    source = inspect.getsource(app_module._render_rm_customer_detail)
+
+    assert source.count("st.selectbox(") == 1
+    assert source.count("st.text_area(") == 1
+    assert "append_review_event(event)" in source
+    assert 'st.session_state.pop("rm_selected_customer_id", None)' in source
+    assert "rm_daily_review_completion_message" in source
+    assert "st.rerun()" in source
+    assert "추가 상담 검토는 RM 기록만 남기며 별도 업무 객체를 만들지 않습니다." in source
+
+
+def test_rm_renderer_has_a_separate_completed_area() -> None:
+    source = inspect.getsource(app_module.render_rm_daily_review_mode)
+
+    assert "오늘 완료" in source
+    assert "build_rm_completed_customer_list_view" in source
+    assert "_render_rm_completed_customer_rows" in source

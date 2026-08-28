@@ -72,6 +72,15 @@ class RmDailyReviewListItemView:
 
 
 @dataclass(frozen=True)
+class RmCompletedCustomerListItemView:
+    """A compact completed-review row, separate from active timing work."""
+
+    customer_id: str
+    relationship_badge: str
+    completion_label: str
+
+
+@dataclass(frozen=True)
 class RmResultOptionView:
     """A selectable manual review result, with no automatic outcome."""
 
@@ -204,6 +213,21 @@ def build_rm_customer_detail_view(
                 for result, label in RESULT_LABELS.items()
             ),
         ),
+    )
+
+
+def build_rm_completed_customer_list_view(
+    worklist: DailyWorklist,
+) -> tuple[RmCompletedCustomerListItemView, ...]:
+    """Return only today's manually completed records in saved worklist order."""
+
+    return tuple(
+        RmCompletedCustomerListItemView(
+            customer_id=item.customer_id,
+            relationship_badge=_relationship_badge(item),
+            completion_label="오늘 검토 결과 기록됨",
+        )
+        for item in worklist.completed_today
     )
 
 

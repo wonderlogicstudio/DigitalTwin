@@ -68,6 +68,7 @@ from src.presentation import (  # noqa: E402
 from src.daily_worklist import build_daily_worklist  # noqa: E402
 from src.rm_daily_review_view import (  # noqa: E402
     build_rm_customer_detail_view,
+    build_rm_completed_customer_list_view,
     build_rm_daily_review_view,
 )
 from src.rm_review_store import (  # noqa: E402
@@ -578,6 +579,9 @@ def render_rm_daily_review_mode(*, daily_date: date | None = None) -> None:
         _render_rm_snapshot_cli_guidance()
         return
 
+    completion_message = st.session_state.pop("rm_daily_review_completion_message", None)
+    if completion_message:
+        st.success(str(completion_message))
     st.caption(f"{dashboard.analysis_as_of_label} · {dashboard.snapshot_freshness_label}")
     summary_columns = st.columns(4)
     for column, label, count in zip(
@@ -628,6 +632,12 @@ def render_rm_daily_review_mode(*, daily_date: date | None = None) -> None:
             ]
             _render_rm_customer_rows(matches, key_prefix="rm_monitor")
 
+    if dashboard.completed_today_count:
+        with st.expander(f"오늘 완료 ({dashboard.completed_today_count})", expanded=False):
+            _render_rm_completed_customer_rows(
+                build_rm_completed_customer_list_view(worklist)
+            )
+
     selected_customer_id = st.session_state.get("rm_selected_customer_id")
     if selected_customer_id:
         _render_rm_customer_detail(worklist, str(selected_customer_id))
@@ -651,6 +661,23 @@ def _render_rm_customer_rows(rows: list[Any], *, key_prefix: str) -> None:
             st.write(row.why_today)
         with columns[3]:
             if st.button("고객 보기", key=f"{key_prefix}_{row.customer_id}"):
+                st.session_state["rm_selected_customer_id"] = row.customer_id
+
+
+def _render_rm_completed_customer_rows(rows: tuple[Any, ...]) -> None:
+    if not rows:
+        st.info("오늘 완료된 고객이 없습니다.")
+        return
+    for row in rows:
+        columns = st.columns([1.2, 1.2, 3.8, 1.0])
+        with columns[0]:
+            st.markdown(f"**{row.customer_id}**")
+        with columns[1]:
+            st.caption(row.relationship_badge)
+        with columns[2]:
+            st.caption(row.completion_label)
+        with columns[3]:
+            if st.button("기록 보기", key=f"rm_completed_{row.customer_id}"):
                 st.session_state["rm_selected_customer_id"] = row.customer_id
 
 
@@ -688,6 +715,7 @@ def _render_rm_customer_detail(worklist: Any, customer_id: str) -> None:
         list(option_by_label),
         key=f"rm_result_{detail.customer_id}",
     )
+    st.caption("추가 상담 검토는 RM 기록만 남기며 별도 업무 객체를 만들지 않습니다.")
     note = st.text_area(
         "메모 (선택)",
         key=f"rm_note_{detail.customer_id}",
@@ -701,7 +729,11 @@ def _render_rm_customer_detail(worklist: Any, customer_id: str) -> None:
             note=note,
         )
         append_review_event(event)
-        st.success("6. 완료 · 검토 결과를 기록했습니다.")
+        st.session_state.pop("rm_selected_customer_id", None)
+        st.session_state["rm_daily_review_completion_message"] = (
+            "6. 완료 · 검토 결과를 기록했습니다. 오늘 완료 영역에서 다시 확인할 수 있습니다."
+        )
+        st.rerun()
 
 
 def render_presentation_mode(

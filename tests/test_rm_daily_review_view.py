@@ -14,6 +14,7 @@ from src.daily_worklist import DailyWorklist, DailyWorklistItem, MonitorSummary,
 from src.rm_daily_review_view import (
     RESULT_LABELS,
     build_rm_customer_detail_view,
+    build_rm_completed_customer_list_view,
     build_rm_daily_review_view,
 )
 from src.rm_review_store import REVIEW_COMPLETED, REVIEW_FOLLOW_UP, REVIEW_MONITOR
@@ -155,6 +156,18 @@ def test_completed_customer_detail_is_available_but_not_in_active_customer_list(
     assert detail.completed_today is True
     with pytest.raises(ValueError, match="not present"):
         build_rm_customer_detail_view(_worklist(), "C999999")
+
+
+def test_completed_customer_list_is_separate_from_active_timing_work() -> None:
+    worklist = _worklist()
+
+    completed = build_rm_completed_customer_list_view(worklist)
+
+    assert [(row.customer_id, row.relationship_badge, row.completion_label) for row in completed] == [
+        ("C000004", "핵심관리", "오늘 검토 결과 기록됨"),
+    ]
+    active_ids = [row.customer_id for row in build_rm_daily_review_view(worklist).customer_list]
+    assert completed[0].customer_id not in active_ids
 
 
 def test_view_module_has_no_streamlit_or_analysis_dependencies() -> None:

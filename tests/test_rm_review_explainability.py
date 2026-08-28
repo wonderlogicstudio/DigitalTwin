@@ -12,8 +12,10 @@ import src.rm_review_explainability as explainability
 from src.daily_review import MONITOR, REVIEW_NOW, UPCOMING
 from src.daily_worklist import DailyWorklistItem
 from src.rm_review_explainability import (
+    CONVERSATION_PROMPTS_BY_FACTOR,
     FACTOR_LABELS,
     HISTORICAL_COMPARISON_NOTICE,
+    build_rm_conversation_preparation,
     build_rm_review_explanation,
     build_rm_review_explanations,
 )
@@ -112,6 +114,47 @@ def test_batch_explanations_keep_existing_worklist_order() -> None:
     assert [explanation.customer_id for explanation in explanations] == ["C000002", "C000001"]
 
 
+@pytest.mark.parametrize("factor, factor_prompt", CONVERSATION_PROMPTS_BY_FACTOR.items())
+def test_conversation_preparation_uses_three_neutral_factor_specific_checks(
+    factor: str,
+    factor_prompt: str,
+) -> None:
+    preparation = build_rm_conversation_preparation(_item(primary_factor=factor))
+
+    assert preparation.primary_change == f"주요 변화: {FACTOR_LABELS[factor]}"
+    assert len(preparation.confirmation_points) == 3
+    assert preparation.confirmation_points[-1] == factor_prompt
+    assert all("확인해 보세요" in point for point in preparation.confirmation_points)
+
+
+def test_conversation_preparation_does_not_change_for_relationship_priority() -> None:
+    core = build_rm_conversation_preparation(_item())
+    standard = build_rm_conversation_preparation(
+        _item(relationship_priority="STANDARD", relationship_label="일반관리")
+    )
+
+    assert core.primary_change == standard.primary_change
+    assert core.confirmation_points == standard.confirmation_points
+
+
+def test_conversation_preparation_contains_no_contact_prediction_or_product_directive() -> None:
+    preparation = build_rm_conversation_preparation(_item(primary_factor="unknown_factor"))
+    rendered_points = " ".join(preparation.confirmation_points)
+
+    assert len(preparation.confirmation_points) <= 5
+    for prohibited_text in (
+        "곧 연체합니다",
+        "위험 확률",
+        "반드시 연락",
+        "지금 전화",
+        "대출을 줄이세요",
+        "이 상품",
+        "위험이 사라집니다",
+    ):
+        assert prohibited_text not in rendered_points
+    assert "unknown_factor" not in preparation.primary_change
+
+
 def test_module_has_no_analysis_imports_or_score_fields() -> None:
     module_path = Path(explainability.__file__)
     tree = ast.parse(module_path.read_text(encoding="utf-8"))
@@ -132,3 +175,7 @@ def test_module_has_no_analysis_imports_or_score_fields() -> None:
     )
     fields = set(explainability.RmReviewExplanation.__dataclass_fields__)
     assert not {"score", "risk_score", "probability", "prediction_probability"}.intersection(fields)
+    preparation_fields = set(explainability.RmConversationPreparation.__dataclass_fields__)
+    assert not {"score", "risk_score", "probability", "prediction_probability"}.intersection(
+        preparation_fields
+    )

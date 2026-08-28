@@ -22,6 +22,17 @@ RELATIONSHIP_CONTEXT_LABELS = {
     "PRIORITY": "우선관리 고객",
     "STANDARD": "일반관리 고객",
 }
+CONVERSATION_PROMPTS_BY_FACTOR = {
+    "cash_balance_ratio": "최근 현금 여력 감소에 일시적인 지출이나 이벤트가 있었는지 확인해 보세요.",
+    "dsr": "최근 상환 부담에 변화가 있었는지 확인해 보세요.",
+    "fixed_expense_ratio": "최근 고정지출에 큰 변화가 있었는지 확인해 보세요.",
+    "variable_expense_ratio": "최근 변동지출에 큰 변화가 있었는지 확인해 보세요.",
+    "savings_rate": "최근 저축 여력 변화가 일시적인지 확인해 보세요.",
+    "loan_balance_ratio": "최근 대출 잔액이나 상환 일정에 변화가 있었는지 확인해 보세요.",
+}
+DEFAULT_CONVERSATION_PROMPT = (
+    "최근 현금 여력, 지출 또는 상환 부담에 변화가 있었는지 확인해 보세요."
+)
 REASON_LABELS = {
     "EVIDENCE_UNAVAILABLE": "현재 Daily 업무로 올릴 timing 근거가 부족합니다.",
     "BREAKPOINT_NOT_FOUND": "유사 고객 경로의 분기 시점이 확인되지 않았습니다.",
@@ -50,6 +61,16 @@ class RmReviewExplanation:
     relationship_context: str
 
 
+@dataclass(frozen=True)
+class RmConversationPreparation:
+    """Three concise confirmation points for a customer conversation."""
+
+    customer_id: str
+    snapshot_id: str
+    primary_change: str
+    confirmation_points: tuple[str, ...]
+
+
 def build_rm_review_explanation(item: DailyWorklistItem) -> RmReviewExplanation:
     """Explain saved timing evidence without performing or implying new analysis."""
 
@@ -74,6 +95,27 @@ def build_rm_review_explanations(
     """Build explanations in the existing worklist order without re-sorting tasks."""
 
     return tuple(build_rm_review_explanation(item) for item in items)
+
+
+def build_rm_conversation_preparation(
+    item: DailyWorklistItem,
+) -> RmConversationPreparation:
+    """Prepare neutral confirmation points without contact or product advice."""
+
+    factor_label = FACTOR_LABELS.get(item.primary_factor, "주요 변화 정보 확인 필요")
+    return RmConversationPreparation(
+        customer_id=item.customer_id,
+        snapshot_id=item.snapshot_id,
+        primary_change=f"주요 변화: {factor_label}",
+        confirmation_points=(
+            "최근 변화가 일시적인지, 계속 이어지고 있는지 확인해 보세요.",
+            "최근 소득 흐름에 변화가 있었는지 확인해 보세요.",
+            CONVERSATION_PROMPTS_BY_FACTOR.get(
+                item.primary_factor,
+                DEFAULT_CONVERSATION_PROMPT,
+            ),
+        ),
+    )
 
 
 def _review_reason(item: DailyWorklistItem, primary_change: str) -> str:

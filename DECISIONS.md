@@ -96,7 +96,7 @@
 - Status: accepted
 - Decision: Define a separate deterministic synthetic CRM overlay for RM-POC-001: 300 customer IDs selected from the 5,000-customer universe with seed 20260828, then CORE 10%, PRIORITY 25%, and STANDARD 65% relationship metadata assigned with independent seed 42.
 - Reason: Daily Review needs a bounded RM workload scope and relationship context without treating financial balances, income, persona, outcomes, or Digital Twin results as CRM value.
-- Impact files: RM_PORTFOLIO_METADATA_DESIGN.md in this stage; a new derived/demo metadata artifact and overlay-only tests in a later implementation stage.
+- Impact files: RM_PORTFOLIO_METADATA_DESIGN.md, src/rm_portfolio.py, scripts/build_rm_portfolio.py, and tests/test_rm_portfolio.py; generated overlay artifacts remain separate from core data files.
 - Alternative: Infer customer importance from Financial Path Twin data, but that would falsely represent financial data as CRM/AUM information and violate the analysis/workflow boundary.
 
 ## DEC-017 Daily Timing Bucket Policy

@@ -6,8 +6,9 @@
 분리하기 위한 **synthetic CRM overlay** 계약을 고정한다. Overlay는 금융 데이터가
 아닌 PoC용 업무 메타데이터다.
 
-이번 단계에서는 설계와 결정 기록만 추가한다. Portfolio metadata generator,
-CSV/JSON artifact, Snapshot 생성, 화면, DB 또는 외부 연동은 구현하지 않는다.
+STEP 05에서 이 계약의 Portfolio metadata generator와 standalone JSON/CSV artifact
+writer를 구현한다. Snapshot 생성, Daily 화면, DB 또는 외부 연동은 이 범위에
+포함하지 않는다.
 
 ## 2. 고정 원칙
 
@@ -27,16 +28,16 @@ CSV/JSON artifact, Snapshot 생성, 화면, DB 또는 외부 연동은 구현하
 
 ## 3. 별도 overlay artifact
 
-후속 구현은 기존 금융 CSV와 별개인 아래 artifact를 생성한다.
+구현된 builder는 기존 금융 CSV와 별개인 아래 artifact를 생성한다.
 
 ~~~text
-data/demo/rm_portfolio_metadata.csv
-data/demo/rm_portfolio_manifest.json
+artifacts/rm_daily_review/portfolio/rm_portfolio.json
+artifacts/rm_daily_review/portfolio/rm_portfolio.csv
 ~~~
 
 이는 새로운 derived/demo artifact이며, 기존 CSV/JSON 스키마나 저장 값 의미를
-변경하지 않는다. CSV는 Daily Review가 join할 업무 메타데이터이고, manifest는
-생성 규칙과 provenance를 사람이 검증할 수 있게 보관한다.
+변경하지 않는다. CSV는 Daily Review가 join할 업무 메타데이터이고, JSON은
+생성 규칙·provenance·고지와 같은 고객 행을 함께 보관한다.
 
 ### 3.1 CSV 스키마
 
@@ -58,9 +59,9 @@ data/demo/rm_portfolio_manifest.json
 CSV에는 위험 점수, 예측 확률, AUM 추정치, 자산가 여부, 금융 outcome, breakpoint,
 persona 또는 최종 결과 필드를 넣지 않는다.
 
-### 3.2 Manifest 계약
+### 3.2 JSON envelope/manifest 계약
 
-Manifest는 CSV와 별도로 다음 provenance만 기록한다.
+JSON envelope은 다음 provenance와 CSV와 동일한 고객 행을 기록한다.
 
 | 필드 | 기본값 | 의미 |
 | --- | --- | --- |
@@ -73,15 +74,16 @@ Manifest는 CSV와 별도로 다음 provenance만 기록한다.
 | relationship_assignment_seed | 42 | 관계 중요도 배정 seed |
 | relationship_distribution | CORE 10%, PRIORITY 25%, STANDARD 65% | 합성 CRM 비율 |
 
-Manifest와 CSV 모두에 “실제 CRM/AUM 데이터가 아닌 PoC용 synthetic metadata”라는
-고지 문구를 포함한다.
+JSON envelope과 Daily UI는 “실제 CRM/AUM 데이터가 아닌 PoC용 synthetic
+metadata”라는 고지 문구를 표시한다. CSV는 3.1의 네 업무 메타데이터 필드만
+유지한다.
 
 ## 4. Deterministic RM Portfolio 생성 계약
 
 기본 PoC Portfolio는 RM-POC-001이며 크기는 300명이다. 크기 300은 분석
 파라미터나 Daily 업무량 목표가 아니라 화면과 업무 범위의 예시다.
 
-후속 generator는 다음 절차를 정확히 따른다.
+src/rm_portfolio.py의 generator는 다음 절차를 정확히 따른다.
 
 1. existing 5,000명 universe에서 customer_id만 읽어 오름차순으로 정렬한다.
 2. portfolio_selection_seed 20260828의 independent random generator로 300명을
@@ -101,7 +103,7 @@ STEP 02에서 timing 분포를 측정한 300명은 동일한 seed와 고객 ID �
 관계 중요도는 Portfolio 300명에게만 부여하는 independent synthetic CRM
 metadata다. Portfolio 고객의 금융 데이터나 분석 결과를 참조하지 않는다.
 
-후속 generator는 정렬된 300 customer_id에 대해
+구현된 generator는 정렬된 300 customer_id에 대해
 relationship_assignment_seed 42의 independent random generator로 순열을 만들고
 아래의 고정된 수량을 배정한다.
 
@@ -183,4 +185,5 @@ source를 교체 가능하게 한다. provider의 출력 계약은 3.1의 네 �
 - 관계 중요도가 합성 CRM 메타데이터임이 명확하다.
 - 금융 데이터와 분석 결과에서 독립된 deterministic 생성 규칙이 고정되어 있다.
 - timing과 관계 중요도의 비합산 원칙 및 화면 사용 범위가 고정되어 있다.
-- 실제 generator와 Daily UI는 아직 구현하지 않았다.
+- Portfolio generator와 standalone artifact writer는 구현되어 있으며, Daily UI와
+  Snapshot 결합은 아직 구현하지 않았다.

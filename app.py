@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import json
 import sys
 from dataclasses import dataclass
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Callable
 
@@ -63,6 +65,16 @@ from src.presentation import (  # noqa: E402
     load_presentation_payload,
     resolve_presentation_customer_id,
 )
+from src.daily_worklist import build_daily_worklist  # noqa: E402
+from src.rm_daily_review_view import (  # noqa: E402
+    build_rm_customer_detail_view,
+    build_rm_daily_review_view,
+)
+from src.rm_review_store import (  # noqa: E402
+    append_review_event,
+    create_review_event,
+    load_review_events,
+)
 from src.visualizations import (  # noqa: E402
     create_breakpoint_comparison_chart,
     create_current_trajectory_chart,
@@ -75,6 +87,10 @@ from src.visualizations import (  # noqa: E402
 
 
 APP_CONCEPT_SUMMARY = "당신의 미래를 예측하지 않습니다"
+
+
+RM_DAILY_REVIEW_MODE = "RM 오늘의 업무"
+RM_DAILY_REVIEW_SNAPSHOT_DIR = PROJECT_ROOT / "artifacts" / "rm_daily_review" / "monthly"
 
 
 st.set_page_config(
@@ -94,6 +110,7 @@ class SidebarSelection:
     app_mode: str
     presentation_mode: bool
     show_raw_samples: bool
+    rm_daily_review_mode: bool = False
 
 
 @st.cache_data(show_spinner=False)
@@ -135,9 +152,16 @@ def main() -> None:
     """Render the one-page presentation flow."""
 
     language = render_header()
-    cache_payload = load_precomputed_demo_safely()
-    demo_df = load_demo_data_safely(language)
+    if st.session_state.get("app_mode") == RM_DAILY_REVIEW_MODE:
+        cache_payload = None
+        demo_df = pd.DataFrame(columns=settings.DEMO_CUSTOMER_COLUMNS)
+    else:
+        cache_payload = load_precomputed_demo_safely()
+        demo_df = load_demo_data_safely(language)
     selection = render_sidebar(demo_df, cache_payload, language)
+    if selection.rm_daily_review_mode:
+        render_rm_daily_review_mode()
+        return
     missing_files = [
         path
         for path in (settings.CUSTOMER_MONTHLY_PATH, settings.TRAJECTORY_FEATURES_PATH)
@@ -369,14 +393,30 @@ def render_sidebar(demo_df: pd.DataFrame, cache_payload: Any | None, language: s
     """Render only presenter-facing controls needed for the main story."""
 
     st.sidebar.header(t("mode.settings", language))
+    app_mode_options = (*APP_MODE_OPTIONS, RM_DAILY_REVIEW_MODE)
     app_mode = st.sidebar.selectbox(
         t("mode.selector", language),
-        list(APP_MODE_OPTIONS),
-        index=list(APP_MODE_OPTIONS).index(PRESENTATION_MODE),
-        format_func=lambda mode: t("mode.presentation" if mode == PRESENTATION_MODE else "mode.normal", language),
+        list(app_mode_options),
+        index=list(app_mode_options).index(PRESENTATION_MODE),
+        format_func=lambda mode: (
+            "RM 오늘의 업무"
+            if mode == RM_DAILY_REVIEW_MODE
+            else t("mode.presentation" if mode == PRESENTATION_MODE else "mode.normal", language)
+        ),
         key="app_mode",
     )
     presentation_mode = app_mode == PRESENTATION_MODE
+    rm_daily_review_mode = app_mode == RM_DAILY_REVIEW_MODE
+    if rm_daily_review_mode:
+        st.sidebar.caption("저장된 월별 분석 Snapshot을 읽어 오늘의 RM 업무를 표시합니다.")
+        return SidebarSelection(
+            customer_id="",
+            selected_metric="",
+            app_mode=app_mode,
+            presentation_mode=False,
+            show_raw_samples=False,
+            rm_daily_review_mode=True,
+        )
     demo_options = build_demo_options(demo_df, language=language)
     if cache_payload is not None and not any(option["customer_id"] == cache_payload.customer_id for option in demo_options):
         demo_options.insert(
@@ -459,7 +499,200 @@ def render_sidebar(demo_df: pd.DataFrame, cache_payload: Any | None, language: s
         app_mode=app_mode,
         presentation_mode=bool(presentation_mode),
         show_raw_samples=bool(show_raw_samples),
+        rm_daily_review_mode=False,
     )
+
+
+def load_latest_rm_snapshot_artifact(
+    snapshot_dir: Path = RM_DAILY_REVIEW_SNAPSHOT_DIR,
+) -> tuple[Path, dict[str, object]] | None:
+    """Read the most recently written standalone monthly Snapshot artifact."""
+
+    if not snapshot_dir.exists():
+        return None
+    snapshot_paths = [
+        path
+        for path in snapshot_dir.glob("*.json")
+        if not path.name.endswith("_workload_report.json")
+    ]
+    if not snapshot_paths:
+        return None
+    latest_path = max(snapshot_paths, key=lambda path: (path.stat().st_mtime_ns, path.name))
+    payload = json.loads(latest_path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError("Monthly Snapshot artifact must contain a JSON object.")
+    return latest_path, payload
+
+
+def build_rm_daily_review_worklist(
+    snapshot_artifact: dict[str, object],
+    *,
+    snapshot_path: Path,
+    daily_date: date,
+) -> Any:
+    """Build Daily work solely from a saved Snapshot and manual review events."""
+
+    review_events = load_review_events()
+    snapshot_id = str(snapshot_artifact.get("snapshot_id") or "")
+    completed_customer_ids = {
+        event.customer_id
+        for event in review_events
+        if event.snapshot_id == snapshot_id
+        and event.reviewed_at.astimezone().date() == daily_date
+    }
+    return build_daily_worklist(
+        snapshot_artifact,
+        daily_date=daily_date,
+        completed_customer_ids=completed_customer_ids,
+        snapshot_published_on=datetime.fromtimestamp(snapshot_path.stat().st_mtime).date(),
+    )
+
+
+def render_rm_daily_review_mode(*, daily_date: date | None = None) -> None:
+    """Render the simple RM work screen without loading or running analytics."""
+
+    st.title("RM 오늘의 업무")
+    st.caption("저장된 월별 분석 Snapshot을 읽어 오늘의 확인 업무를 보여줍니다.")
+    try:
+        snapshot_result = load_latest_rm_snapshot_artifact()
+    except (OSError, ValueError, json.JSONDecodeError):
+        st.warning("월별 Snapshot을 읽을 수 없습니다. 아래 CLI로 Snapshot을 다시 생성해 주세요.")
+        _render_rm_snapshot_cli_guidance()
+        return
+    if snapshot_result is None:
+        st.info("저장된 월별 Snapshot이 없습니다. 아래 CLI로 먼저 Snapshot을 생성해 주세요.")
+        _render_rm_snapshot_cli_guidance()
+        return
+
+    snapshot_path, snapshot_artifact = snapshot_result
+    current_date = daily_date or date.today()
+    try:
+        worklist = build_rm_daily_review_worklist(
+            snapshot_artifact,
+            snapshot_path=snapshot_path,
+            daily_date=current_date,
+        )
+        dashboard = build_rm_daily_review_view(worklist)
+    except (OSError, ValueError, json.JSONDecodeError):
+        st.warning("월별 Snapshot 업무 목록을 준비할 수 없습니다. CLI 생성 결과를 확인해 주세요.")
+        _render_rm_snapshot_cli_guidance()
+        return
+
+    st.caption(f"{dashboard.analysis_as_of_label} · {dashboard.snapshot_freshness_label}")
+    summary_columns = st.columns(4)
+    for column, label, count in zip(
+        summary_columns,
+        ("오늘 먼저 확인", "곧 확인 예정", "모니터링", "오늘 완료"),
+        (
+            dashboard.today_count,
+            dashboard.upcoming_count,
+            dashboard.monitor_count,
+            dashboard.completed_today_count,
+        ),
+    ):
+        with column:
+            st.metric(label, f"{count}명")
+
+    rows_by_state: dict[str, list[Any]] = {
+        "오늘 먼저 확인": [],
+        "곧 확인 예정": [],
+        "모니터링": [],
+    }
+    for row in dashboard.customer_list:
+        rows_by_state.setdefault(row.review_state_label, []).append(row)
+    today_tab, upcoming_tab, monitor_tab = st.tabs(
+        [
+            f"오늘 먼저 확인 ({dashboard.today_count})",
+            f"곧 확인 예정 ({dashboard.upcoming_count})",
+            f"모니터링 ({dashboard.monitor_count})",
+        ]
+    )
+    with today_tab:
+        _render_rm_customer_rows(rows_by_state["오늘 먼저 확인"], key_prefix="rm_today")
+    with upcoming_tab:
+        core_only = st.checkbox("핵심관리만 보기", key="rm_upcoming_core_only")
+        upcoming_rows = rows_by_state["곧 확인 예정"]
+        if core_only:
+            upcoming_rows = [row for row in upcoming_rows if row.relationship_badge == "핵심관리"]
+        _render_rm_customer_rows(upcoming_rows, key_prefix="rm_upcoming")
+    with monitor_tab:
+        st.caption(
+            f"현재 모니터링 대상은 {dashboard.monitor_count}명입니다. 고객 ID로 필요한 고객만 찾아볼 수 있습니다."
+        )
+        monitor_search = st.text_input("모니터링 고객 ID 검색", key="rm_monitor_search")
+        if monitor_search.strip():
+            matches = [
+                row
+                for row in rows_by_state["모니터링"]
+                if monitor_search.strip().upper() in row.customer_id.upper()
+            ]
+            _render_rm_customer_rows(matches, key_prefix="rm_monitor")
+
+    selected_customer_id = st.session_state.get("rm_selected_customer_id")
+    if selected_customer_id:
+        _render_rm_customer_detail(worklist, str(selected_customer_id))
+
+
+def _render_rm_snapshot_cli_guidance() -> None:
+    st.code("python scripts/build_rm_monthly_snapshot.py --snapshot-id YYYY-MM", language="bash")
+
+
+def _render_rm_customer_rows(rows: list[Any], *, key_prefix: str) -> None:
+    if not rows:
+        st.info("표시할 고객이 없습니다.")
+        return
+    for row in rows:
+        columns = st.columns([1.0, 1.0, 4.3, 1.0])
+        with columns[0]:
+            st.markdown(f"**{row.customer_id}**")
+        with columns[1]:
+            st.caption(row.relationship_badge)
+        with columns[2]:
+            st.write(row.why_today)
+        with columns[3]:
+            if st.button("고객 보기", key=f"{key_prefix}_{row.customer_id}"):
+                st.session_state["rm_selected_customer_id"] = row.customer_id
+
+
+def _render_rm_customer_detail(worklist: Any, customer_id: str) -> None:
+    try:
+        detail = build_rm_customer_detail_view(worklist, customer_id)
+    except ValueError:
+        st.session_state.pop("rm_selected_customer_id", None)
+        return
+    st.divider()
+    st.subheader(f"고객 검토 · {detail.customer_id}")
+    st.markdown("#### 왜 오늘 확인?")
+    st.write(detail.why_today)
+    st.markdown("#### 고객관계 중요도")
+    st.caption(f"{detail.relationship_badge} · {detail.relationship_context}")
+    st.markdown("#### 대화 준비")
+    for point in detail.conversation_preparation:
+        st.markdown(f"- {point}")
+    st.markdown("#### 보조 분석 근거")
+    for evidence in detail.supporting_analysis_evidence:
+        st.caption(evidence)
+    st.markdown("#### 결과 기록")
+    option_by_label = {option.label: option.result for option in detail.result_recording.result_options}
+    selected_label = st.selectbox(
+        "검토 결과",
+        list(option_by_label),
+        key=f"rm_result_{detail.customer_id}",
+    )
+    note = st.text_area(
+        "메모 (선택)",
+        key=f"rm_note_{detail.customer_id}",
+    )
+    if st.button("결과 기록", key=f"rm_save_{detail.customer_id}"):
+        event = create_review_event(
+            customer_id=detail.result_recording.customer_id,
+            snapshot_id=detail.result_recording.snapshot_id,
+            reviewed_at=datetime.now().astimezone(),
+            result=option_by_label[selected_label],
+            note=note,
+        )
+        append_review_event(event)
+        st.success("검토 결과를 저장했습니다.")
 
 
 def render_presentation_mode(

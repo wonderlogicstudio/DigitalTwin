@@ -104,5 +104,5 @@
 - Status: accepted
 - Decision: Classify stored Snapshot results as REVIEW_NOW only when breakpoint status is found, months_from_current is 1 or 2, and the stored month-12 status is watch, stress, or delinquent. Classify found healthy customers at 1 or 2 months and all found customers at 3 or 4 months as UPCOMING. Classify missing/error, not_found, insufficient_group_size, invalid timing, and found timing at 5 or more months as MONITOR.
 - Reason: The measured Portfolio distribution clustered breakpoint evidence at 1 month. Timing alone produced 107 REVIEW_NOW customers out of 300; requiring an already stored current observation gives the “why today?” label an operational meaning without adding a score, prediction, or future-outcome cutoff.
-- Impact files: RM_DAILY_REVIEW_POLICY.md in this stage; a read-only Daily policy module and tests in a later implementation stage.
+- Impact files: RM_DAILY_REVIEW_POLICY.md, src/daily_review.py, and tests/test_daily_review.py; a Snapshot loader and Daily UI remain later implementation work.
 - Alternative: Use a timing-only cutoff or tune a threshold to a target daily count. Both would either overfill REVIEW_NOW in the measured data or make the policy a workload-targeted risk proxy.

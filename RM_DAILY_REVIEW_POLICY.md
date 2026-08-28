@@ -33,6 +33,9 @@ bucket을 고정한다.
 
 current monthly_status는 기존 Financial Path Twin이 관측 구간에서 이미 저장한
 상태다. 이 정책은 그 값을 다시 계산하거나 새 위험도로 변환하지 않는다.
+순수 timing module은 이 값을 optional current_status로 받는다. +1~2개월 found
+고객의 current_status가 없는 구형 Snapshot은 healthy나 non-healthy로 추정하지
+않고 MONITOR로 처리한다.
 
 Daily 경로는 Matching, Outcome, Breakpoint, What-if를 재실행하지 않는다.
 persona, final_outcome, matched outcome 비율, What-if 개선값은 bucket 판정에

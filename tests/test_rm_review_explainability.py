@@ -41,7 +41,7 @@ def _item(**overrides: object) -> DailyWorklistItem:
 def test_review_now_explains_historical_timing_and_primary_change() -> None:
     explanation = build_rm_review_explanation(_item())
 
-    assert explanation.review_reason == "오늘 확인 근거: 분기 시점 1개월 이내 · 주요 변화: 현금 여력"
+    assert explanation.review_reason == "오늘 확인 이유: 분기 시점 1개월 이내 · 주요 변화: 현금 여력"
     assert "유사 고객의 위험 경로와 위험 회피 경로" in explanation.timing_evidence
     assert "역사적으로" in explanation.timing_evidence
     assert explanation.primary_change == "주요 변화: 현금 여력"
@@ -81,8 +81,8 @@ def test_upcoming_and_monitor_use_saved_reason_without_prediction_language() -> 
         )
     )
 
-    assert upcoming.review_reason == "곧 확인 예정 근거: 분기 시점 3개월 이내 · 주요 변화: 대출 상환 부담"
-    assert monitor.review_reason == "모니터링 근거: 유사 고객 그룹의 비교 근거가 충분하지 않습니다."
+    assert upcoming.review_reason == "곧 확인 예정 이유: 분기 시점 3개월 이내 · 주요 변화: 대출 상환 부담"
+    assert monitor.review_reason == "모니터링 이유: 유사 고객 그룹의 비교 근거가 충분하지 않습니다."
     assert monitor.primary_change == "주요 변화: 주요 변화 정보 확인 필요"
     assert "INSUFFICIENT_GROUP_SIZE" not in monitor.review_reason
     assert monitor.timing_evidence == "분기 시점의 timing 근거가 충분하지 않아 현재는 모니터링합니다."
@@ -171,6 +171,7 @@ def test_module_has_no_analysis_imports_or_score_fields() -> None:
             "dataclasses",
             "src.daily_review",
             "src.daily_worklist",
+            "src.i18n",
         }
     )
     fields = set(explainability.RmReviewExplanation.__dataclass_fields__)
@@ -178,4 +179,18 @@ def test_module_has_no_analysis_imports_or_score_fields() -> None:
     preparation_fields = set(explainability.RmConversationPreparation.__dataclass_fields__)
     assert not {"score", "risk_score", "probability", "prediction_probability"}.intersection(
         preparation_fields
+    )
+
+
+def test_english_copy_preserves_historical_timing_and_neutral_conversation() -> None:
+    explanation = build_rm_review_explanation(_item(), language="en")
+    preparation = build_rm_conversation_preparation(_item(), language="en")
+
+    assert explanation.review_reason == "Why review now: breakpoint timing within 1 month · Primary change: cash capacity"
+    assert "historical paths of similar customers" in explanation.historical_comparison_notice
+    assert explanation.relationship_context == "Relationship: core customer · synthetic CRM metadata"
+    assert preparation.confirmation_points == (
+        "Check whether the recent change is temporary or continuing.",
+        "Check whether there has been a change in recent income flow.",
+        "Check whether a recent reduction in cash capacity followed a temporary expense or event.",
     )

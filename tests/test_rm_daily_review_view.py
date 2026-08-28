@@ -100,7 +100,7 @@ def test_dashboard_exposes_actual_worklist_counts_and_easy_customer_list() -> No
     assert [row.customer_id for row in view.customer_list] == ["C000001", "C000002", "C000003"]
     assert view.customer_list[0].review_state_label == "오늘 먼저 확인"
     assert view.customer_list[0].relationship_badge == "핵심관리"
-    assert view.customer_list[0].why_today == "오늘 확인 근거: 분기 시점 1개월 이내 · 주요 변화: 현금 여력"
+    assert view.customer_list[0].why_today == "오늘 확인 이유: 분기 시점 1개월 이내 · 주요 변화: 현금 여력"
     assert "cash_balance_ratio" not in view.customer_list[0].primary_change
 
 
@@ -122,7 +122,7 @@ def test_core_filter_changes_only_visible_rows_not_timing_bucket_counts() -> Non
 def test_customer_detail_composes_explanation_conversation_evidence_and_result_options() -> None:
     detail = build_rm_customer_detail_view(_worklist(), "C000001")
 
-    assert detail.why_today == "오늘 확인 근거: 분기 시점 1개월 이내 · 주요 변화: 현금 여력"
+    assert detail.why_today == "오늘 확인 이유: 분기 시점 1개월 이내 · 주요 변화: 현금 여력"
     assert detail.relationship_badge == "핵심관리"
     assert detail.relationship_context == "고객관계: 핵심관리 고객 · 합성 CRM 메타데이터"
     assert len(detail.conversation_preparation) == 3
@@ -164,10 +164,23 @@ def test_completed_customer_list_is_separate_from_active_timing_work() -> None:
     completed = build_rm_completed_customer_list_view(worklist)
 
     assert [(row.customer_id, row.relationship_badge, row.completion_label) for row in completed] == [
-        ("C000004", "핵심관리", "오늘 검토 결과 기록됨"),
+        ("C000004", "핵심관리", "오늘 확인 완료"),
     ]
     active_ids = [row.customer_id for row in build_rm_daily_review_view(worklist).customer_list]
     assert completed[0].customer_id not in active_ids
+
+
+def test_english_rm_view_uses_matching_display_copy() -> None:
+    dashboard = build_rm_daily_review_view(_worklist(), language="en")
+    detail = build_rm_customer_detail_view(_worklist(), "C000001", language="en")
+    completed = build_rm_completed_customer_list_view(_worklist(), language="en")
+
+    assert dashboard.analysis_as_of_label == "Monthly analysis as of: observation month 12"
+    assert dashboard.snapshot_freshness_label == "This month's Snapshot"
+    assert dashboard.customer_list[0].review_state_label == "Review now"
+    assert dashboard.customer_list[0].relationship_badge == "Core"
+    assert detail.supporting_analysis.current_summary[0] == "Current summary: The current status warrants a check."
+    assert completed[0].completion_label == "Today's review result recorded"
 
 
 def test_view_module_has_no_streamlit_or_analysis_dependencies() -> None:
@@ -187,6 +200,7 @@ def test_view_module_has_no_streamlit_or_analysis_dependencies() -> None:
             "dataclasses",
             "src.daily_review",
             "src.daily_worklist",
+            "src.i18n",
             "src.rm_review_explainability",
             "src.rm_review_store",
         }

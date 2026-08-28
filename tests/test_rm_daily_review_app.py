@@ -181,7 +181,11 @@ def test_main_exits_into_rm_mode_before_loading_live_analytics(monkeypatch) -> N
             rm_daily_review_mode=True,
         ),
     )
-    monkeypatch.setattr(app_module, "render_rm_daily_review_mode", lambda: calls.append("rm"))
+    monkeypatch.setattr(
+        app_module,
+        "render_rm_daily_review_mode",
+        lambda *_args, **_kwargs: calls.append("rm"),
+    )
     monkeypatch.setattr(
         app_module,
         "load_monthly_data",
@@ -218,25 +222,26 @@ def test_rm_renderer_has_no_live_analysis_or_capacity_case_stepper_controls() ->
         "model setting",
     ):
         assert forbidden_text not in source.lower()
-    assert "핵심관리만 보기" in source
-    assert "모니터링 고객 ID 검색" in source
+    assert 't("rm.filter.core_only", language)' in source
+    assert 't("rm.monitor.search", language)' in source
+    assert 't("rm.help.title", language)' in source
 
 
 def test_customer_detail_keeps_timing_and_crm_information_visually_separate() -> None:
     source = inspect.getsource(app_module._render_rm_customer_detail)
     section_order = (
-        "1. 왜 오늘 확인?",
-        "2. 고객관계 정보",
-        "3. 대화 준비",
-        "4. 분석 근거 (보조)",
-        "5. 검토 결과 기록",
-        "6. 완료",
+        "rm.detail.why",
+        "rm.detail.relationship",
+        "rm.detail.conversation",
+        "rm.detail.analysis",
+        "rm.detail.result",
+        "rm.completed.already",
     )
 
     assert [source.index(section) for section in section_order] == sorted(
         source.index(section) for section in section_order
     )
-    assert "합성 CRM 메타데이터이며, 오늘 확인 timing 근거와 별도입니다." in source
+    assert 't("rm.detail.relationship_separate", language)' in source
     assert "st.expander" in source
     for forbidden_text in (
         "run_customer_analysis",
@@ -260,12 +265,26 @@ def test_customer_detail_save_requests_rerun_and_keeps_follow_up_as_an_rm_record
     assert 'st.session_state.pop("rm_selected_customer_id", None)' in source
     assert "rm_daily_review_completion_message" in source
     assert "st.rerun()" in source
-    assert "추가 상담 검토는 RM 기록만 남기며 별도 업무 객체를 만들지 않습니다." in source
+    assert 't("rm.follow_up.note", language)' in source
 
 
 def test_rm_renderer_has_a_separate_completed_area() -> None:
     source = inspect.getsource(app_module.render_rm_daily_review_mode)
 
-    assert "오늘 완료" in source
+    assert 't("rm.completed.title", language' in source
     assert "build_rm_completed_customer_list_view" in source
     assert "_render_rm_completed_customer_rows" in source
+
+
+def test_rm_first_screen_keeps_today_first_and_help_collapsed() -> None:
+    source = inspect.getsource(app_module.render_rm_daily_review_mode)
+
+    assert source.index('t("rm.metric.today", language)') < source.index(
+        't("rm.metric.upcoming", language)'
+    )
+    assert source.index('t("rm.metric.upcoming", language)') < source.index(
+        't("rm.metric.monitor", language)'
+    )
+    assert 'st.expander(t("rm.help.title", language), expanded=False)' in source
+    assert "gradient" not in source.lower()
+    assert "unsafe_allow_html" not in source

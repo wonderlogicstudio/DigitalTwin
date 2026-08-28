@@ -131,6 +131,24 @@ def test_supported_languages_and_translation_fallbacks() -> None:
     assert validate_translation_keys() == []
 
 
+def test_rm_daily_review_terms_and_help_have_korean_english_key_parity() -> None:
+    assert t("rm.metric.today", "ko") == "오늘 먼저 확인"
+    assert t("rm.metric.upcoming", "ko") == "곧 확인 예정"
+    assert t("rm.metric.monitor", "ko") == "모니터링"
+    assert t("rm.metric.completed", "ko") == "확인 완료"
+    assert t("rm.detail.why", "ko") == "1. 확인 이유"
+    assert t("rm.detail.conversation", "ko") == "3. 대화 준비"
+    assert t("rm.detail.analysis", "ko") == "4. 분석 근거 (보조)"
+    assert "역사적으로 처음 뚜렷하게 달라진 시점" in t("rm.help.breakpoint", "ko")
+    assert "월별 분석 결과를 매일 업무로 전달" in t("rm.help.daily_review", "ko")
+    assert "합성 CRM 메타데이터" in t("rm.help.relationship", "ko")
+    assert "오늘 우선 확인 구간보다 여유" in t("rm.help.upcoming", "ko")
+    assert t("rm.metric.today", "en") == "Review now"
+    assert "point in history" in t("rm.help.breakpoint", "en")
+    assert "synthetic CRM metadata" in t("rm.help.relationship", "en")
+    assert validate_translation_keys() == []
+
+
 def test_labels_translate_without_changing_unknown_fallbacks() -> None:
     assert label_status("stress", "ko") == "재무 스트레스"
     assert label_status("stress", "en") == "Financial Stress"

@@ -161,7 +161,7 @@ def main() -> None:
         demo_df = load_demo_data_safely(language)
     selection = render_sidebar(demo_df, cache_payload, language)
     if selection.rm_daily_review_mode:
-        render_rm_daily_review_mode()
+        render_rm_daily_review_mode(language=language)
         return
     missing_files = [
         path
@@ -400,7 +400,7 @@ def render_sidebar(demo_df: pd.DataFrame, cache_payload: Any | None, language: s
         list(app_mode_options),
         index=list(app_mode_options).index(PRESENTATION_MODE),
         format_func=lambda mode: (
-            "RM 오늘의 업무"
+            t("mode.rm_daily", language)
             if mode == RM_DAILY_REVIEW_MODE
             else t("mode.presentation" if mode == PRESENTATION_MODE else "mode.normal", language)
         ),
@@ -409,7 +409,7 @@ def render_sidebar(demo_df: pd.DataFrame, cache_payload: Any | None, language: s
     presentation_mode = app_mode == PRESENTATION_MODE
     rm_daily_review_mode = app_mode == RM_DAILY_REVIEW_MODE
     if rm_daily_review_mode:
-        st.sidebar.caption("저장된 월별 분석 Snapshot을 읽어 오늘의 RM 업무를 표시합니다.")
+        st.sidebar.caption(t("rm.subtitle", language))
         return SidebarSelection(
             customer_id="",
             selected_metric="",
@@ -549,19 +549,23 @@ def build_rm_daily_review_worklist(
     )
 
 
-def render_rm_daily_review_mode(*, daily_date: date | None = None) -> None:
+def render_rm_daily_review_mode(
+    *,
+    daily_date: date | None = None,
+    language: str = DEFAULT_LANGUAGE,
+) -> None:
     """Render the simple RM work screen without loading or running analytics."""
 
-    st.title("RM 오늘의 업무")
-    st.caption("저장된 월별 분석 Snapshot을 읽어 오늘의 확인 업무를 보여줍니다.")
+    st.title(t("rm.title", language))
+    st.caption(t("rm.subtitle", language))
     try:
         snapshot_result = load_latest_rm_snapshot_artifact()
     except (OSError, ValueError, json.JSONDecodeError):
-        st.warning("월별 Snapshot을 읽을 수 없습니다. 아래 CLI로 Snapshot을 다시 생성해 주세요.")
+        st.warning(t("rm.snapshot.load_error", language))
         _render_rm_snapshot_cli_guidance()
         return
     if snapshot_result is None:
-        st.info("저장된 월별 Snapshot이 없습니다. 아래 CLI로 먼저 Snapshot을 생성해 주세요.")
+        st.info(t("rm.snapshot.none", language))
         _render_rm_snapshot_cli_guidance()
         return
 
@@ -573,20 +577,33 @@ def render_rm_daily_review_mode(*, daily_date: date | None = None) -> None:
             snapshot_path=snapshot_path,
             daily_date=current_date,
         )
-        dashboard = build_rm_daily_review_view(worklist)
+        dashboard = build_rm_daily_review_view(worklist, language=language)
     except (OSError, ValueError, json.JSONDecodeError):
-        st.warning("월별 Snapshot 업무 목록을 준비할 수 없습니다. CLI 생성 결과를 확인해 주세요.")
+        st.warning(t("rm.snapshot.worklist_error", language))
         _render_rm_snapshot_cli_guidance()
         return
 
     completion_message = st.session_state.pop("rm_daily_review_completion_message", None)
     if completion_message:
         st.success(str(completion_message))
+    with st.expander(t("rm.help.title", language), expanded=False):
+        for help_key in (
+            "rm.help.breakpoint",
+            "rm.help.daily_review",
+            "rm.help.relationship",
+            "rm.help.upcoming",
+        ):
+            st.caption(t(help_key, language))
     st.caption(f"{dashboard.analysis_as_of_label} · {dashboard.snapshot_freshness_label}")
     summary_columns = st.columns(4)
     for column, label, count in zip(
         summary_columns,
-        ("오늘 먼저 확인", "곧 확인 예정", "모니터링", "오늘 완료"),
+        (
+            t("rm.metric.today", language),
+            t("rm.metric.upcoming", language),
+            t("rm.metric.monitor", language),
+            t("rm.metric.completed", language),
+        ),
         (
             dashboard.today_count,
             dashboard.upcoming_count,
@@ -595,61 +612,76 @@ def render_rm_daily_review_mode(*, daily_date: date | None = None) -> None:
         ),
     ):
         with column:
-            st.metric(label, f"{count}명")
+            st.metric(label, t("rm.people", language, count=count))
 
     rows_by_state: dict[str, list[Any]] = {
-        "오늘 먼저 확인": [],
-        "곧 확인 예정": [],
-        "모니터링": [],
+        t("rm.state.review_now", language): [],
+        t("rm.state.upcoming", language): [],
+        t("rm.state.monitor", language): [],
     }
     for row in dashboard.customer_list:
         rows_by_state.setdefault(row.review_state_label, []).append(row)
     today_tab, upcoming_tab, monitor_tab = st.tabs(
         [
-            f"오늘 먼저 확인 ({dashboard.today_count})",
-            f"곧 확인 예정 ({dashboard.upcoming_count})",
-            f"모니터링 ({dashboard.monitor_count})",
+            f"{t('rm.metric.today', language)} ({dashboard.today_count})",
+            f"{t('rm.metric.upcoming', language)} ({dashboard.upcoming_count})",
+            f"{t('rm.metric.monitor', language)} ({dashboard.monitor_count})",
         ]
     )
     with today_tab:
-        _render_rm_customer_rows(rows_by_state["오늘 먼저 확인"], key_prefix="rm_today")
-    with upcoming_tab:
-        core_only = st.checkbox("핵심관리만 보기", key="rm_upcoming_core_only")
-        upcoming_rows = rows_by_state["곧 확인 예정"]
-        if core_only:
-            upcoming_rows = [row for row in upcoming_rows if row.relationship_badge == "핵심관리"]
-        _render_rm_customer_rows(upcoming_rows, key_prefix="rm_upcoming")
-    with monitor_tab:
-        st.caption(
-            f"현재 모니터링 대상은 {dashboard.monitor_count}명입니다. 고객 ID로 필요한 고객만 찾아볼 수 있습니다."
+        _render_rm_customer_rows(
+            rows_by_state[t("rm.state.review_now", language)],
+            key_prefix="rm_today",
+            language=language,
         )
-        monitor_search = st.text_input("모니터링 고객 ID 검색", key="rm_monitor_search")
+    with upcoming_tab:
+        core_only = st.checkbox(t("rm.filter.core_only", language), key="rm_upcoming_core_only")
+        upcoming_rows = rows_by_state[t("rm.state.upcoming", language)]
+        if core_only:
+            upcoming_rows = [
+                row
+                for row in upcoming_rows
+                if row.relationship_badge == t("rm.relationship.core", language)
+            ]
+        _render_rm_customer_rows(upcoming_rows, key_prefix="rm_upcoming", language=language)
+    with monitor_tab:
+        st.caption(t("rm.monitor.summary", language, count=dashboard.monitor_count))
+        monitor_search = st.text_input(t("rm.monitor.search", language), key="rm_monitor_search")
         if monitor_search.strip():
             matches = [
                 row
-                for row in rows_by_state["모니터링"]
+                for row in rows_by_state[t("rm.state.monitor", language)]
                 if monitor_search.strip().upper() in row.customer_id.upper()
             ]
-            _render_rm_customer_rows(matches, key_prefix="rm_monitor")
+            _render_rm_customer_rows(matches, key_prefix="rm_monitor", language=language)
 
     if dashboard.completed_today_count:
-        with st.expander(f"오늘 완료 ({dashboard.completed_today_count})", expanded=False):
+        with st.expander(
+            t("rm.completed.title", language, count=dashboard.completed_today_count),
+            expanded=False,
+        ):
             _render_rm_completed_customer_rows(
-                build_rm_completed_customer_list_view(worklist)
+                build_rm_completed_customer_list_view(worklist, language=language),
+                language=language,
             )
 
     selected_customer_id = st.session_state.get("rm_selected_customer_id")
     if selected_customer_id:
-        _render_rm_customer_detail(worklist, str(selected_customer_id))
+        _render_rm_customer_detail(worklist, str(selected_customer_id), language=language)
 
 
 def _render_rm_snapshot_cli_guidance() -> None:
     st.code("python scripts/build_rm_monthly_snapshot.py --snapshot-id YYYY-MM", language="bash")
 
 
-def _render_rm_customer_rows(rows: list[Any], *, key_prefix: str) -> None:
+def _render_rm_customer_rows(
+    rows: list[Any],
+    *,
+    key_prefix: str,
+    language: str = DEFAULT_LANGUAGE,
+) -> None:
     if not rows:
-        st.info("표시할 고객이 없습니다.")
+        st.info(t("rm.list.empty", language))
         return
     for row in rows:
         columns = st.columns([1.0, 1.0, 4.3, 1.0])
@@ -660,13 +692,17 @@ def _render_rm_customer_rows(rows: list[Any], *, key_prefix: str) -> None:
         with columns[2]:
             st.write(row.why_today)
         with columns[3]:
-            if st.button("고객 보기", key=f"{key_prefix}_{row.customer_id}"):
+            if st.button(t("rm.customer.open", language), key=f"{key_prefix}_{row.customer_id}"):
                 st.session_state["rm_selected_customer_id"] = row.customer_id
 
 
-def _render_rm_completed_customer_rows(rows: tuple[Any, ...]) -> None:
+def _render_rm_completed_customer_rows(
+    rows: tuple[Any, ...],
+    *,
+    language: str = DEFAULT_LANGUAGE,
+) -> None:
     if not rows:
-        st.info("오늘 완료된 고객이 없습니다.")
+        st.info(t("rm.completed.empty", language))
         return
     for row in rows:
         columns = st.columns([1.2, 1.2, 3.8, 1.0])
@@ -677,50 +713,55 @@ def _render_rm_completed_customer_rows(rows: tuple[Any, ...]) -> None:
         with columns[2]:
             st.caption(row.completion_label)
         with columns[3]:
-            if st.button("기록 보기", key=f"rm_completed_{row.customer_id}"):
+            if st.button(t("rm.completed.open", language), key=f"rm_completed_{row.customer_id}"):
                 st.session_state["rm_selected_customer_id"] = row.customer_id
 
 
-def _render_rm_customer_detail(worklist: Any, customer_id: str) -> None:
+def _render_rm_customer_detail(
+    worklist: Any,
+    customer_id: str,
+    *,
+    language: str = DEFAULT_LANGUAGE,
+) -> None:
     try:
-        detail = build_rm_customer_detail_view(worklist, customer_id)
+        detail = build_rm_customer_detail_view(worklist, customer_id, language=language)
     except ValueError:
         st.session_state.pop("rm_selected_customer_id", None)
         return
     st.divider()
-    st.subheader(f"고객 검토 · {detail.customer_id}")
-    st.caption("아래는 검토를 돕는 순서이며, 각 단계를 강제하지 않습니다.")
-    st.markdown("#### 1. 왜 오늘 확인?")
+    st.subheader(t("rm.detail.title", language, customer_id=detail.customer_id))
+    st.caption(t("rm.detail.flow", language))
+    st.markdown(f"#### {t('rm.detail.why', language)}")
     st.write(detail.why_today)
-    st.markdown("#### 2. 고객관계 정보")
+    st.markdown(f"#### {t('rm.detail.relationship', language)}")
     st.caption(f"{detail.relationship_badge} · {detail.relationship_context}")
-    st.caption("고객관계 중요도는 합성 CRM 메타데이터이며, 오늘 확인 timing 근거와 별도입니다.")
-    st.markdown("#### 3. 대화 준비")
+    st.caption(t("rm.detail.relationship_separate", language))
+    st.markdown(f"#### {t('rm.detail.conversation', language)}")
     for point in detail.conversation_preparation:
         st.markdown(f"- {point}")
-    with st.expander("4. 분석 근거 (보조)", expanded=False):
+    with st.expander(t("rm.detail.analysis", language), expanded=False):
         for summary in detail.supporting_analysis.current_summary:
             st.caption(summary)
         for outcome in detail.supporting_analysis.matched_outcome_summary:
             st.caption(outcome)
         st.caption(detail.supporting_analysis.breakpoint_summary)
         st.caption(detail.supporting_analysis.additional_analysis_notice)
-    st.markdown("#### 5. 검토 결과 기록")
+    st.markdown(f"#### {t('rm.detail.result', language)}")
     if detail.completed_today:
-        st.success("6. 완료 · 오늘 검토 결과가 이미 기록되었습니다.")
+        st.success(t("rm.completed.already", language))
         return
     option_by_label = {option.label: option.result for option in detail.result_recording.result_options}
     selected_label = st.selectbox(
-        "검토 결과",
+        t("rm.result.label", language),
         list(option_by_label),
         key=f"rm_result_{detail.customer_id}",
     )
-    st.caption("추가 상담 검토는 RM 기록만 남기며 별도 업무 객체를 만들지 않습니다.")
+    st.caption(t("rm.follow_up.note", language))
     note = st.text_area(
-        "메모 (선택)",
+        t("rm.note.label", language),
         key=f"rm_note_{detail.customer_id}",
     )
-    if st.button("결과 기록", key=f"rm_save_{detail.customer_id}"):
+    if st.button(t("rm.result.save", language), key=f"rm_save_{detail.customer_id}"):
         event = create_review_event(
             customer_id=detail.result_recording.customer_id,
             snapshot_id=detail.result_recording.snapshot_id,
@@ -730,9 +771,7 @@ def _render_rm_customer_detail(worklist: Any, customer_id: str) -> None:
         )
         append_review_event(event)
         st.session_state.pop("rm_selected_customer_id", None)
-        st.session_state["rm_daily_review_completion_message"] = (
-            "6. 완료 · 검토 결과를 기록했습니다. 오늘 완료 영역에서 다시 확인할 수 있습니다."
-        )
+        st.session_state["rm_daily_review_completion_message"] = t("rm.completed.message", language)
         st.rerun()
 
 

@@ -7,8 +7,8 @@ from dataclasses import dataclass
 
 from src.daily_review import MONITOR, REVIEW_NOW, UPCOMING
 from src.daily_worklist import DailyWorklist, DailyWorklistItem
+from src.i18n import t
 from src.rm_review_explainability import (
-    HISTORICAL_COMPARISON_NOTICE,
     build_rm_conversation_preparation,
     build_rm_review_explanation,
 )
@@ -144,6 +144,7 @@ def build_rm_daily_review_view(
     worklist: DailyWorklist,
     *,
     relationship_priority_filter: str | None = None,
+    language: str = "ko",
 ) -> RmDailyReviewDashboardView:
     """Build dashboard counts and rows without Streamlit or analysis calls.
 
@@ -164,44 +165,52 @@ def build_rm_daily_review_view(
     )
     return RmDailyReviewDashboardView(
         snapshot_id=worklist.snapshot_id,
-        analysis_as_of_label=(
-            f"월별 분석 기준: 관측 {worklist.snapshot_freshness.analysis_as_of_month}개월차"
+        analysis_as_of_label=t(
+            "rm.analysis_as_of",
+            language,
+            month=worklist.snapshot_freshness.analysis_as_of_month,
         ),
-        snapshot_freshness_label=FRESHNESS_LABELS.get(
+        snapshot_freshness_label=_freshness_label(
             worklist.snapshot_freshness.status,
-            "Snapshot freshness 확인 필요",
+            language,
         ),
         today_count=len(worklist.today_items),
         upcoming_count=len(worklist.upcoming_items),
         monitor_count=len(worklist.monitor_items),
         completed_today_count=len(worklist.completed_today),
         relationship_priority_filter=normalized_filter,
-        customer_list=tuple(_list_item_view(item) for item in visible_items),
+        customer_list=tuple(_list_item_view(item, language) for item in visible_items),
     )
 
 
 def build_rm_customer_detail_view(
     worklist: DailyWorklist,
     customer_id: str,
+    *,
+    language: str = "ko",
 ) -> RmCustomerDetailView:
     """Build one customer detail View Model from an existing Daily Worklist item."""
 
     item = _find_worklist_item(worklist, customer_id)
-    explanation = build_rm_review_explanation(item)
-    conversation = build_rm_conversation_preparation(item)
-    supporting_analysis = _build_supporting_analysis_view(item, explanation.timing_evidence)
+    explanation = build_rm_review_explanation(item, language=language)
+    conversation = build_rm_conversation_preparation(item, language=language)
+    supporting_analysis = _build_supporting_analysis_view(
+        item,
+        explanation.timing_evidence,
+        language,
+    )
     return RmCustomerDetailView(
         customer_id=item.customer_id,
         snapshot_id=item.snapshot_id,
-        review_state_label=_review_state_label(item.review_state),
+        review_state_label=_review_state_label(item.review_state, language),
         why_today=explanation.review_reason,
-        relationship_badge=_relationship_badge(item),
+        relationship_badge=_relationship_badge(item, language),
         relationship_context=explanation.relationship_context,
         conversation_preparation=conversation.confirmation_points,
         supporting_analysis_evidence=(
             explanation.timing_evidence,
             explanation.primary_change,
-            HISTORICAL_COMPARISON_NOTICE,
+            explanation.historical_comparison_notice,
         ),
         supporting_analysis=supporting_analysis,
         completed_today=item.completed_today,
@@ -210,7 +219,7 @@ def build_rm_customer_detail_view(
             snapshot_id=item.snapshot_id,
             result_options=tuple(
                 RmResultOptionView(result=result, label=label)
-                for result, label in RESULT_LABELS.items()
+                for result, label in _result_labels(language).items()
             ),
         ),
     )
@@ -218,14 +227,16 @@ def build_rm_customer_detail_view(
 
 def build_rm_completed_customer_list_view(
     worklist: DailyWorklist,
+    *,
+    language: str = "ko",
 ) -> tuple[RmCompletedCustomerListItemView, ...]:
     """Return only today's manually completed records in saved worklist order."""
 
     return tuple(
         RmCompletedCustomerListItemView(
             customer_id=item.customer_id,
-            relationship_badge=_relationship_badge(item),
-            completion_label="오늘 검토 결과 기록됨",
+            relationship_badge=_relationship_badge(item, language),
+            completion_label=t("rm.completed.row", language),
         )
         for item in worklist.completed_today
     )
@@ -239,12 +250,12 @@ def _active_items(worklist: DailyWorklist) -> tuple[DailyWorklistItem, ...]:
     )
 
 
-def _list_item_view(item: DailyWorklistItem) -> RmDailyReviewListItemView:
-    explanation = build_rm_review_explanation(item)
+def _list_item_view(item: DailyWorklistItem, language: str) -> RmDailyReviewListItemView:
+    explanation = build_rm_review_explanation(item, language=language)
     return RmDailyReviewListItemView(
         customer_id=item.customer_id,
-        review_state_label=_review_state_label(item.review_state),
-        relationship_badge=_relationship_badge(item),
+        review_state_label=_review_state_label(item.review_state, language),
+        relationship_badge=_relationship_badge(item, language),
         why_today=explanation.review_reason,
         primary_change=explanation.primary_change,
         completed_today=item.completed_today,
@@ -270,73 +281,121 @@ def _normalize_relationship_filter(value: str | None) -> str | None:
     return normalized_value
 
 
-def _review_state_label(review_state: str) -> str:
-    return REVIEW_STATE_LABELS.get(review_state, "업무 상태 확인 필요")
+def _review_state_label(review_state: str, language: str) -> str:
+    key_by_state = {
+        REVIEW_NOW: "rm.state.review_now",
+        UPCOMING: "rm.state.upcoming",
+        MONITOR: "rm.state.monitor",
+    }
+    return t(key_by_state.get(review_state, "rm.state.unknown"), language)
 
 
-def _relationship_badge(item: DailyWorklistItem) -> str:
-    return RELATIONSHIP_BADGE_LABELS.get(
-        item.relationship_priority,
-        item.relationship_label or "관계 중요도 미지정",
-    )
+def _relationship_badge(item: DailyWorklistItem, language: str) -> str:
+    key_by_priority = {
+        "CORE": "rm.relationship.core",
+        "PRIORITY": "rm.relationship.priority",
+        "STANDARD": "rm.relationship.standard",
+    }
+    return t(key_by_priority.get(item.relationship_priority, "rm.relationship.unspecified"), language)
 
 
 def _build_supporting_analysis_view(
     item: DailyWorklistItem,
     timing_evidence: str,
+    language: str,
 ) -> RmSupportingAnalysisView:
     return RmSupportingAnalysisView(
-        current_summary=_current_summary_lines(item),
-        matched_outcome_summary=_matched_outcome_lines(item),
-        breakpoint_summary=_breakpoint_summary(item, timing_evidence),
-        additional_analysis_notice=(
-            "이 화면은 저장된 월별 분석 요약만 읽습니다. 기존 차트와 시나리오 분석은 "
-            "일반 분석 화면에서 별도로 확인하며, 여기서 다시 계산하지 않습니다."
-        ),
+        current_summary=_current_summary_lines(item, language),
+        matched_outcome_summary=_matched_outcome_lines(item, language),
+        breakpoint_summary=_breakpoint_summary(item, timing_evidence, language),
+        additional_analysis_notice=t("rm.analysis.additional", language),
     )
 
 
-def _current_summary_lines(item: DailyWorklistItem) -> tuple[str, ...]:
+def _current_summary_lines(item: DailyWorklistItem, language: str) -> tuple[str, ...]:
     summary = item.current_summary
     lines = [
-        "현재 요약: "
-        + CURRENT_STATUS_LABELS.get(
-            item.current_status,
-            "저장된 현재 상태를 추가로 확인해 주세요.",
+        t(
+            "rm.current.prefix",
+            language,
+            status=t(
+                {
+                    "healthy": "rm.current.healthy",
+                    "watch": "rm.current.watch",
+                    "stress": "rm.current.stress",
+                    "delinquent": "rm.current.delinquent",
+                }.get(item.current_status, "rm.current.unknown"),
+                language,
+            ),
         )
     ]
-    for field, label in CURRENT_SUMMARY_RATIO_LABELS:
+    for field, key in (
+        ("recent_savings_rate", "rm.current.savings"),
+        ("recent_dsr", "rm.current.dsr"),
+        ("recent_fixed_expense_ratio", "rm.current.fixed_expense"),
+    ):
         formatted_value = _format_saved_ratio(summary.get(field))
         if formatted_value is not None:
-            lines.append(f"{label}: {formatted_value} (저장된 월별 요약)")
+            lines.append(
+                f"{t(key, language)}: {formatted_value} "
+                f"({t('rm.current.monthly_summary', language)})"
+            )
     return tuple(lines)
 
 
-def _matched_outcome_lines(item: DailyWorklistItem) -> tuple[str, ...]:
+def _matched_outcome_lines(item: DailyWorklistItem, language: str) -> tuple[str, ...]:
     lines: list[str] = []
     if item.matched_count:
-        lines.append(f"참고한 유사 고객: {item.matched_count:,}명")
+        lines.append(t("rm.matched", language, count=f"{item.matched_count:,}"))
 
     outcomes = _mapping_value(item.outcome_summary, "outcomes")
     outcome_counts: list[str] = []
-    for outcome, label in OUTCOME_LABELS:
+    for outcome, key in (
+        ("healthy", "rm.outcome.healthy"),
+        ("recovered", "rm.outcome.recovered"),
+        ("stress", "rm.outcome.stress"),
+        ("delinquent", "rm.outcome.delinquent"),
+    ):
         count = _mapping_value(outcomes, outcome).get("count")
         if isinstance(count, int) and not isinstance(count, bool) and count >= 0:
-            outcome_counts.append(f"{label} {count:,}명")
+            if language != "en":
+                outcome_counts.append(f"{t(key, language)} {count:,}명")
+            else:
+                outcome_counts.append(f"{t(key, language)}: {count:,}")
     if outcome_counts:
-        lines.append("유사 고객의 과거 결과: " + " · ".join(outcome_counts))
+        lines.append(t("rm.outcome.history", language, outcomes=" · ".join(outcome_counts)))
     elif not lines:
-        lines.append("유사 고객 결과 요약이 저장되지 않았습니다.")
+        lines.append(t("rm.outcome.unavailable", language))
     return tuple(lines)
 
 
-def _breakpoint_summary(item: DailyWorklistItem, timing_evidence: str) -> str:
+def _breakpoint_summary(item: DailyWorklistItem, timing_evidence: str, language: str) -> str:
     if item.breakpoint_status == "found" and item.breakpoint_month is not None:
-        return (
-            f"분기점: 유사 고객 경로가 역사적으로 갈라진 분석 월은 "
-            f"{item.breakpoint_month}개월차입니다. {timing_evidence}"
+        return t(
+            "rm.breakpoint.found",
+            language,
+            month=item.breakpoint_month,
+            timing_evidence=timing_evidence,
         )
-    return f"분기점: {timing_evidence}"
+    return t("rm.breakpoint.default", language, timing_evidence=timing_evidence)
+
+
+def _freshness_label(status: str, language: str) -> str:
+    key_by_status = {
+        "CURRENT_MONTH": "rm.freshness.current",
+        "PRIOR_MONTH": "rm.freshness.prior",
+        "FUTURE_PUBLICATION_DATE": "rm.freshness.future",
+        "UNKNOWN": "rm.freshness.unknown",
+    }
+    return t(key_by_status.get(status, "rm.freshness.unknown"), language)
+
+
+def _result_labels(language: str) -> dict[str, str]:
+    return {
+        REVIEW_COMPLETED: t("rm.result.completed", language),
+        REVIEW_FOLLOW_UP: t("rm.result.follow_up", language),
+        REVIEW_MONITOR: t("rm.result.monitor", language),
+    }
 
 
 def _mapping_value(value: object, key: str) -> Mapping[str, object]:

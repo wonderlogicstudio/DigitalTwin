@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 
 from src.daily_review import MONITOR, REVIEW_NOW, UPCOMING
@@ -39,6 +40,23 @@ RESULT_LABELS = {
     REVIEW_FOLLOW_UP: "추가 상담 검토",
     REVIEW_MONITOR: "추후 모니터링",
 }
+CURRENT_STATUS_LABELS = {
+    "healthy": "현재 상태는 안정적으로 관찰됩니다.",
+    "watch": "현재 상태는 확인이 필요한 흐름입니다.",
+    "stress": "현재 상태에서 재무 부담 변화를 확인할 필요가 있습니다.",
+    "delinquent": "현재 상환 상태를 확인할 필요가 있습니다.",
+}
+CURRENT_SUMMARY_RATIO_LABELS = (
+    ("recent_savings_rate", "최근 저축 여력"),
+    ("recent_dsr", "최근 대출 상환 부담"),
+    ("recent_fixed_expense_ratio", "최근 고정지출"),
+)
+OUTCOME_LABELS = (
+    ("healthy", "안정 경로"),
+    ("recovered", "회복 경로"),
+    ("stress", "부담 경로"),
+    ("delinquent", "연체 경로"),
+)
 
 
 @dataclass(frozen=True)
@@ -72,6 +90,16 @@ class RmResultRecordingView:
 
 
 @dataclass(frozen=True)
+class RmSupportingAnalysisView:
+    """Saved, optional analysis evidence for a focused RM detail screen."""
+
+    current_summary: tuple[str, ...]
+    matched_outcome_summary: tuple[str, ...]
+    breakpoint_summary: str
+    additional_analysis_notice: str
+
+
+@dataclass(frozen=True)
 class RmCustomerDetailView:
     """A customer detail page composed only from saved Daily workflow data."""
 
@@ -83,6 +111,7 @@ class RmCustomerDetailView:
     relationship_context: str
     conversation_preparation: tuple[str, ...]
     supporting_analysis_evidence: tuple[str, ...]
+    supporting_analysis: RmSupportingAnalysisView
     completed_today: bool
     result_recording: RmResultRecordingView
 
@@ -151,6 +180,7 @@ def build_rm_customer_detail_view(
     item = _find_worklist_item(worklist, customer_id)
     explanation = build_rm_review_explanation(item)
     conversation = build_rm_conversation_preparation(item)
+    supporting_analysis = _build_supporting_analysis_view(item, explanation.timing_evidence)
     return RmCustomerDetailView(
         customer_id=item.customer_id,
         snapshot_id=item.snapshot_id,
@@ -164,6 +194,7 @@ def build_rm_customer_detail_view(
             explanation.primary_change,
             HISTORICAL_COMPARISON_NOTICE,
         ),
+        supporting_analysis=supporting_analysis,
         completed_today=item.completed_today,
         result_recording=RmResultRecordingView(
             customer_id=item.customer_id,
@@ -224,3 +255,74 @@ def _relationship_badge(item: DailyWorklistItem) -> str:
         item.relationship_priority,
         item.relationship_label or "관계 중요도 미지정",
     )
+
+
+def _build_supporting_analysis_view(
+    item: DailyWorklistItem,
+    timing_evidence: str,
+) -> RmSupportingAnalysisView:
+    return RmSupportingAnalysisView(
+        current_summary=_current_summary_lines(item),
+        matched_outcome_summary=_matched_outcome_lines(item),
+        breakpoint_summary=_breakpoint_summary(item, timing_evidence),
+        additional_analysis_notice=(
+            "이 화면은 저장된 월별 분석 요약만 읽습니다. 기존 차트와 시나리오 분석은 "
+            "일반 분석 화면에서 별도로 확인하며, 여기서 다시 계산하지 않습니다."
+        ),
+    )
+
+
+def _current_summary_lines(item: DailyWorklistItem) -> tuple[str, ...]:
+    summary = item.current_summary
+    lines = [
+        "현재 요약: "
+        + CURRENT_STATUS_LABELS.get(
+            item.current_status,
+            "저장된 현재 상태를 추가로 확인해 주세요.",
+        )
+    ]
+    for field, label in CURRENT_SUMMARY_RATIO_LABELS:
+        formatted_value = _format_saved_ratio(summary.get(field))
+        if formatted_value is not None:
+            lines.append(f"{label}: {formatted_value} (저장된 월별 요약)")
+    return tuple(lines)
+
+
+def _matched_outcome_lines(item: DailyWorklistItem) -> tuple[str, ...]:
+    lines: list[str] = []
+    if item.matched_count:
+        lines.append(f"참고한 유사 고객: {item.matched_count:,}명")
+
+    outcomes = _mapping_value(item.outcome_summary, "outcomes")
+    outcome_counts: list[str] = []
+    for outcome, label in OUTCOME_LABELS:
+        count = _mapping_value(outcomes, outcome).get("count")
+        if isinstance(count, int) and not isinstance(count, bool) and count >= 0:
+            outcome_counts.append(f"{label} {count:,}명")
+    if outcome_counts:
+        lines.append("유사 고객의 과거 결과: " + " · ".join(outcome_counts))
+    elif not lines:
+        lines.append("유사 고객 결과 요약이 저장되지 않았습니다.")
+    return tuple(lines)
+
+
+def _breakpoint_summary(item: DailyWorklistItem, timing_evidence: str) -> str:
+    if item.breakpoint_status == "found" and item.breakpoint_month is not None:
+        return (
+            f"분기점: 유사 고객 경로가 역사적으로 갈라진 분석 월은 "
+            f"{item.breakpoint_month}개월차입니다. {timing_evidence}"
+        )
+    return f"분기점: {timing_evidence}"
+
+
+def _mapping_value(value: object, key: str) -> Mapping[str, object]:
+    if not isinstance(value, Mapping):
+        return {}
+    nested = value.get(key)
+    return nested if isinstance(nested, Mapping) else {}
+
+
+def _format_saved_ratio(value: object) -> str | None:
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return f"{float(value) * 100:.1f}%"
+    return None

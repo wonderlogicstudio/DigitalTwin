@@ -662,17 +662,26 @@ def _render_rm_customer_detail(worklist: Any, customer_id: str) -> None:
         return
     st.divider()
     st.subheader(f"고객 검토 · {detail.customer_id}")
-    st.markdown("#### 왜 오늘 확인?")
+    st.caption("아래는 검토를 돕는 순서이며, 각 단계를 강제하지 않습니다.")
+    st.markdown("#### 1. 왜 오늘 확인?")
     st.write(detail.why_today)
-    st.markdown("#### 고객관계 중요도")
+    st.markdown("#### 2. 고객관계 정보")
     st.caption(f"{detail.relationship_badge} · {detail.relationship_context}")
-    st.markdown("#### 대화 준비")
+    st.caption("고객관계 중요도는 합성 CRM 메타데이터이며, 오늘 확인 timing 근거와 별도입니다.")
+    st.markdown("#### 3. 대화 준비")
     for point in detail.conversation_preparation:
         st.markdown(f"- {point}")
-    st.markdown("#### 보조 분석 근거")
-    for evidence in detail.supporting_analysis_evidence:
-        st.caption(evidence)
-    st.markdown("#### 결과 기록")
+    with st.expander("4. 분석 근거 (보조)", expanded=False):
+        for summary in detail.supporting_analysis.current_summary:
+            st.caption(summary)
+        for outcome in detail.supporting_analysis.matched_outcome_summary:
+            st.caption(outcome)
+        st.caption(detail.supporting_analysis.breakpoint_summary)
+        st.caption(detail.supporting_analysis.additional_analysis_notice)
+    st.markdown("#### 5. 검토 결과 기록")
+    if detail.completed_today:
+        st.success("6. 완료 · 오늘 검토 결과가 이미 기록되었습니다.")
+        return
     option_by_label = {option.label: option.result for option in detail.result_recording.result_options}
     selected_label = st.selectbox(
         "검토 결과",
@@ -692,7 +701,7 @@ def _render_rm_customer_detail(worklist: Any, customer_id: str) -> None:
             note=note,
         )
         append_review_event(event)
-        st.success("검토 결과를 저장했습니다.")
+        st.success("6. 완료 · 검토 결과를 기록했습니다.")
 
 
 def render_presentation_mode(

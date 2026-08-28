@@ -44,6 +44,20 @@ def _item(
         relationship_priority=relationship_priority,
         relationship_label=relationship_priority,
         completed_today=completed_today,
+        current_summary={
+            "current_status": "watch" if state == REVIEW_NOW else "healthy",
+            "recent_savings_rate": 0.12,
+            "recent_dsr": 0.34,
+        },
+        matched_count=200,
+        outcome_summary={
+            "outcomes": {
+                "healthy": {"count": 100},
+                "stress": {"count": 50},
+            }
+        },
+        breakpoint_month=13 if state != MONITOR else None,
+        breakpoint_status="found" if state != MONITOR else "insufficient_group_size",
     )
 
 
@@ -113,6 +127,17 @@ def test_customer_detail_composes_explanation_conversation_evidence_and_result_o
     assert len(detail.conversation_preparation) == 3
     assert detail.supporting_analysis_evidence[1] == "주요 변화: 현금 여력"
     assert "cash_balance_ratio" not in " ".join(detail.supporting_analysis_evidence)
+    assert detail.supporting_analysis.current_summary == (
+        "현재 요약: 현재 상태는 확인이 필요한 흐름입니다.",
+        "최근 저축 여력: 12.0% (저장된 월별 요약)",
+        "최근 대출 상환 부담: 34.0% (저장된 월별 요약)",
+    )
+    assert detail.supporting_analysis.matched_outcome_summary == (
+        "참고한 유사 고객: 200명",
+        "유사 고객의 과거 결과: 안정 경로 100명 · 부담 경로 50명",
+    )
+    assert "13개월차" in detail.supporting_analysis.breakpoint_summary
+    assert "다시 계산하지 않습니다" in detail.supporting_analysis.additional_analysis_notice
     assert detail.result_recording.customer_id == "C000001"
     assert detail.result_recording.snapshot_id == "monthly-2026-08"
     assert [(option.result, option.label) for option in detail.result_recording.result_options] == [

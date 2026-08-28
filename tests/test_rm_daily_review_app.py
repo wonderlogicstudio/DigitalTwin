@@ -176,3 +176,32 @@ def test_rm_renderer_has_no_live_analysis_or_capacity_case_stepper_controls() ->
         assert forbidden_text not in source.lower()
     assert "핵심관리만 보기" in source
     assert "모니터링 고객 ID 검색" in source
+
+
+def test_customer_detail_keeps_timing_and_crm_information_visually_separate() -> None:
+    source = inspect.getsource(app_module._render_rm_customer_detail)
+    section_order = (
+        "1. 왜 오늘 확인?",
+        "2. 고객관계 정보",
+        "3. 대화 준비",
+        "4. 분석 근거 (보조)",
+        "5. 검토 결과 기록",
+        "6. 완료",
+    )
+
+    assert [source.index(section) for section in section_order] == sorted(
+        source.index(section) for section in section_order
+    )
+    assert "합성 CRM 메타데이터이며, 오늘 확인 timing 근거와 별도입니다." in source
+    assert "st.expander" in source
+    for forbidden_text in (
+        "run_customer_analysis",
+        "load_matcher",
+        "load_monthly_data",
+        "load_feature_data",
+        "capacity",
+        "queue",
+        "case",
+        "stepper",
+    ):
+        assert forbidden_text not in source.lower()

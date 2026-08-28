@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections import Counter
 from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from datetime import date
 from typing import Literal
 
@@ -42,6 +42,11 @@ class DailyWorklistItem:
     relationship_priority: str
     relationship_label: str
     completed_today: bool = False
+    current_summary: Mapping[str, object] = field(default_factory=dict)
+    matched_count: int = 0
+    outcome_summary: Mapping[str, object] | None = None
+    breakpoint_month: int | None = None
+    breakpoint_status: str | None = None
 
 
 @dataclass(frozen=True)
@@ -231,6 +236,11 @@ def _build_worklist_item(
         ) or "UNSPECIFIED",
         relationship_label=_optional_text(relationship_metadata.get("relationship_label"))
         or "관계 중요도 미지정",
+        current_summary=dict(current_summary),
+        matched_count=_nonnegative_int(record.get("matched_count")),
+        outcome_summary=_optional_mapping(record.get("outcome_summary")),
+        breakpoint_month=_optional_int(breakpoint.get("breakpoint_month")),
+        breakpoint_status=_optional_text(breakpoint.get("status")),
     )
 
 
@@ -248,6 +258,22 @@ def _optional_text(value: object) -> str | None:
         return None
     normalized_value = str(value).strip()
     return normalized_value or None
+
+
+def _optional_mapping(value: object) -> Mapping[str, object] | None:
+    if not isinstance(value, Mapping):
+        return None
+    return dict(value)
+
+
+def _optional_int(value: object) -> int | None:
+    return value if isinstance(value, int) and not isinstance(value, bool) else None
+
+
+def _nonnegative_int(value: object) -> int:
+    if isinstance(value, int) and not isinstance(value, bool) and value >= 0:
+        return value
+    return 0
 
 
 def _sort_items(items: Iterable[DailyWorklistItem]) -> tuple[DailyWorklistItem, ...]:

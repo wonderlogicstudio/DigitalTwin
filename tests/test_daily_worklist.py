@@ -117,6 +117,33 @@ def test_relationship_filter_stays_inside_existing_bucket() -> None:
     assert all(item.review_state == REVIEW_NOW for item in worklist.today_items)
 
 
+def test_worklist_carries_only_saved_optional_detail_evidence() -> None:
+    artifact = _snapshot_artifact()
+    record = artifact["records"][1]
+    record["current_summary"] = {
+        "current_status": "stress",
+        "recent_savings_rate": 0.12,
+        "recent_dsr": 0.34,
+    }
+    record["matched_count"] = 240
+    record["outcome_summary"] = {
+        "outcomes": {
+            "healthy": {"count": 120},
+            "stress": {"count": 60},
+        }
+    }
+
+    worklist = build_daily_worklist(artifact, daily_date=date(2026, 8, 29))
+    item = next(item for item in worklist.today_items if item.customer_id == "C000001")
+
+    assert item.current_summary["recent_savings_rate"] == 0.12
+    assert item.matched_count == 240
+    assert item.outcome_summary == {
+        "outcomes": {"healthy": {"count": 120}, "stress": {"count": 60}}
+    }
+    assert (item.breakpoint_status, item.breakpoint_month) == ("found", 13)
+
+
 def test_daily_date_changes_freshness_not_saved_timing_or_bucket() -> None:
     artifact = _snapshot_artifact()
     august = build_daily_worklist(

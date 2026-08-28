@@ -156,19 +156,21 @@ Queue는 이 기본 흐름 밖에 둔다. Case는 기본 플로우 밖이며, �
 업무 결과 기록은 분석 결과를 수정하지 않는다. 초기 PoC의 기록 방식은 별도로
 정하되, DB나 외부 시스템 연동을 전제하지 않는다.
 
-## 9. 현재 기준선과 후속 구현의 경계
+## 9. 구현된 application layer와 artifact 경계
 
-현재 기준선에는 전체 고객 또는 300명 Portfolio에 대한 독립적인 고객별 월별
-Snapshot이 아직 준비되어 있지 않을 수 있다. 특히 기존 demo/cache 산출물은
-특정 demo 고객의 상세 결과에 묶여 있을 수 있으므로, 이를 다른 고객의 분석
-근거로 재사용하지 않는다. evidence가 준비되지 않은 고객은 근거 없음으로
-표시하며, 임의의 결과를 보완해 보여 주지 않는다.
+`scripts/build_rm_monthly_snapshot.py`는 기존 core CSV와 5,000명 feature universe를
+읽어 deterministic 300명 Portfolio의 월별 분석 Snapshot을
+`artifacts/rm_daily_review/monthly/<snapshot_id>.json`에 저장한다. 같은 배치는 실제
+저장값으로 workload report도 남긴다. 기존 demo/cache는 특정 demo 고객의 상세
+결과이므로 RM Portfolio 근거로 재사용하지 않는다.
 
-후속 구현은 이 문서의 경계를 지키는 별도 application layer로 추가한다. 필요한
-경우 기존 분석을 월별로 완료한 뒤 그 결과를 읽기 전용 Snapshot으로 보존하고,
-Daily Review는 그 Snapshot만 읽는다. 이 과정은 기존 분석 코드와 데이터
-계약을 바꾸지 않으며, RM Workspace나 Guided Workflow를 설계 기준으로 삼지
-않는다.
+`src.monthly_review_snapshot`은 `src.customer_analysis.run_customer_analysis`를 재사용해
+Snapshot을 만든다. `src.daily_review`, `src.daily_worklist`,
+`src.rm_daily_review_view`, `src.rm_review_explainability`, `src.rm_review_store`와
+`app.py`의 RM 모드는 Snapshot, Portfolio metadata, review event만 사용한다.
+missing 또는 stale Snapshot은 CLI 안내·freshness 정보로 처리하며 자동 분석을 시작하지
+않는다. 이 과정은 기존 분석 데이터 계약을 바꾸지 않으며, RM Workspace나 Guided
+Workflow를 설계 기준으로 삼지 않는다.
 
 ## 10. 완료 기준
 
@@ -180,3 +182,5 @@ Daily Review는 그 Snapshot만 읽는다. 이 과정은 기존 분석 코드와
 - “오늘 먼저 확인”이 위험도 순위나 미래 사건 예고로 표현되지 않는다.
 - 고객관계 중요도는 분석 우선도와 별도 축으로 유지된다.
 - Case와 복잡한 업무 관리 기능은 기본 흐름에 포함되지 않는다.
+- Monthly Snapshot build에는 기존 분석 서비스가 사용되고, Daily 경로의 analytics
+  호출 수는 0으로 regression guard에서 검증된다.

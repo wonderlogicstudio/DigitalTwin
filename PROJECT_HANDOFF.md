@@ -69,13 +69,16 @@ python scripts\start_streamlit.py --port 8519 --timeout 60
 
 ## 7. 최신 검증 결과
 
-2026-08-20에 코드 변경 없이 다음을 재확인했습니다.
+2026-08-29 `rm-restart` 기준으로 다음을 재확인했습니다.
 
-- `pytest -q`: `214 passed in 175.55s`
+- `python -B -m pytest -q -p no:cacheprovider`: `299 passed in 171.39s`
 - `python scripts/check_demo_readiness.py`: `READY_WITH_WARNINGS`
+- `python scripts/start_streamlit.py --port 8519 --timeout 60`: HTTP health check 성공
 - 사전 계산 캐시 smoke check: 메인 고객 `C002608`, 유사 고객 `200명` 로드 성공
 - 필수 패키지, 원본 데이터, 처리 데이터, 데모 JSON, 사전 계산 캐시: 준비됨
-- 8501 포트: 확인 시 사용 가능
+- RM E2E Snapshot: 300명 Portfolio, 5,000명 reference universe, 초기 업무량
+  `오늘 먼저 확인 19 / 곧 확인 예정 88 / 모니터링 193`, UPCOMING 핵심관리 9명
+- RM 결과 기록 E2E: 고객 1명을 완료 처리한 뒤 오늘 목록 `19 → 18`, 완료 목록 `0 → 1`
 
 현재 readiness 경고는 아래 두 가지입니다.
 
@@ -125,3 +128,26 @@ DB 종류나 스키마는 위 결정이 완료되기 전까지 임의로 선택�
 6. `config/settings.py`, `app.py`, 관련 `src/` 모듈과 `tests/`
 
 새 작업은 코드 수정 전에 현재 테스트와 실제 구현을 다시 확인하고, 문서와 코드의 불일치를 먼저 보고해야 합니다.
+
+## 12. RM Daily Review 인수인계
+
+RM Daily Review는 월별 Financial Path Twin 분석을 다시 구현하지 않는다. 배치 CLI가
+기존 5,000명 universe에 대해 Portfolio 300명의 분석 결과를 월별 Snapshot으로 저장하고,
+Daily는 그 Snapshot·독립 synthetic CRM overlay·수동 review log만 읽는다.
+
+1. `python scripts/build_rm_monthly_snapshot.py --snapshot-id YYYY-MM`로 Snapshot을 만든다.
+2. Streamlit에서 `RM 오늘의 업무`를 선택한다. Snapshot이 없으면 CLI 안내만 보인다.
+3. `오늘 먼저 확인`, `곧 확인 예정`, `모니터링`은 저장된 timing evidence로 결정된다.
+   일 단위로 `months_from_current`를 줄이거나 새 분석을 실행하지 않는다.
+4. 고객 상세에서 확인 근거, 관계 중요도(별도 CRM 축), 대화 준비를 보고 결과를 기록한다.
+
+핵심 잠금 조건은 다음과 같다.
+
+- 5,000명 core 금융 데이터·1~12/13~36개월 구간·Matching/Outcome/Breakpoint/What-if는 변경하지 않는다.
+- relationship priority는 timing/위험 점수가 아니며 bucket 내부 badge/filter/보조 정렬에만 쓴다.
+- Daily 경로는 feature engineering, matcher, outcome, breakpoint, What-if, pipeline을 호출하지 않는다.
+- Case, 자동 연락, DB/실제 데이터, 새 risk score, Capacity/Queue/Guided Stepper는 기본 흐름 밖이다.
+
+관련 회귀 범위는 `tests/test_rm_portfolio.py`, `tests/test_monthly_review_snapshot.py`,
+`tests/test_daily_review.py`, `tests/test_daily_worklist.py`,
+`tests/test_rm_daily_review_app.py`, `tests/test_rm_daily_analysis_boundary.py`다.

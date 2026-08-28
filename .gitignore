@@ -42,4 +42,7 @@ desktop.ini
 data/raw/*.csv
 data/processed/*.csv
 
+# Local RM Daily Review Snapshot and manual review artifacts
+artifacts/rm_daily_review/
+
 # Keep demo JSON/CSV artifacts available for hackathon fallback unless explicitly removed.

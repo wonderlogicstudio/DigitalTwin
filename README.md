@@ -498,3 +498,32 @@ Financial Path Twin은 한국어와 영어 화면을 지원합니다. 기본 언
 ```powershell
 pytest -q tests\test_i18n.py
 ```
+
+## 25. RM Daily Review
+
+Financial Path Twin은 월별 재무 궤적 분석으로 유사 고객의 경로가 갈라졌던 시점을 찾고,
+Daily Review가 그 저장 결과를 매일 업무로 연결해 RM이 오늘 누구를 왜 확인할지 알려준다.
+
+RM Daily Review는 일반 모드·발표 모드와 별도의 단순 업무 모드다. 5,000명 전체
+synthetic universe는 기존 분석과 Matching reference universe로 유지하고, 그중 seed
+기반으로 선택한 300명만 `RM-POC-001`의 업무 범위로 표시한다. CORE/PRIORITY/STANDARD는
+금융 수치나 분석 결과에서 유도하지 않은 합성 CRM 관계 메타데이터다.
+
+월별 분석 Snapshot은 아래 명령으로 별도 artifact에 만든다. 이 명령은 기존 raw 금융
+CSV와 feature CSV를 읽기만 하며, Portfolio 고객별 Matching은 여전히 5,000명 전체를
+사용한다.
+
+```powershell
+python scripts\build_rm_monthly_snapshot.py --snapshot-id YYYY-MM
+```
+
+Snapshot이 있으면 앱의 `RM 오늘의 업무` 모드에서 실제 저장 결과로 `오늘 먼저 확인`,
+`곧 확인 예정`, `모니터링` 수를 표시한다. `곧 확인 예정`에서는 핵심관리 고객만
+별도 filter할 수 있지만 관계 중요도가 timing bucket을 바꾸지는 않는다. Snapshot이
+없으면 화면은 분석을 실행하지 않고 위 CLI 안내만 표시한다.
+
+Daily Review는 Snapshot, Portfolio metadata, 수동 review log만 읽는다. Matching,
+Outcome, Breakpoint, What-if, feature engineering, pipeline은 Daily 경로에서 호출하지
+않는다. RM은 “왜 확인?”과 대화 준비를 확인한 뒤 `확인 완료`, `추가 상담 검토`,
+`추후 모니터링` 중 하나를 기록한다. Case, 자동 연락, 새 예측 모델, risk score,
+Capacity/Queue/Guided Stepper는 포함하지 않는다.

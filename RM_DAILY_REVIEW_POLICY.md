@@ -114,6 +114,11 @@ REVIEW_NOW가 가까운 timing과 저장된 현재 관측 상태를 함께 요�
 outcome에 맞춘 cutoff나 새 위험 점수 없이도 “왜 오늘?”을 설명할 수 있다.
 새 월별 Snapshot에서는 실제 저장된 값에 따라 이 수치가 달라질 수 있다.
 
+2026-08-29 E2E Snapshot은 이 정책과 동일한 기존 5,000명 Financial Path Twin 입력을
+읽어 Portfolio 300명에 적용했고, found 107명 / insufficient_group_size 193명,
+`REVIEW_NOW 19명 / UPCOMING 88명 / MONITOR 193명`을 저장했다. UPCOMING 중 CORE는
+9명이었다. 이 값들은 화면 목표치가 아니라 해당 저장 Snapshot의 실제 결과다.
+
 ## 5. Relationship Priority의 위치
 
 Relationship Priority는 synthetic CRM overlay의 별도 축이다. timing bucket이
@@ -163,9 +168,9 @@ Review 자체는 분석을 수행하지 않는다.
 고객 상세는 “왜 오늘?”과 대화 준비를 지원할 수 있으나, RM이 결과를 기록하고
 완료하는 단순 Daily 흐름 밖의 자동 조치를 만들지 않는다.
 
-## 9. 구현 수용 기준
+## 9. 구현 수용 기준과 회귀 Guard
 
-후속 application layer는 아래를 모두 만족해야 한다.
+구현된 application layer는 아래를 모두 만족한다.
 
 - Portfolio overlay와 동일 Snapshot의 customer_id만 결합한다.
 - 각 고객을 이 정책의 세 bucket 중 하나에 결정적으로 분류한다.
@@ -173,3 +178,9 @@ Review 자체는 분석을 수행하지 않는다.
 - relationship_priority가 timing bucket을 바꾸지 못하게 한다.
 - 같은 Snapshot을 며칠 읽어도 bucket이 변하지 않게 한다.
 - bucket 판정 중 기존 분석 함수를 호출하지 않게 한다.
+
+`tests/test_rm_daily_analysis_boundary.py`는 Daily worklist, view, missing Snapshot UI,
+RM mode 진입 경로에서 feature engineering, matcher fit/match, outcome aggregation,
+breakpoint analyzer, What-if simulator, pipeline을 monkeypatch로 차단한다. 호출이
+발생하면 테스트가 실패한다. 같은 Guard는 relationship priority가 analysis 입력이
+아니며, Portfolio 300명이 5,000명 matching universe를 축소하지 않는지도 확인한다.

@@ -132,3 +132,29 @@ DigitalTwin/
 현재 데이터베이스는 아키텍처 구성 요소가 아니다. 데이터는 CSV/JSON 파일과 데모 cache로 관리한다.
 
 DB를 도입할 때는 먼저 DB 종류, 파일과 DB의 역할 분리, 마이그레이션/백필/롤백, 환경변수와 비밀값, 캐시와 fallback, 배포/보안 정책을 결정하고 `DECISIONS.md`에 기록한다. 기존 CSV/JSON 계약과 분석 계산을 바꾸는 구현은 이 결정 이후에 별도 단계로 진행한다.
+
+## 12. RM Daily Review 경계
+
+```text
+Monthly Snapshot Build
+  -> src.customer_analysis.run_customer_analysis
+  -> 기존 Feature / Matcher / Outcome / Breakpoint / What-if
+  -> artifacts/rm_daily_review/monthly/<snapshot_id>.json
+                                      ↓
+Daily Review
+  -> Snapshot + RM Portfolio metadata + review_events.jsonl
+  -> 오늘 먼저 확인 / 곧 확인 예정 / 모니터링 / 결과 기록
+```
+
+- `src.rm_portfolio`는 5,000명 ID에서 deterministic 300명 Portfolio와 독립적인
+  합성 CRM 관계 중요도를 만든다. 분석 데이터는 수정하지 않는다.
+- `src.monthly_review_snapshot`과 `scripts/build_rm_monthly_snapshot.py`만 기존
+  고객 분석 서비스를 호출한다. 모든 Portfolio 고객의 matcher reference universe는
+  전체 5,000명이다.
+- `src.daily_review`, `src.daily_worklist`, `src.rm_daily_review_view`,
+  `src.rm_review_explainability`, `src.rm_review_store`, 그리고 RM UI는 저장된
+  Snapshot과 수동 기록만 사용한다. stale/missing Snapshot도 자동 재분석하지 않는다.
+- `tests/test_rm_daily_analysis_boundary.py`는 Daily 경로에서 feature engineering,
+  matcher, outcome, breakpoint, What-if, pipeline 호출을 실패시키는 regression guard다.
+- Snapshot과 review event는 `artifacts/rm_daily_review/`의 별도 local artifact이며
+  기존 core CSV/JSON schema나 값에 포함되지 않는다.

@@ -106,3 +106,11 @@
 - Reason: The measured Portfolio distribution clustered breakpoint evidence at 1 month. Timing alone produced 107 REVIEW_NOW customers out of 300; requiring an already stored current observation gives the “why today?” label an operational meaning without adding a score, prediction, or future-outcome cutoff.
 - Impact files: RM_DAILY_REVIEW_POLICY.md, src/daily_review.py, and tests/test_daily_review.py; a Snapshot loader and Daily UI remain later implementation work.
 - Alternative: Use a timing-only cutoff or tune a threshold to a target daily count. Both would either overfill REVIEW_NOW in the measured data or make the policy a workload-targeted risk proxy.
+
+## DEC-018 Saved Snapshot Daily Delivery Boundary
+- Date: 2026-08-29
+- Status: accepted
+- Decision: Build the RM monthly Snapshot through the existing `run_customer_analysis` service for the deterministic 300-customer Portfolio against the full 5,000-customer matcher universe. Build Daily worklists and the RM UI only from the saved Snapshot, independent Portfolio metadata, and manual JSONL review events.
+- Reason: This makes the historical Breakpoint timing operationally available to an RM without changing Financial Path Twin methodology or creating a new risk model. The Daily layer remains an operational delivery cycle, not an analytics execution path.
+- Impact files: `src/customer_analysis.py`, `src/monthly_review_snapshot.py`, `src/daily_review.py`, `src/daily_worklist.py`, `src/rm_daily_review_view.py`, `src/rm_review_store.py`, `app.py`, `scripts/build_rm_monthly_snapshot.py`, and RM Daily tests.
+- Alternative: Recompute analytics whenever the RM opens the screen or derive a composite relationship-risk score. Both violate the saved Snapshot boundary and make relationship priority appear as Digital Twin risk.

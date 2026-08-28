@@ -252,6 +252,19 @@
 - [x] 결과 분포와 저축률/DSR 제목을 더 짧게 바꾸고 Plotly top margin/title 위치를 보수적으로 조정했다.
 - [ ] 실제 1366x768 및 1920x1080 브라우저 픽셀 스크린샷은 발표 전 사람이 최종 확인한다.
 
+## RM Daily Review Status
+
+- [x] 5,000명 synthetic analysis universe와 deterministic 300명 RM Portfolio를 분리했다.
+- [x] Portfolio의 relationship priority를 금융 데이터와 독립적인 synthetic CRM overlay로 만들었다.
+- [x] 기존 고객 분석 서비스로 월별 Snapshot과 workload report를 별도 artifact에 저장한다.
+- [x] Snapshot 기준 timing으로 `오늘 먼저 확인`·`곧 확인 예정`·`모니터링`을 결정한다.
+- [x] Daily worklist와 Streamlit RM 화면은 Snapshot, Portfolio metadata, review log만 읽는다.
+- [x] 핵심관리 고객 filter는 UPCOMING bucket 안에서만 제공하며 timing bucket을 바꾸지 않는다.
+- [x] RM 결과를 JSONL에 기록하고 같은 Snapshot·같은 날의 미완료 목록에서 제외한다.
+- [x] Daily에서 Feature/Matcher/Outcome/Breakpoint/What-if/Pipeline 재실행을 차단하는 회귀 Guard를 추가했다.
+- [x] Case, 자동 연락, DB, 새 위험 점수, Capacity/Queue/Guided Stepper를 기본 흐름에서 제외했다.
+- [x] 실제 5,000명 reference universe 기반 300명 Snapshot E2E에서 초기 업무량과 완료 후 목록 갱신을 확인했다.
+
 ## 다음 단계: DB 연결 설계 및 의사결정
 
 - [ ] DB 종류와 로컬/배포 실행 환경을 결정한다.

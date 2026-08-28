@@ -15,6 +15,7 @@ import pandas as pd
 from config import settings
 from src.breakpoint_analyzer import save_breakpoint_result
 from src.data_generator import generate_dataset, save_dataset
+from src.customer_analysis import add_balance_ratios, build_breakpoint_comparison
 from src.demo_selector import (
     build_current_metrics,
     build_final_outcome_lookup,
@@ -27,7 +28,6 @@ from src.demo_cache import save_demo_backup, save_precomputed_demo_artifacts
 from src.feature_engineering import build_trajectory_features, save_trajectory_features
 from src.matcher import TrajectoryMatcher
 from src.models import GeneratorConfig
-from src.ui_components import add_balance_ratios, build_breakpoint_comparison
 from src.validator import (
     build_outcome_distribution,
     build_persona_summary,

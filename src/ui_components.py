@@ -12,13 +12,7 @@ import pandas as pd
 
 from config import settings
 from src.assets import load_css_asset
-from src.breakpoint_analyzer import (
-    AVOIDANCE_OUTCOMES,
-    RISK_OUTCOMES,
-    calculate_monthly_smd,
-    find_breakpoint,
-    prepare_breakpoint_data,
-)
+from src.breakpoint_analyzer import find_breakpoint
 from src.copy import (
     BREAKPOINT_INSUFFICIENT_MESSAGE,
     BREAKPOINT_NOT_FOUND_MESSAGE,
@@ -26,6 +20,11 @@ from src.copy import (
     UI_MESSAGES,
     WHATIF_TABLE_COLUMNS,
     cash_depletion_label,
+)
+from src.customer_analysis import (
+    add_balance_ratios,
+    build_breakpoint_comparison,
+    run_customer_analysis_with_dependencies,
 )
 from src.demo_selector import build_final_outcome_lookup, summarize_matched_outcomes
 from src.formatters import (
@@ -934,39 +933,6 @@ def build_breakpoint_display_data(breakpoint_result: dict[str, Any], language: s
     }
 
 
-def add_balance_ratios(monthly_df: pd.DataFrame, customer_ids: list[str]) -> pd.DataFrame:
-    """Filter customers and add balance-to-recent-income ratios for display charts."""
-
-    _validate_columns(monthly_df, ("customer_id", "month", "income", "cash_balance", "loan_balance"), "monthly_df")
-    filtered_df = monthly_df[monthly_df["customer_id"].astype(str).isin(set(customer_ids))].copy()
-    baseline_income = (
-        filtered_df[filtered_df["month"].between(10, settings.OBSERVATION_END_MONTH)]
-        .groupby("customer_id")["income"]
-        .mean()
-    )
-    denominator = filtered_df["customer_id"].map(baseline_income).fillna(1).clip(lower=1)
-    filtered_df["cash_balance_ratio"] = filtered_df["cash_balance"] / denominator
-    filtered_df["loan_balance_ratio"] = filtered_df["loan_balance"] / denominator
-    return filtered_df
-
-
-def build_breakpoint_comparison(matched_ids: list[str], monthly_df: pd.DataFrame) -> pd.DataFrame:
-    """Build monthly SMD comparison rows for matched risk and avoidance groups."""
-
-    enriched_df = prepare_breakpoint_data(matched_ids, monthly_df)
-    customer_outcomes = (
-        enriched_df[["customer_id", "final_outcome"]]
-        .drop_duplicates("customer_id")
-        .set_index("customer_id")["final_outcome"]
-    )
-    risk_ids = customer_outcomes[customer_outcomes.isin(RISK_OUTCOMES)].index.tolist()
-    avoidance_ids = customer_outcomes[customer_outcomes.isin(AVOIDANCE_OUTCOMES)].index.tolist()
-    future_df = enriched_df[
-        enriched_df["month"].between(settings.FUTURE_START_MONTH, settings.FUTURE_END_MONTH)
-    ]
-    return calculate_monthly_smd(future_df, risk_ids, avoidance_ids)
-
-
 def run_customer_analysis(
     customer_id: str,
     monthly_df: pd.DataFrame,
@@ -974,42 +940,20 @@ def run_customer_analysis(
     matcher: TrajectoryMatcher,
     top_k: int = settings.TOP_K_MATCHES,
 ) -> dict[str, Any]:
-    """Run matching, outcome summary, breakpoint, and What-if for one customer."""
+    """Compatibility wrapper for the UI's existing public helper."""
 
-    if str(customer_id) not in set(features_df["customer_id"].astype(str)):
-        raise ValueError(f"Unknown customer_id: {customer_id}")
-
-    matches = matcher.match(str(customer_id), top_k=top_k)
-    matched_ids = matches["matched_customer_id"].astype(str).tolist()
-    outcome_lookup = build_final_outcome_lookup(monthly_df)
-    outcome_summary = summarize_matched_outcomes(str(customer_id), matched_ids, monthly_df, outcome_lookup)
-    errors: dict[str, str] = {}
-    try:
-        breakpoint_result = find_breakpoint(matched_ids, monthly_df)
-    except Exception as exc:  # noqa: BLE001
-        errors["breakpoint"] = str(exc)
-        breakpoint_result = _error_breakpoint_result(str(exc))
-    try:
-        comparison_df = build_breakpoint_comparison(matched_ids, monthly_df)
-    except Exception as exc:  # noqa: BLE001
-        errors["breakpoint_comparison"] = str(exc)
-        comparison_df = pd.DataFrame()
-    try:
-        whatif_results = build_whatif_results(str(customer_id), monthly_df)
-    except Exception as exc:  # noqa: BLE001
-        errors["whatif"] = str(exc)
-        whatif_results = {"target_customer_id": str(customer_id), "simulation_months": 0, "scenarios": []}
-
-    return {
-        "customer_id": str(customer_id),
-        "matches": matches,
-        "matched_ids": matched_ids,
-        "outcome_summary": outcome_summary,
-        "breakpoint_result": breakpoint_result,
-        "whatif_results": whatif_results,
-        "breakpoint_comparison": comparison_df,
-        "errors": errors,
-    }
+    return run_customer_analysis_with_dependencies(
+        customer_id,
+        monthly_df,
+        features_df,
+        matcher,
+        top_k=top_k,
+        outcome_lookup_builder=build_final_outcome_lookup,
+        outcome_summary_builder=summarize_matched_outcomes,
+        breakpoint_finder=find_breakpoint,
+        breakpoint_comparison_builder=build_breakpoint_comparison,
+        whatif_builder=build_whatif_results,
+    )
 
 
 def best_whatif_scenario(whatif_results: dict[str, Any]) -> dict[str, Any] | None:
@@ -1349,18 +1293,3 @@ def _has_value(value: Any) -> bool:
         return not bool(pd.isna(value))
     except (TypeError, ValueError):
         return True
-
-
-def _error_breakpoint_result(message: str) -> dict[str, Any]:
-    return {
-        "status": "error",
-        "breakpoint_month": None,
-        "months_from_current": None,
-        "primary_factor": None,
-        "risk_group_mean": None,
-        "avoidance_group_mean": None,
-        "standardized_difference": None,
-        "persistence_months": 0,
-        "secondary_factors": [],
-        "interpretation": message,
-    }

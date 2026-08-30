@@ -17,7 +17,7 @@ from src.matcher import TrajectoryMatcher
 from src.rm_portfolio import METADATA_SOURCE, RmPortfolio, RmPortfolioCustomer
 
 
-SNAPSHOT_SCHEMA_VERSION = 1
+SNAPSHOT_SCHEMA_VERSION = 2
 EVIDENCE_AVAILABLE = "available"
 EVIDENCE_AVAILABLE_WITH_OPTIONAL_ERRORS = "available_with_optional_errors"
 EVIDENCE_ANALYSIS_ERROR = "analysis_error"
@@ -59,6 +59,8 @@ class MonthlyReviewSnapshotRecord:
     evidence: dict[str, object]
     relationship_metadata: dict[str, str]
     outcome_summary: dict[str, object] | None
+    matched_customer_ids: tuple[str, ...] = ()
+    supporting_evidence: dict[str, object] | None = None
 
     def as_dict(self) -> dict[str, object]:
         """Return the JSON-safe Snapshot record."""
@@ -73,6 +75,8 @@ class MonthlyReviewSnapshotRecord:
             "evidence": self.evidence,
             "relationship_metadata": self.relationship_metadata,
             "outcome_summary": self.outcome_summary,
+            "matched_customer_ids": list(self.matched_customer_ids),
+            "supporting_evidence": self.supporting_evidence,
         }
 
 
@@ -244,7 +248,17 @@ def _record_from_analysis(
         if isinstance(outcome_source, dict)
         else 0
     )
+    matched_customer_ids = _matched_customer_ids(analysis.get("matched_ids"))
     evidence = _evidence(current_summary, breakpoint, errors)
+    supporting_evidence = _supporting_evidence(
+        snapshot_id=snapshot_id,
+        analysis_as_of_month=analysis_as_of_month,
+        evidence=evidence,
+        current_summary=current_summary,
+        breakpoint=breakpoint,
+        outcome_summary=outcome_summary,
+        analysis=analysis,
+    )
     return MonthlyReviewSnapshotRecord(
         customer_id=customer_id,
         snapshot_id=snapshot_id,
@@ -255,6 +269,8 @@ def _record_from_analysis(
         evidence=evidence,
         relationship_metadata=relationship_metadata,
         outcome_summary=outcome_summary,
+        matched_customer_ids=matched_customer_ids,
+        supporting_evidence=supporting_evidence,
     )
 
 
@@ -281,6 +297,207 @@ def _minimal_outcome_summary(source: object) -> dict[str, object] | None:
     return {
         field: _json_value(source.get(field))
         for field in OUTCOME_SUMMARY_FIELDS
+    }
+
+
+def _matched_customer_ids(source: object) -> tuple[str, ...]:
+    if not isinstance(source, (list, tuple)):
+        return ()
+    return tuple(str(customer_id) for customer_id in source)
+
+
+def _supporting_evidence(
+    *,
+    snapshot_id: str,
+    analysis_as_of_month: int,
+    evidence: dict[str, object],
+    current_summary: dict[str, object],
+    breakpoint: dict[str, object],
+    outcome_summary: dict[str, object] | None,
+    analysis: dict[str, Any],
+) -> dict[str, object]:
+    """Create display evidence only from an already-completed analysis result."""
+
+    evidence_available = evidence.get("available") is True
+    evidence_status = str(evidence.get("status") or "unavailable")
+    errors = {
+        str(key): str(value)
+        for key, value in dict(evidence.get("errors", {})).items()
+    }
+    provenance = {
+        "snapshot_id": snapshot_id,
+        "analysis_as_of_month": analysis_as_of_month,
+        "generated_from": "existing_customer_analysis",
+        "source_service": "src.customer_analysis.run_customer_analysis",
+    }
+    if not evidence_available:
+        return {
+            "evidence_status": evidence_status,
+            "available": False,
+            "errors": errors,
+            "provenance": provenance,
+            "why_now": dict(breakpoint),
+            "current_change_cards": [],
+            "cohort_path_chart": _unavailable_component(
+                "analysis_evidence_unavailable",
+                "Customer analysis evidence was unavailable for this Snapshot record.",
+            ),
+            "outcome_summary": outcome_summary,
+            "whatif_summary": _unavailable_component(
+                "analysis_evidence_unavailable",
+                "What-if summary was unavailable because customer analysis evidence failed.",
+            ),
+        }
+    return {
+        "evidence_status": evidence_status,
+        "available": True,
+        "errors": errors,
+        "provenance": provenance,
+        "why_now": dict(breakpoint),
+        "current_change_cards": _current_change_cards(current_summary),
+        "cohort_path_chart": _cohort_path_chart(
+            analysis.get("breakpoint_comparison"), breakpoint, errors
+        ),
+        "outcome_summary": outcome_summary,
+        "whatif_summary": _whatif_summary(analysis.get("whatif_results"), errors),
+    }
+
+
+def _current_change_cards(current_summary: dict[str, object]) -> list[dict[str, object]]:
+    card_specs = (
+        ("cash_availability", "현금 여력", "balance_decline_run_6m", "consecutive_months"),
+        ("debt_service_burden", "대출 상환 부담", "recent_dsr", "ratio"),
+        ("fixed_expense", "고정지출", "recent_fixed_expense_ratio", "ratio"),
+        ("savings_capacity", "저축 여력", "recent_savings_rate", "ratio"),
+    )
+    cards: list[dict[str, object]] = []
+    for key, label, source_field, value_type in card_specs:
+        value = current_summary.get(source_field)
+        if value is not None:
+            cards.append(
+                {
+                    "key": key,
+                    "label": label,
+                    "source_field": source_field,
+                    "value": _json_value(value),
+                    "value_type": value_type,
+                }
+            )
+    return cards
+
+
+def _cohort_path_chart(
+    comparison_source: object,
+    breakpoint: dict[str, object],
+    errors: dict[str, str],
+) -> dict[str, object]:
+    status = str(breakpoint.get("status") or "")
+    if status != "found":
+        return _unavailable_component(
+            f"breakpoint_{status or 'unavailable'}",
+            "Historical cohort comparison is unavailable because a breakpoint was not found.",
+        )
+    if "breakpoint_comparison" in errors:
+        return _unavailable_component("breakpoint_comparison_error", errors["breakpoint_comparison"])
+    if not isinstance(comparison_source, pd.DataFrame) or comparison_source.empty:
+        return _unavailable_component(
+            "breakpoint_comparison_unavailable",
+            "No saved historical cohort comparison was available from customer analysis.",
+        )
+    metric = breakpoint.get("primary_factor")
+    required_columns = {
+        "month", "metric", "risk_group_mean", "avoidance_group_mean", "risk_count", "avoidance_count"
+    }
+    if not isinstance(metric, str) or not metric:
+        return _unavailable_component("primary_factor_unavailable", "A primary breakpoint factor was unavailable.")
+    if not required_columns.issubset(comparison_source.columns):
+        return _unavailable_component(
+            "breakpoint_comparison_schema_unavailable",
+            "The saved comparison did not contain the required historical cohort fields.",
+        )
+    metric_rows = comparison_source.loc[
+        comparison_source["metric"].astype(str) == metric
+    ].sort_values("month")
+    if metric_rows.empty:
+        return _unavailable_component(
+            "primary_factor_comparison_unavailable",
+            "The saved comparison did not contain the primary breakpoint factor.",
+        )
+    risk_path = [
+        {
+            "month": _json_value(row["month"]),
+            "mean": _json_value(row["risk_group_mean"]),
+            "group_size": _json_value(row["risk_count"]),
+        }
+        for _, row in metric_rows.iterrows()
+    ]
+    avoidance_path = [
+        {
+            "month": _json_value(row["month"]),
+            "mean": _json_value(row["avoidance_group_mean"]),
+            "group_size": _json_value(row["avoidance_count"]),
+        }
+        for _, row in metric_rows.iterrows()
+    ]
+    breakpoint_month = breakpoint.get("breakpoint_month")
+    marker_rows = metric_rows.loc[metric_rows["month"] == breakpoint_month]
+    marker_row = marker_rows.iloc[0] if not marker_rows.empty else metric_rows.iloc[0]
+    return {
+        "available": True,
+        "comparison_type": "historical_matched_cohort_comparison",
+        "label": "유사 고객의 과거 경로 비교",
+        "metric": metric,
+        "risk_path_label": "위험 경로",
+        "avoidance_path_label": "회피 경로",
+        "group_sizes": {
+            "risk_path": _json_value(marker_row["risk_count"]),
+            "avoidance_path": _json_value(marker_row["avoidance_count"]),
+        },
+        "breakpoint_marker": {"month": _json_value(breakpoint_month)},
+        "risk_path": risk_path,
+        "avoidance_path": avoidance_path,
+    }
+
+
+def _whatif_summary(source: object, errors: dict[str, str]) -> dict[str, object]:
+    if "whatif" in errors:
+        return _unavailable_component("whatif_error", errors["whatif"])
+    if not isinstance(source, dict):
+        return _unavailable_component(
+            "whatif_unavailable",
+            "No saved What-if summary was available from customer analysis.",
+        )
+    scenario_fields = (
+        "scenario_id", "scenario_name", "ending_cash_balance", "minimum_cash_balance",
+        "average_savings_rate", "cash_depletion_month", "improvement_vs_baseline",
+        "total_saved_expense", "months_with_negative_savings",
+    )
+    scenarios = source.get("scenarios")
+    if not isinstance(scenarios, list):
+        return _unavailable_component(
+            "whatif_scenarios_unavailable",
+            "The saved What-if result did not contain scenario summaries.",
+        )
+    return {
+        "available": True,
+        "simulation_months": _json_value(source.get("simulation_months")),
+        "scenarios": [
+            {field: _json_value(scenario.get(field)) for field in scenario_fields}
+            for scenario in scenarios
+            if isinstance(scenario, dict)
+        ],
+    }
+
+
+def _unavailable_component(reason_code: str, reason: str) -> dict[str, object]:
+    return {
+        "available": False,
+        "status": "unavailable",
+        "reason_code": reason_code,
+        "reason": reason,
+        "scenarios": [],
+        "risk_path": [],
+        "avoidance_path": [],
     }
 
 
@@ -324,25 +541,37 @@ def _error_record(
     evidence_status: str,
     error_message: str,
 ) -> MonthlyReviewSnapshotRecord:
+    breakpoint = {
+        "status": "error",
+        "breakpoint_month": None,
+        "months_from_current": None,
+        "primary_factor": None,
+    }
+    evidence = {
+        "available": False,
+        "status": evidence_status,
+        "errors": {"analysis": error_message},
+    }
     return MonthlyReviewSnapshotRecord(
         customer_id=customer_id,
         snapshot_id=snapshot_id,
         analysis_as_of_month=analysis_as_of_month,
         current_summary=current_summary,
         matched_count=0,
-        breakpoint={
-            "status": "error",
-            "breakpoint_month": None,
-            "months_from_current": None,
-            "primary_factor": None,
-        },
-        evidence={
-            "available": False,
-            "status": evidence_status,
-            "errors": {"analysis": error_message},
-        },
+        breakpoint=breakpoint,
+        evidence=evidence,
         relationship_metadata=relationship_metadata,
         outcome_summary=None,
+        matched_customer_ids=(),
+        supporting_evidence=_supporting_evidence(
+            snapshot_id=snapshot_id,
+            analysis_as_of_month=analysis_as_of_month,
+            evidence=evidence,
+            current_summary=current_summary,
+            breakpoint=breakpoint,
+            outcome_summary=None,
+            analysis={},
+        ),
     )
 
 

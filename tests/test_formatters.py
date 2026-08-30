@@ -90,6 +90,9 @@ def test_shared_labels_cover_required_mappings() -> None:
         "event_shock": "이벤트 충격형",
         "recovery": "회복형",
         "overspending": "과소비형",
+        "self_employed": "사업 소득 변동형(합성)",
+        "asset_resilient": "여유자금 보유형(합성)",
+        "financially_constrained": "재무 여력 제약형(합성)",
     }
     expected_metrics = {
         "income": "월 소득",

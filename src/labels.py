@@ -22,6 +22,9 @@ PERSONA_LABELS = {
     "event_shock": "이벤트 충격형",
     "recovery": "회복형",
     "overspending": "과소비형",
+    "self_employed": "사업 소득 변동형(합성)",
+    "asset_resilient": "여유자금 보유형(합성)",
+    "financially_constrained": "재무 여력 제약형(합성)",
 }
 
 METRIC_LABELS = {
@@ -70,11 +73,11 @@ TERM_HELP_TEXT = {
 }
 
 STATUS_COLORS = {
-    "healthy": "#1b9e77",
-    "recovered": "#4daf4a",
-    "watch": "#f59e0b",
-    "stress": "#d95f02",
-    "delinquent": "#7c3aed",
+    "healthy": "#008a78",
+    "recovered": "#2f855a",
+    "watch": "#b7791f",
+    "stress": "#c43d3d",
+    "delinquent": "#7a3e8e",
 }
 
 OUTCOME_ORDER = ("healthy", "recovered", "stress", "delinquent")

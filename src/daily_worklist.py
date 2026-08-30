@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections import Counter
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
-from datetime import date
+from datetime import date, timedelta
 from typing import Literal
 
 from src.daily_review import (
@@ -20,6 +20,7 @@ from src.rm_portfolio import RELATIONSHIP_PRIORITY_ORDER
 
 
 COMPLETED_TODAY = "COMPLETED_TODAY"
+DAILY_REVIEW_PLAN_BATCH_SIZE = 3
 FRESHNESS_CURRENT_MONTH = "CURRENT_MONTH"
 FRESHNESS_PRIOR_MONTH = "PRIOR_MONTH"
 FRESHNESS_FUTURE_PUBLICATION_DATE = "FUTURE_PUBLICATION_DATE"
@@ -47,6 +48,7 @@ class DailyWorklistItem:
     outcome_summary: Mapping[str, object] | None = None
     breakpoint_month: int | None = None
     breakpoint_status: str | None = None
+    supporting_evidence: Mapping[str, object] | None = None
 
 
 @dataclass(frozen=True)
@@ -70,6 +72,25 @@ class SnapshotFreshness:
 
 
 @dataclass(frozen=True)
+class DailyReviewPlan:
+    """A small operational plan derived from saved Daily timing buckets.
+
+    The plan is not an additional prediction or a queue.  It only presents the
+    already-decided REVIEW_NOW customers in deterministic, three-customer
+    working-day batches.  The saved timing bucket and months stay unchanged.
+    """
+
+    effective_workday: date
+    next_workday: date
+    previous_workday: date
+    previous_workday_completed_count: int
+    today_items: tuple[DailyWorklistItem, ...]
+    next_workday_items: tuple[DailyWorklistItem, ...]
+    this_month_items: tuple[DailyWorklistItem, ...]
+    next_month_candidates: tuple[DailyWorklistItem, ...]
+
+
+@dataclass(frozen=True)
 class DailyWorklist:
     """Daily presentation of a saved Snapshot with no financial recalculation."""
 
@@ -82,6 +103,7 @@ class DailyWorklist:
     completed_today: tuple[DailyWorklistItem, ...]
     snapshot_freshness: SnapshotFreshness
     relationship_priority_breakdown: dict[str, dict[str, int]]
+    work_plan: DailyReviewPlan
 
 
 def build_daily_worklist(
@@ -89,18 +111,28 @@ def build_daily_worklist(
     *,
     daily_date: date,
     completed_customer_ids: Iterable[str] = (),
+    completed_today_customer_ids: Iterable[str] | None = None,
+    previous_workday_completed_count: int = 0,
     snapshot_published_on: date | None = None,
 ) -> DailyWorklist:
     """Build a deterministic worklist from one already-saved Monthly Snapshot.
 
-    ``daily_date`` affects only completion grouping and freshness metadata. The
-    saved ``months_from_current`` values pass unchanged to the Daily classifier.
+    ``daily_date`` affects operational presentation, completion grouping, and
+    freshness metadata. The saved ``months_from_current`` values pass unchanged
+    to the Daily classifier.
     """
 
     snapshot_id, analysis_as_of_month, records = _validate_snapshot_artifact(snapshot_artifact)
     completed_ids = {str(customer_id) for customer_id in completed_customer_ids}
+    completed_today_ids = (
+        set(completed_ids)
+        if completed_today_customer_ids is None
+        else {str(customer_id) for customer_id in completed_today_customer_ids}
+    )
     known_customer_ids = {str(record["customer_id"]) for record in records}
-    unknown_completed_ids = sorted(completed_ids - known_customer_ids)
+    unknown_completed_ids = sorted(
+        (completed_ids | completed_today_ids) - known_customer_ids
+    )
     if unknown_completed_ids:
         raise ValueError(
             "completed_customer_ids must belong to the saved RM Portfolio Snapshot: "
@@ -122,9 +154,10 @@ def build_daily_worklist(
             _empty_relationship_counts(),
         )
         if item.customer_id in completed_ids:
-            completed_item = replace(item, completed_today=True)
-            completed_items.append(completed_item)
-            relationship_breakdown[item.relationship_priority][COMPLETED_TODAY] += 1
+            if item.customer_id in completed_today_ids:
+                completed_item = replace(item, completed_today=True)
+                completed_items.append(completed_item)
+                relationship_breakdown[item.relationship_priority][COMPLETED_TODAY] += 1
             continue
 
         active_by_state[item.review_state].append(item)
@@ -140,6 +173,12 @@ def build_daily_worklist(
             reason: int(count)
             for reason, count in sorted(Counter(item.reason_code for item in monitor_items).items())
         },
+    )
+    work_plan = build_daily_review_plan(
+        today_items=today_items,
+        upcoming_items=upcoming_items,
+        daily_date=daily_date,
+        previous_workday_completed_count=previous_workday_completed_count,
     )
     return DailyWorklist(
         snapshot_id=snapshot_id,
@@ -157,6 +196,48 @@ def build_daily_worklist(
         ),
         relationship_priority_breakdown=_ordered_relationship_breakdown(
             relationship_breakdown
+        ),
+        work_plan=work_plan,
+    )
+
+
+def build_daily_review_plan(
+    *,
+    today_items: Iterable[DailyWorklistItem],
+    upcoming_items: Iterable[DailyWorklistItem],
+    daily_date: date,
+    previous_workday_completed_count: int = 0,
+) -> DailyReviewPlan:
+    """Create a deterministic operational horizon from existing saved buckets.
+
+    A completed review is omitted by the caller before this function runs, so
+    any unfinished item naturally carries into the next working day's plan.
+    Relationship metadata only preserves the existing within-bucket order; it
+    never changes a timing bucket or creates an analytical score.
+    """
+
+    if (
+        not isinstance(previous_workday_completed_count, int)
+        or isinstance(previous_workday_completed_count, bool)
+        or previous_workday_completed_count < 0
+    ):
+        raise ValueError("previous_workday_completed_count must be a non-negative integer.")
+
+    priority_items = tuple(today_items)
+    upcoming = tuple(upcoming_items)
+    effective_workday = _business_day_on_or_after(daily_date)
+    return DailyReviewPlan(
+        effective_workday=effective_workday,
+        next_workday=_next_business_day(effective_workday),
+        previous_workday=previous_business_day(effective_workday),
+        previous_workday_completed_count=previous_workday_completed_count,
+        today_items=priority_items[:DAILY_REVIEW_PLAN_BATCH_SIZE],
+        next_workday_items=priority_items[
+            DAILY_REVIEW_PLAN_BATCH_SIZE : DAILY_REVIEW_PLAN_BATCH_SIZE * 2
+        ],
+        this_month_items=priority_items,
+        next_month_candidates=tuple(
+            item for item in upcoming if item.timing_months in {1, 2}
         ),
     )
 
@@ -241,6 +322,7 @@ def _build_worklist_item(
         outcome_summary=_optional_mapping(record.get("outcome_summary")),
         breakpoint_month=_optional_int(breakpoint.get("breakpoint_month")),
         breakpoint_status=_optional_text(breakpoint.get("status")),
+        supporting_evidence=_optional_mapping(record.get("supporting_evidence")),
     )
 
 
@@ -290,6 +372,30 @@ def _sort_items(items: Iterable[DailyWorklistItem]) -> tuple[DailyWorklistItem, 
             ),
         )
     )
+
+
+def _business_day_on_or_after(value: date) -> date:
+    """Use a minimal Monday--Friday workday calendar for the PoC plan."""
+
+    candidate = value
+    while candidate.weekday() >= 5:
+        candidate += timedelta(days=1)
+    return candidate
+
+
+def _next_business_day(value: date) -> date:
+    """Return the following Monday--Friday workday without external calendars."""
+
+    return _business_day_on_or_after(value + timedelta(days=1))
+
+
+def previous_business_day(value: date) -> date:
+    """Return the preceding Monday--Friday workday for display-only planning."""
+
+    candidate = value - timedelta(days=1)
+    while candidate.weekday() >= 5:
+        candidate -= timedelta(days=1)
+    return candidate
 
 
 def _empty_relationship_counts() -> dict[str, int]:

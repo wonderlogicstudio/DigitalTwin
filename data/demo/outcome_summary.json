@@ -1,24 +1,24 @@
 {
-  "target_customer_id": "C002608",
+  "target_customer_id": "C000711",
   "matched_count": 200,
   "outcomes": {
     "healthy": {
-      "count": 87,
-      "ratio": 0.435
+      "count": 132,
+      "ratio": 0.66
     },
     "recovered": {
-      "count": 41,
-      "ratio": 0.205
+      "count": 5,
+      "ratio": 0.025
     },
     "stress": {
-      "count": 66,
-      "ratio": 0.33
+      "count": 63,
+      "ratio": 0.315
     },
     "delinquent": {
-      "count": 6,
-      "ratio": 0.03
+      "count": 0,
+      "ratio": 0.0
     }
   },
   "first_stress_month_median": 22,
-  "first_delinquency_month_median": 36
+  "first_delinquency_month_median": null
 }

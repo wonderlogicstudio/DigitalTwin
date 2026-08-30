@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from contextlib import nullcontext
 from copy import deepcopy
+import inspect
 from types import SimpleNamespace
 from typing import Any
 
@@ -164,3 +165,19 @@ def test_tab_renderer_uses_prepared_values_without_repeating_analysis(monkeypatc
     ]
     assert summary == before_summary
     assert analysis == before_analysis
+
+
+def test_presentation_metric_selector_has_an_explicit_peer_chart_effect() -> None:
+    sidebar_source = inspect.getsource(app_module.render_sidebar)
+    peer_source = inspect.getsource(app_module.render_presentation_peer_scene)
+    chart_source = inspect.getsource(app_module.render_chart_or_table)
+    frame_source = inspect.getsource(app_module._render_framed_plotly_chart)
+
+    assert "sidebar.presentation_metric_selector" in sidebar_source
+    assert "presentation.metric.active" in peer_source
+    assert "metric=selected_metric" in peer_source
+    assert 'chart_key=f"presentation_future_trajectory_{selected_metric}"' in peer_source
+    assert "chart_key: str | None = None" in chart_source
+    assert "_render_framed_plotly_chart" in chart_source
+    assert 'chart_arguments["key"] = chart_key' in frame_source
+    assert "with st.container(border=True)" in frame_source

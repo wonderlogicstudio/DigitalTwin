@@ -1,5 +1,16 @@
 # Financial Path Twin Architecture
 
+## Synthetic universe v2 baseline
+
+The core universe remains 5,000 deterministic synthetic customers over 36
+months. Version 2 broadens financial-flow generation with stable, gradual,
+event, recovery, overspending, synthetic business-income variability, synthetic
+liquidity-resilient, and synthetic financially constrained paths. It preserves
+the master/monthly column schemas, months 1–12 observation window, months
+13–36 future window, feature engineering, matching, outcome, breakpoint, and
+What-if implementations. `SYNTHETIC_UNIVERSE_V2_DESIGN.md` is the authoritative
+generation contract.
+
 ## 1. 문서 기준
 
 이 문서는 현재 `main` 브랜치의 실제 `src/`, `app.py`, `config/settings.py`, 테스트 구조를 기준으로 작성한다. 과거 계획 문서에 있더라도 현재 존재하지 않는 모듈은 현재 아키텍처 구성 요소로 취급하지 않는다.
@@ -134,6 +145,10 @@ DigitalTwin/
 DB를 도입할 때는 먼저 DB 종류, 파일과 DB의 역할 분리, 마이그레이션/백필/롤백, 환경변수와 비밀값, 캐시와 fallback, 배포/보안 정책을 결정하고 `DECISIONS.md`에 기록한다. 기존 CSV/JSON 계약과 분석 계산을 바꾸는 구현은 이 결정 이후에 별도 단계로 진행한다.
 
 ## 12. RM Daily Review 경계
+
+### UX-07 E2E delivery path
+
+`src.rm_daily_review_loader`는 저장 artifact만 읽고 controlled 1.5~2초 loading feedback을 제공한다. `src.rm_daily_review_view`와 `app.py`의 RM detail은 saved supporting evidence를 표시하고 `src.rm_review_store`의 JSONL 이벤트로 완료 상태를 갱신한다. 이 경로에는 analytics 재실행, Case/Alert, 자동 연락이 없다.
 
 ```text
 Monthly Snapshot Build

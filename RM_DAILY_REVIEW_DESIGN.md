@@ -1,5 +1,9 @@
 # RM Daily Review 설계 계약
 
+## UX-07 구현 확인
+
+현재 구현은 Monthly Snapshot build에서만 기존 Financial Path Twin analytics를 사용한다. Daily query와 RM UI는 saved Snapshot, independent RM Portfolio/CRM/presentation metadata, JSONL review log만 사용한다. 로딩은 1.5~2초의 저장 결과 조회 피드백이며 재분석이 아니다. `FOLLOW_UP`은 RM의 수동 결과 기록일 뿐 Case 생성이 아니다.
+
 ## 1. 목적과 적용 범위
 
 이 문서는 Financial Path Twin의 **월별 분석(Monthly Analysis)** 결과를 RM의

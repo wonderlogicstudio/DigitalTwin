@@ -40,13 +40,16 @@ def generate_customer_master(config: GeneratorConfig) -> pd.DataFrame:
 
     rng = np.random.default_rng(config.random_seed)
     personas = _build_persona_assignments(config, rng)
-    incomes = _generate_initial_incomes(config.customer_count, rng)
 
     rows: list[dict[str, object]] = []
     for index, persona in enumerate(personas, start=1):
-        income = int(incomes[index - 1])
+        income = _generate_initial_income(persona, rng)
         has_loan = rng.random() >= _persona_no_loan_probability(persona)
-        initial_loan = int(round(income * rng.uniform(3.0, 36.0))) if has_loan else 0
+        initial_loan = (
+            int(round(income * rng.uniform(*_persona_initial_loan_month_range(persona))))
+            if has_loan
+            else 0
+        )
         initial_cash = int(
             np.clip(
                 round(income * rng.uniform(*_persona_cash_month_range(persona))),
@@ -248,18 +251,60 @@ def _build_persona_assignments(config: GeneratorConfig, rng: np.random.Generator
     return assignments
 
 
-def _generate_initial_incomes(count: int, rng: np.random.Generator) -> np.ndarray:
-    raw = rng.lognormal(mean=np.log(4_500_000), sigma=0.35, size=count)
-    return np.clip(np.round(raw), settings.INCOME_MIN, settings.INCOME_MAX).astype(int)
+def _generate_initial_income(persona: str, rng: np.random.Generator) -> int:
+    """Draw one deterministic, persona-specific synthetic monthly income.
+
+    These distributions model financial-flow archetypes only. They are not
+    occupation, AUM, wealth, or CRM classifications.
+    """
+
+    mean, sigma = {
+        "stable": (4_700_000, 0.30),
+        "gradual_deterioration": (4_200_000, 0.32),
+        "event_shock": (4_500_000, 0.35),
+        "recovery": (4_000_000, 0.36),
+        "overspending": (5_000_000, 0.35),
+        "self_employed": (5_000_000, 0.52),
+        "asset_resilient": (9_200_000, 0.36),
+        "financially_constrained": (2_700_000, 0.27),
+    }[persona]
+    raw = rng.lognormal(mean=np.log(mean), sigma=sigma)
+    return int(np.clip(round(raw), settings.INCOME_MIN, settings.INCOME_MAX))
 
 
 def _persona_no_loan_probability(persona: str) -> float:
+    if persona == "asset_resilient":
+        return 0.45
     if persona in {"stable", "recovery"}:
         return 0.30
+    if persona == "self_employed":
+        return 0.20
+    if persona == "financially_constrained":
+        return 0.05
     return 0.15
 
 
+def _persona_initial_loan_month_range(persona: str) -> tuple[float, float]:
+    if persona == "asset_resilient":
+        return 2.0, 22.0
+    if persona == "financially_constrained":
+        return 12.0, 60.0
+    if persona == "self_employed":
+        return 8.0, 54.0
+    if persona in {"gradual_deterioration", "overspending"}:
+        return 8.0, 48.0
+    if persona == "event_shock":
+        return 6.0, 42.0
+    return 3.0, 36.0
+
+
 def _persona_cash_month_range(persona: str) -> tuple[float, float]:
+    if persona == "asset_resilient":
+        return 12.0, 30.0
+    if persona == "financially_constrained":
+        return 0.3, 2.0
+    if persona == "self_employed":
+        return 1.0, 10.0
     if persona == "stable":
         return 4.0, 12.0
     if persona == "recovery":
@@ -274,15 +319,21 @@ def _persona_cash_month_range(persona: str) -> tuple[float, float]:
 def _persona_initial_ratio_ranges(
     persona: str,
 ) -> tuple[tuple[float, float], tuple[float, float], tuple[float, float]]:
+    if persona == "asset_resilient":
+        return (0.14, 0.29), (0.12, 0.24), (0.02, 0.17)
+    if persona == "financially_constrained":
+        return (0.32, 0.50), (0.20, 0.36), (0.18, 0.40)
+    if persona == "self_employed":
+        return (0.17, 0.34), (0.15, 0.38), (0.08, 0.32)
     if persona == "stable":
-        return (0.20, 0.35), (0.15, 0.30), (0.05, 0.25)
+        return (0.18, 0.33), (0.14, 0.28), (0.04, 0.20)
     if persona == "gradual_deterioration":
-        return (0.28, 0.45), (0.25, 0.40), (0.10, 0.35)
+        return (0.26, 0.42), (0.20, 0.35), (0.10, 0.32)
     if persona == "event_shock":
         return (0.25, 0.42), (0.20, 0.35), (0.10, 0.32)
     if persona == "recovery":
         return (0.25, 0.42), (0.20, 0.35), (0.08, 0.30)
-    return (0.25, 0.43), (0.30, 0.40), (0.12, 0.35)
+    return (0.22, 0.38), (0.30, 0.45), (0.10, 0.30)
 
 
 def _choose_primary_event(persona: str, rng: np.random.Generator) -> tuple[str, int]:
@@ -303,6 +354,10 @@ def _choose_primary_event(persona: str, rng: np.random.Generator) -> tuple[str, 
         return str(rng.choice(["income_recovery", "expense_reduction"])), int(rng.integers(14, 27))
     if persona == "overspending" and rng.random() < 0.45:
         return "new_loan", int(rng.integers(13, 31))
+    if persona == "financially_constrained" and rng.random() < 0.60:
+        return str(rng.choice(["interest_rate_shock", "housing_cost_increase"])), int(
+            rng.integers(13, 29)
+        )
     return "none", 0
 
 
@@ -325,6 +380,11 @@ def _simulate_customer_months(
     shock_duration = int(rng.integers(3, 9))
     recovery_start = int(rng.integers(12, 19)) if state.persona == "recovery" else 0
     recovery_duration = int(rng.integers(3, 9)) if state.persona == "recovery" else 0
+    future_pressure_end = min(config.future_end_month, 24)
+    future_pressure_start = int(
+        rng.integers(config.future_start_month, future_pressure_end + 1)
+    )
+    business_cycle_phase = float(rng.uniform(0.0, 2.0 * np.pi))
 
     for month in range(1, config.total_months + 1):
         month_index = month - 1
@@ -340,7 +400,30 @@ def _simulate_customer_months(
         fixed_expense *= rng.uniform(0.99, 1.02)
         variable_expense *= rng.uniform(0.92, 1.12)
 
-        if state.persona == "event_shock" and state.primary_event_month:
+        if state.persona == "self_employed":
+            income, variable_expense = _apply_business_income_variability(
+                month,
+                business_cycle_phase,
+                income,
+                variable_expense,
+                rng,
+            )
+        elif state.persona == "gradual_deterioration" and month >= future_pressure_start:
+            fixed_expense, debt_payment = _apply_gradual_pressure(
+                month,
+                future_pressure_start,
+                fixed_expense,
+                debt_payment,
+            )
+        elif state.persona == "financially_constrained" and month >= future_pressure_start:
+            fixed_expense, debt_payment = _apply_constrained_pressure(
+                month,
+                future_pressure_start,
+                fixed_expense,
+                debt_payment,
+            )
+
+        if state.persona in {"event_shock", "financially_constrained"} and state.primary_event_month:
             event_type, event_expense, new_loan_amount, income, fixed_expense, debt_payment = (
                 _apply_event_shock(
                     state,
@@ -367,8 +450,12 @@ def _simulate_customer_months(
             if state.primary_event_type == "new_loan" and month == state.primary_event_month:
                 event_type = "new_loan"
                 new_loan_amount = state.initial_income * rng.uniform(3.0, 8.0)
-            if month >= config.future_start_month:
-                variable_expense *= 1.15
+            if month >= future_pressure_start:
+                variable_expense = _apply_variable_expense_acceleration(
+                    month,
+                    future_pressure_start,
+                    variable_expense,
+                )
 
         income = max(0, int(round(income)))
         fixed_expense = max(0, int(round(fixed_expense)))
@@ -456,15 +543,36 @@ def _persona_trend_parameters(persona: str, rng: np.random.Generator) -> dict[st
         return {
             "income_growth": rng.uniform(-0.0005, 0.0005),
             "fixed_growth": rng.uniform(0.0010, 0.0035),
-            "variable_growth": rng.uniform(0.0100, 0.0200),
+            "variable_growth": rng.uniform(0.0020, 0.0060),
             "debt_growth": rng.uniform(0.0, 0.0010),
         }
     if persona == "overspending":
         return {
             "income_growth": rng.uniform(-0.0002, 0.0010),
             "fixed_growth": rng.uniform(0.0010, 0.0030),
-            "variable_growth": rng.uniform(0.0120, 0.0240),
+            "variable_growth": rng.uniform(0.0020, 0.0070),
             "debt_growth": rng.uniform(0.0, 0.0010),
+        }
+    if persona == "self_employed":
+        return {
+            "income_growth": rng.uniform(-0.0010, 0.0020),
+            "fixed_growth": rng.uniform(0.0005, 0.0030),
+            "variable_growth": rng.uniform(0.0010, 0.0060),
+            "debt_growth": rng.uniform(-0.0010, 0.0020),
+        }
+    if persona == "asset_resilient":
+        return {
+            "income_growth": rng.uniform(0.0010, 0.0045),
+            "fixed_growth": rng.uniform(0.0, 0.0020),
+            "variable_growth": rng.uniform(-0.0010, 0.0025),
+            "debt_growth": rng.uniform(-0.0030, 0.0),
+        }
+    if persona == "financially_constrained":
+        return {
+            "income_growth": rng.uniform(-0.0015, 0.0005),
+            "fixed_growth": rng.uniform(0.0015, 0.0040),
+            "variable_growth": rng.uniform(0.0010, 0.0050),
+            "debt_growth": rng.uniform(0.0005, 0.0030),
         }
     if persona == "recovery":
         return {
@@ -479,6 +587,60 @@ def _persona_trend_parameters(persona: str, rng: np.random.Generator) -> dict[st
         "variable_growth": rng.uniform(0.0010, 0.0050),
         "debt_growth": rng.uniform(0.0, 0.0020),
     }
+
+
+def _apply_business_income_variability(
+    month: int,
+    cycle_phase: float,
+    income: float,
+    variable_expense: float,
+    rng: np.random.Generator,
+) -> tuple[float, float]:
+    """Apply deterministic synthetic business-income seasonality and volatility."""
+
+    seasonal_income = 0.16 * np.sin((2.0 * np.pi * month / 12.0) + cycle_phase)
+    income *= 1.0 + seasonal_income + rng.uniform(-0.10, 0.10)
+    variable_expense *= 1.0 + (seasonal_income * 0.35) + rng.uniform(-0.06, 0.08)
+    return income, variable_expense
+
+
+def _apply_gradual_pressure(
+    month: int,
+    pressure_start: int,
+    fixed_expense: float,
+    debt_payment: float,
+) -> tuple[float, float]:
+    """Add a varied future fixed-cost/debt pressure without changing rules."""
+
+    pressure_months = month - pressure_start + 1
+    fixed_expense *= 1.0 + min(0.20, 0.014 * pressure_months)
+    debt_payment *= 1.0 + min(0.16, 0.010 * pressure_months)
+    return fixed_expense, debt_payment
+
+
+def _apply_constrained_pressure(
+    month: int,
+    pressure_start: int,
+    fixed_expense: float,
+    debt_payment: float,
+) -> tuple[float, float]:
+    """Add a varied future pressure to a low-buffer synthetic path."""
+
+    pressure_months = month - pressure_start + 1
+    fixed_expense *= 1.0 + min(0.24, 0.018 * pressure_months)
+    debt_payment *= 1.0 + min(0.22, 0.014 * pressure_months)
+    return fixed_expense, debt_payment
+
+
+def _apply_variable_expense_acceleration(
+    month: int,
+    pressure_start: int,
+    variable_expense: float,
+) -> float:
+    """Accelerate synthetic discretionary costs at a varied future month."""
+
+    pressure_months = month - pressure_start + 1
+    return variable_expense * (1.0 + min(0.32, 0.050 * pressure_months))
 
 
 def _apply_event_shock(

@@ -14,6 +14,7 @@ from src.assets import (
     load_hero_svg,
     load_logo_svg,
 )
+from src.theme import DESIGN_TOKENS
 from src.ui_components import load_css
 
 
@@ -97,5 +98,24 @@ def test_streamlit_theme_config_matches_local_identity() -> None:
     config_text = config_path.read_text(encoding="utf-8")
 
     assert 'base = "light"' in config_text
-    assert 'primaryColor = "#1f5f8b"' in config_text
+    assert 'primaryColor = "#005eb8"' in config_text
+    assert 'backgroundColor = "#f4f7fb"' in config_text
+    assert 'textColor = "#102a43"' in config_text
     assert "gatherUsageStats = false" in config_text
+
+
+def test_shared_theme_uses_an_original_offline_safe_banking_type_stack() -> None:
+    """The visual refresh must not need a remote font or another bank's assets."""
+
+    css = load_css()
+    assets = "\n".join(_svg_text(path).lower() for path in (LOGO_SVG_PATH, HERO_SVG_PATH))
+
+    assert DESIGN_TOKENS["primary"] == "#005eb8"
+    assert DESIGN_TOKENS["accent"] == "#008a78"
+    assert "Pretendard Variable" in DESIGN_TOKENS["font_family"]
+    assert "font-variant-numeric: tabular-nums lining-nums;" in css
+    assert "background: var(--fpt-primary-dark);" in css
+    assert "border-top: 4px solid var(--fpt-accent);" in css
+    assert "border-bottom: 3px solid var(--fpt-primary);" in css
+    assert "fonts.googleapis.com" not in css
+    assert "standard chartered" not in assets

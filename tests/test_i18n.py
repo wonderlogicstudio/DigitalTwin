@@ -132,18 +132,52 @@ def test_supported_languages_and_translation_fallbacks() -> None:
 
 
 def test_rm_daily_review_terms_and_help_have_korean_english_key_parity() -> None:
-    assert t("rm.metric.today", "ko") == "오늘 먼저 확인"
+    assert t("rm.metric.today", "ko") == "업무 기준일 미완료"
     assert t("rm.metric.upcoming", "ko") == "곧 확인 예정"
     assert t("rm.metric.monitor", "ko") == "모니터링"
-    assert t("rm.metric.completed", "ko") == "확인 완료"
+    assert t("rm.metric.completed", "ko") == "오늘 기록 완료"
     assert t("rm.detail.why", "ko") == "1. 확인 이유"
     assert t("rm.detail.conversation", "ko") == "3. 대화 준비"
     assert t("rm.detail.analysis", "ko") == "4. 분석 근거 (보조)"
+    assert "future event date" in t("rm.detail.cohort_caption", "en")
+    assert "probability" not in t("rm.detail.cohort_caption", "en").lower()
+    assert "위험 확률" not in t("rm.detail.cohort_caption", "ko")
     assert "역사적으로 처음 뚜렷하게 달라진 시점" in t("rm.help.breakpoint", "ko")
     assert "월별 분석 결과를 매일 업무로 전달" in t("rm.help.daily_review", "ko")
     assert "합성 CRM 메타데이터" in t("rm.help.relationship", "ko")
     assert "오늘 우선 확인 구간보다 여유" in t("rm.help.upcoming", "ko")
-    assert t("rm.metric.today", "en") == "Review now"
+    assert t("rm.metric.today", "en") == "Outstanding for work date"
+    assert t("rm.dashboard.title", "ko") == "오늘의 업무"
+    assert t("rm.dashboard.title", "en") == "Today's work"
+    assert "업무 기준일" in t("rm.summary.today", "ko")
+    assert "1~2개월" in t("rm.today_review_criterion", "ko")
+    assert "one to two months" in t("rm.today_review_criterion", "en")
+    assert t("rm.planning.title", "ko") == "업무 계획"
+    assert t("rm.planning.next_workday", "en") == "Next workday"
+    assert t("sidebar.presentation_metric_selector", "en") == "Similar-path chart metric"
+    assert "vertical axis" in t(
+        "presentation.metric.active",
+        "en",
+        metric="DSR",
+    )
+    assert t("rm.summary.completed_on", "en", date="2026-08-29") == (
+        "Review results recorded on 2026-08-29."
+    )
+    assert t(
+        "rm.date_context",
+        "en",
+        record_date="2026-08-30",
+        work_date="2026-08-31",
+    ) == "Record date 2026-08-30 · work date 2026-08-31"
+    assert "비영업일" in t(
+        "rm.planning.non_business_day_notice",
+        "ko",
+        workday="2026.08.31",
+        record_date="2026.08.29",
+    )
+    assert "breakpoint timing" in t("rm.summary.today", "en")
+    assert t("rm.row.change", "en") == "Current change"
+    assert t("rm.change.ratio", "en", label="cash capacity", value="23.0%") == "cash capacity 23.0%"
     assert "point in history" in t("rm.help.breakpoint", "en")
     assert "synthetic CRM metadata" in t("rm.help.relationship", "en")
     assert validate_translation_keys() == []

@@ -188,6 +188,39 @@ def test_all_visualization_functions_return_figures() -> None:
     assert all(isinstance(figure, go.Figure) for figure in figures)
 
 
+def test_all_standard_charts_share_a_safe_outer_layout_contract() -> None:
+    target_features, matched_features = _feature_rows()
+    figures = [
+        create_current_trajectory_chart(_target_monthly(), "savings_rate", language="en"),
+        create_income_expense_chart(_target_monthly(), language="en"),
+        create_twin_trajectory_chart(
+            _target_monthly(),
+            _twin_monthly(),
+            "dsr",
+            _breakpoint_result(),
+            language="en",
+        ),
+        create_outcome_bar_chart(_outcome_summary(), language="en"),
+        create_breakpoint_comparison_chart(
+            _breakpoint_result(),
+            _breakpoint_comparison(),
+            language="en",
+        ),
+        create_whatif_balance_chart(_whatif_results(), language="en"),
+        create_whatif_improvement_chart(_whatif_results(), language="en"),
+        create_feature_similarity_chart(target_features, matched_features, language="en"),
+    ]
+
+    for figure in figures:
+        assert figure.layout.paper_bgcolor == "#ffffff"
+        assert figure.layout.plot_bgcolor == "#ffffff"
+        assert figure.layout.margin.l >= 72
+        assert figure.layout.margin.r >= 70
+        assert figure.layout.margin.t >= 126
+        assert figure.layout.margin.b >= 72
+        assert figure.layout.height >= 420
+
+
 def test_visualization_functions_do_not_mutate_inputs() -> None:
     target = _target_monthly()
     twins = _twin_monthly()
@@ -335,9 +368,12 @@ def test_breakpoint_found_uses_result_values_when_comparison_frame_is_empty() ->
     fig = create_breakpoint_comparison_chart(_breakpoint_result(), pd.DataFrame())
 
     assert isinstance(fig, go.Figure)
-    assert any(trace.name == "위험 경로 고객 평균" for trace in fig.data)
-    assert any(trace.name == "위험 회피 고객 평균" for trace in fig.data)
-    assert any(shape.x0 == 14 for shape in fig.layout.shapes)
+    assert len(fig.data) == 1
+    assert fig.data[0].type == "bar"
+    assert fig.data[0].orientation == "h"
+    assert fig.data[0].cliponaxis is False
+    assert len(fig.layout.shapes) == 0
+    assert "저장된 14개월 차 그룹 평균 비교" in fig.layout.title.text
 
 
 def test_outcome_order_is_fixed_and_bar_text_has_count_and_ratio() -> None:
@@ -417,6 +453,9 @@ def test_whatif_baseline_and_best_scenario_are_distinct() -> None:
     assert baseline_trace.line.color != best_trace.line.color
     assert best_trace.line.width > baseline_trace.line.width
     assert improvement_fig.data[0].marker.color[0] != improvement_fig.data[0].marker.color[-1]
+    assert improvement_fig.data[0].cliponaxis is False
+    assert improvement_fig.layout.xaxis.range[1] > max(improvement_fig.data[0].x)
+    assert improvement_fig.layout.height == balance_fig.layout.height
 
 
 def test_zero_balance_reference_lines_exist() -> None:

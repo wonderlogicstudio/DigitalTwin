@@ -135,6 +135,76 @@ def test_persona_values_are_allowed(
     assert set(monthly_df["persona"].unique()) <= allowed_personas
 
 
+def test_v2_persona_assignments_cover_configured_synthetic_path_archetypes(
+    generated_dataset: tuple[pd.DataFrame, pd.DataFrame],
+) -> None:
+    master_df, _ = generated_dataset
+
+    expected_counts = {
+        persona: int(settings.CUSTOMER_COUNT * ratio)
+        for persona, ratio in settings.PERSONA_DISTRIBUTION.items()
+    }
+    assert master_df["persona"].value_counts().to_dict() == expected_counts
+    assert {
+        "self_employed",
+        "asset_resilient",
+        "financially_constrained",
+    } <= set(master_df["persona"])
+
+
+def test_v2_personas_create_diverse_financial_path_inputs_and_observed_flow(
+    generated_dataset: tuple[pd.DataFrame, pd.DataFrame],
+) -> None:
+    master_df, monthly_df = generated_dataset
+
+    master_by_persona = master_df.groupby("persona")
+    assert (
+        master_by_persona["initial_income"].median()["asset_resilient"]
+        > master_by_persona["initial_income"].median()["stable"]
+        > master_by_persona["initial_income"].median()["financially_constrained"]
+    )
+    assert (
+        master_by_persona["initial_cash_balance"].median()["asset_resilient"]
+        > master_by_persona["initial_cash_balance"].median()["stable"]
+        > master_by_persona["initial_cash_balance"].median()["financially_constrained"]
+    )
+
+    observed = monthly_df.loc[monthly_df["month"].le(settings.OBSERVATION_END_MONTH)]
+    income_cv = (
+        observed.groupby(["persona", "customer_id"])["income"]
+        .agg(lambda values: values.std(ddof=0) / values.mean())
+        .groupby("persona")
+        .median()
+    )
+    assert income_cv["self_employed"] > income_cv["stable"] * 2
+
+    average_ratio_by_period = (
+        monthly_df.assign(
+            period=np.where(
+                monthly_df["month"].le(settings.OBSERVATION_END_MONTH), "observed", "future"
+            )
+        )
+        .groupby(["persona", "customer_id", "period"])[
+            ["variable_expense_ratio", "fixed_expense_ratio", "dsr"]
+        ]
+        .mean()
+        .unstack("period")
+    )
+    overspending_variable_change = (
+        average_ratio_by_period[("variable_expense_ratio", "future")]
+        - average_ratio_by_period[("variable_expense_ratio", "observed")]
+    ).groupby(level="persona").median()
+    constrained_fixed_change = (
+        average_ratio_by_period[("fixed_expense_ratio", "future")]
+        - average_ratio_by_period[("fixed_expense_ratio", "observed")]
+    ).groupby(level="persona").median()
+    assert overspending_variable_change["overspending"] > overspending_variable_change["stable"]
+    assert (
+        constrained_fixed_change["financially_constrained"]
+        > constrained_fixed_change["stable"]
+    )
+
+
 def test_months_are_in_documented_range(
     generated_dataset: tuple[pd.DataFrame, pd.DataFrame],
 ) -> None:

@@ -193,6 +193,7 @@ def test_snapshot_reuses_customer_analysis_service_with_minimal_parity_fields() 
     )
     record = snapshot.records[0]
 
+    assert record.matched_customer_ids == tuple(direct_analysis["matched_ids"])
     assert record.matched_count == direct_analysis["outcome_summary"]["matched_count"]
     assert record.outcome_summary == {
         field: direct_analysis["outcome_summary"].get(field)
@@ -298,7 +299,7 @@ def test_snapshot_artifact_is_json_serializable_and_rejects_core_data_paths(tmp_
     written_path = write_monthly_review_snapshot(snapshot, output_path)
     artifact = json.loads(written_path.read_text(encoding="utf-8"))
 
-    assert artifact["schema_version"] == 1
+    assert artifact["schema_version"] == 2
     assert artifact["portfolio_size"] == 1
     assert artifact["records"][0]["snapshot_id"] == "monthly-12-json"
     assert "whatif_results" not in artifact["records"][0]

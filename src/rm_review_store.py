@@ -6,7 +6,7 @@ import json
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Literal, Mapping
+from typing import Literal, Mapping, Sequence
 from uuid import uuid4
 
 from config import settings
@@ -122,6 +122,89 @@ def load_review_events(
     return tuple(events)
 
 
+def find_latest_review_event(
+    events: Sequence[RmReviewEvent],
+    *,
+    customer_id: str,
+    snapshot_id: str,
+) -> RmReviewEvent | None:
+    """Return the newest standalone RM review for one saved Snapshot customer."""
+
+    normalized_customer_id = _required_text(customer_id, "customer_id")
+    normalized_snapshot_id = _required_text(snapshot_id, "snapshot_id")
+    matching = [
+        (index, event)
+        for index, event in enumerate(events)
+        if event.customer_id == normalized_customer_id
+        and event.snapshot_id == normalized_snapshot_id
+    ]
+    if not matching:
+        return None
+    return max(matching, key=lambda pair: (pair[1].reviewed_at, pair[0]))[1]
+
+
+def replace_customer_review(
+    event: RmReviewEvent,
+    output_path: Path | str = DEFAULT_REVIEW_EVENTS_PATH,
+) -> Path:
+    """Replace the current RM record for one customer/Snapshot without touching core data.
+
+    This compact PoC store keeps one effective review record per customer and
+    Snapshot. It is intentionally separate from a Case or audit lifecycle.
+    """
+
+    path = Path(output_path)
+    _ensure_separate_artifact_path(path)
+    existing_events = load_review_events(path)
+    if not any(
+        current.customer_id == event.customer_id
+        and current.snapshot_id == event.snapshot_id
+        for current in existing_events
+    ):
+        raise ValueError("No existing RM review record is available to update.")
+    remaining_events = [
+        current
+        for current in existing_events
+        if not (
+            current.customer_id == event.customer_id
+            and current.snapshot_id == event.snapshot_id
+        )
+    ]
+    _write_review_events((*remaining_events, event), path)
+    return path
+
+
+def cancel_customer_review(
+    *,
+    customer_id: str,
+    snapshot_id: str,
+    output_path: Path | str = DEFAULT_REVIEW_EVENTS_PATH,
+) -> int:
+    """Cancel an RM review record so the customer returns to its saved timing bucket.
+
+    Only the separate RM review artifact is changed. A caller can use the
+    returned count to distinguish a completed cancellation from a stale view.
+    """
+
+    normalized_customer_id = _required_text(customer_id, "customer_id")
+    normalized_snapshot_id = _required_text(snapshot_id, "snapshot_id")
+    path = Path(output_path)
+    _ensure_separate_artifact_path(path)
+    existing_events = load_review_events(path)
+    remaining_events = [
+        event
+        for event in existing_events
+        if not (
+            event.customer_id == normalized_customer_id
+            and event.snapshot_id == normalized_snapshot_id
+        )
+    ]
+    removed_count = len(existing_events) - len(remaining_events)
+    if removed_count:
+        _write_review_events(remaining_events, path)
+    return removed_count
+
+
 def _event_from_dict(payload: Mapping[str, object]) -> RmReviewEvent:
     reviewed_at_raw = payload.get("reviewed_at")
     if not isinstance(reviewed_at_raw, str):
@@ -141,6 +224,23 @@ def _event_from_dict(payload: Mapping[str, object]) -> RmReviewEvent:
         result=_required_text(payload.get("result"), "result"),
         note=note,
     )
+
+
+def _write_review_events(events: Sequence[RmReviewEvent], path: Path) -> None:
+    """Atomically rewrite only the standalone RM review JSONL artifact."""
+
+    _ensure_separate_artifact_path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary_path = path.with_suffix(f"{path.suffix}.tmp")
+    try:
+        with temporary_path.open("w", encoding="utf-8", newline="\n") as output_file:
+            for event in events:
+                output_file.write(json.dumps(event.as_dict(), ensure_ascii=False, sort_keys=True))
+                output_file.write("\n")
+        temporary_path.replace(path)
+    finally:
+        if temporary_path.exists():
+            temporary_path.unlink()
 
 
 def _required_text(value: object, field_name: str) -> str:

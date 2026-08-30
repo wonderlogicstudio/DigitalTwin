@@ -167,6 +167,89 @@ def test_daily_date_changes_freshness_not_saved_timing_or_bucket() -> None:
     assert september.snapshot_freshness.age_days == 31
 
 
+def test_saved_priority_work_is_presented_in_three_customer_workday_batches() -> None:
+    artifact = _snapshot_artifact()
+    artifact["records"] = [
+        _record("C000001", "CORE", current_status="stress"),
+        _record("C000002", "PRIORITY", current_status="watch"),
+        _record("C000003", "STANDARD", current_status="stress"),
+        _record("C000004", "STANDARD", current_status="watch"),
+        _record("C000005", "STANDARD", current_status="stress"),
+        _record("C000006", "STANDARD", current_status="watch"),
+        _record("C000007", "STANDARD", current_status="stress"),
+        _record("C000008", "CORE", current_status="healthy", months_from_current=1),
+        _record("C000009", "PRIORITY", current_status="healthy", months_from_current=3),
+    ]
+
+    worklist = build_daily_worklist(artifact, daily_date=date(2026, 8, 29))
+    plan = worklist.work_plan
+
+    assert plan.effective_workday == date(2026, 8, 31)
+    assert plan.next_workday == date(2026, 9, 1)
+    assert plan.previous_workday == date(2026, 8, 28)
+    assert plan.previous_workday_completed_count == 0
+    assert [item.customer_id for item in plan.today_items] == [
+        "C000001",
+        "C000002",
+        "C000003",
+    ]
+    assert [item.customer_id for item in plan.next_workday_items] == [
+        "C000004",
+        "C000005",
+        "C000006",
+    ]
+    assert len(plan.this_month_items) == 7
+    assert [item.customer_id for item in plan.next_month_candidates] == ["C000008"]
+    assert all(item.review_state == REVIEW_NOW for item in plan.this_month_items)
+    assert all(item.review_state == UPCOMING for item in plan.next_month_candidates)
+
+
+def test_completed_priority_work_is_not_reintroduced_on_the_next_workday() -> None:
+    artifact = _snapshot_artifact()
+    artifact["records"] = [
+        _record("C000001", "CORE", current_status="stress"),
+        _record("C000002", "PRIORITY", current_status="watch"),
+        _record("C000003", "STANDARD", current_status="stress"),
+        _record("C000004", "STANDARD", current_status="watch"),
+    ]
+
+    worklist = build_daily_worklist(
+        artifact,
+        daily_date=date(2026, 9, 1),
+        completed_customer_ids=["C000001"],
+        completed_today_customer_ids=[],
+    )
+
+    assert [item.customer_id for item in worklist.today_items] == [
+        "C000002",
+        "C000003",
+        "C000004",
+    ]
+    assert [item.customer_id for item in worklist.work_plan.today_items] == [
+        "C000002",
+        "C000003",
+        "C000004",
+    ]
+    assert worklist.completed_today == ()
+
+
+def test_previous_workday_completion_count_is_display_only_plan_metadata() -> None:
+    worklist = build_daily_worklist(
+        _snapshot_artifact(),
+        daily_date=date(2026, 9, 1),
+        previous_workday_completed_count=4,
+    )
+
+    assert worklist.work_plan.previous_workday == date(2026, 8, 31)
+    assert worklist.work_plan.previous_workday_completed_count == 4
+    with pytest.raises(ValueError, match="non-negative integer"):
+        build_daily_worklist(
+            _snapshot_artifact(),
+            daily_date=date(2026, 9, 1),
+            previous_workday_completed_count=-1,
+        )
+
+
 def test_freshness_is_unknown_without_explicit_snapshot_publication_date() -> None:
     worklist = build_daily_worklist(
         _snapshot_artifact(),

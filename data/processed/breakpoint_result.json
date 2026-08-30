@@ -2,19 +2,11 @@
   "status": "found",
   "breakpoint_month": 13,
   "months_from_current": 1,
-  "primary_factor": "cash_balance_ratio",
-  "risk_group_mean": 3.4329698218288542,
-  "avoidance_group_mean": 5.494472234166576,
-  "standardized_difference": -1.2672623851125968,
+  "primary_factor": "dsr",
+  "risk_group_mean": 0.2470840952380953,
+  "avoidance_group_mean": 0.1911801824817518,
+  "standardized_difference": 0.9654902830209674,
   "persistence_months": 24,
-  "secondary_factors": [
-    {
-      "factor": "variable_expense_ratio",
-      "risk_group_mean": 0.34825975000000003,
-      "avoidance_group_mean": 0.2576694140625,
-      "standardized_difference": 1.1934261570731688,
-      "persistence_months": 4
-    }
-  ],
-  "interpretation": "Risk and avoidance groups first show a sustained standardized difference in cash_balance_ratio at month 13. This describes an association within the matched synthetic customers and is not a causal estimate."
+  "secondary_factors": [],
+  "interpretation": "Risk and avoidance groups first show a sustained standardized difference in dsr at month 13. This describes an association within the matched synthetic customers and is not a causal estimate."
 }

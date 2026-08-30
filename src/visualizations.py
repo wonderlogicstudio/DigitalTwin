@@ -78,9 +78,9 @@ COLORS = {
     "avoidance": STATUS_COLORS["healthy"],
     "baseline": DESIGN_TOKENS["baseline"],
     "scenario_2": DESIGN_TOKENS["primary"],
-    "scenario_3": "#7c3aed",
-    "scenario_4": "#0891b2",
-    "band": "rgba(31, 95, 139, 0.14)",
+    "scenario_3": "#7a3e8e",
+    "scenario_4": "#007c91",
+    "band": "rgba(0, 94, 184, 0.14)",
 }
 LINE_DASHES = {
     "healthy": "solid",
@@ -356,6 +356,7 @@ def create_outcome_bar_chart(outcome_summary: Mapping[str, Any] | pd.DataFrame, 
             orientation="h",
             text=text,
             textposition="outside",
+            cliponaxis=False,
             marker_color=[COLORS[outcome] for outcome in OUTCOME_ORDER],
             customdata=np.array(
                 [
@@ -395,7 +396,82 @@ def create_outcome_bar_chart(outcome_summary: Mapping[str, Any] | pd.DataFrame, 
         font={"color": DESIGN_TOKENS["muted_text"], "size": 13},
     )
     fig.update_layout(title=build_outcome_title(summary, language=language), showlegend=False)
-    return _style_figure(fig, height=380, language=language)
+    # This chart is paired with the 460px similar-path chart in both General
+    # and Presentation mode. Its summary lives inside this chart, so matching
+    # the paired chart height keeps the two framed panels level.
+    return _style_figure(fig, height=460, language=language)
+
+
+def _create_breakpoint_single_month_chart(
+    breakpoint_result: Mapping[str, Any],
+    chart_df: pd.DataFrame,
+    *,
+    primary_factor: str,
+    krw_unit: str | None,
+    language: str,
+) -> go.Figure:
+    """Show a saved one-month comparison without implying a full trajectory.
+
+    Older cached demos can contain only the already-calculated means at the
+    breakpoint month. Rendering those values as two points across a 36-month
+    axis looks broken and suggests history that was not saved. This display is
+    intentionally a comparison of the two stored historical group means only.
+    """
+
+    row = chart_df.iloc[0]
+    month = int(row["month"])
+    raw_values = [float(row["risk_group_mean"]), float(row["avoidance_group_mean"])]
+    display_values = _display_y(raw_values, primary_factor, krw_unit, language)
+    group_labels = [
+        t("chart.risk_path_mean", language),
+        t("chart.avoidance_path_mean", language),
+    ]
+    figure = go.Figure(
+        go.Bar(
+            x=display_values,
+            y=group_labels,
+            orientation="h",
+            marker_color=[COLORS["risk"], COLORS["avoidance"]],
+            text=[
+                format_metric_value(value, primary_factor, language=language)
+                for value in raw_values
+            ],
+            textposition="outside",
+            cliponaxis=False,
+            customdata=np.array(
+                [
+                    [
+                        label,
+                        format_month_label(month, language=language),
+                        format_metric_value(value, primary_factor, language=language),
+                    ]
+                    for label, value in zip(group_labels, raw_values, strict=True)
+                ],
+                dtype=object,
+            ),
+            hovertemplate=(
+                f"{t('chart.group', language)}=%{{customdata[0]}}<br>"
+                f"{t('chart.period', language)}=%{{customdata[1]}}<br>"
+                f"{_metric_label(primary_factor, language)}=%{{customdata[2]}}<extra></extra>"
+            ),
+        )
+    )
+    figure.update_layout(
+        title=(
+            f"{build_breakpoint_title(breakpoint_result, language=language)}<br>"
+            f"<span style='font-size:12px;color:{DESIGN_TOKENS['muted_text']}'>"
+            f"{t('chart.breakpoint.single_month_context', language, month=month)}"
+            "</span>"
+        ),
+        showlegend=False,
+        hovermode="y",
+    )
+    figure.update_xaxes(
+        title_text=_metric_label(primary_factor, language),
+        range=_bar_value_range(display_values),
+    )
+    figure.update_yaxes(title_text=t("chart.group", language), autorange="reversed")
+    return _style_figure(figure, height=440, language=language)
 
 
 def create_breakpoint_comparison_chart(
@@ -439,6 +515,18 @@ def create_breakpoint_comparison_chart(
         )
 
     chart_df = chart_df.sort_values("month")
+    if len(chart_df) == 1:
+        return _create_breakpoint_single_month_chart(
+            breakpoint_result,
+            chart_df,
+            primary_factor=primary_factor,
+            krw_unit=_krw_unit_for_metric(
+                primary_factor,
+                chart_df[["risk_group_mean", "avoidance_group_mean"]].to_numpy(),
+                language,
+            ),
+            language=language,
+        )
     krw_unit = _krw_unit_for_metric(
         primary_factor,
         chart_df[["risk_group_mean", "avoidance_group_mean"]].to_numpy(),
@@ -591,6 +679,7 @@ def create_whatif_improvement_chart(whatif_results: Mapping[str, Any], language:
             marker_color=colors,
             text=[format_krw_compact(value, language=language) for value in chart_df["improvement"]],
             textposition="outside",
+            cliponaxis=False,
             customdata=np.array(
                 [
                     [
@@ -610,10 +699,19 @@ def create_whatif_improvement_chart(whatif_results: Mapping[str, Any], language:
         )
     )
     fig.add_vline(x=0, line_color=DESIGN_TOKENS["baseline"], line_dash="dash", annotation_text=t("chart.zero_won", language))
-    fig.update_xaxes(title_text=f"{t('chart.whatif.improvement', language)}({krw_unit})", tickformat=",")
+    display_improvements = chart_df["improvement"].map(
+        lambda value: scale_currency_value(value, krw_unit, language)
+    )
+    fig.update_xaxes(
+        title_text=f"{t('chart.whatif.improvement', language)}({krw_unit})",
+        tickformat=",",
+        range=_bar_value_range(display_improvements),
+    )
     fig.update_yaxes(title_text=t("chart.action", language), autorange="reversed")
     fig.update_layout(title=t("chart.whatif.improvement_title", language), showlegend=False)
-    return _style_figure(fig, height=360, language=language)
+    # Keep the paired What-if cards level while preserving enough vertical
+    # space for outside bar labels in Korean and English.
+    return _style_figure(fig, height=440, language=language)
 
 
 def create_feature_similarity_chart(
@@ -1093,14 +1191,12 @@ def _add_breakpoint_markers(
         go.Scatter(
             x=[breakpoint_month, breakpoint_month],
             y=y_values,
-            mode="markers+text",
+            # Keep exact values in hover/summary rather than placing text on
+            # top of the two series in the narrow breakpoint area.
+            mode="markers",
             name=t("chart.breakpoint_mean", language),
+            showlegend=False,
             marker={"size": 11, "color": [COLORS["risk"], COLORS["avoidance"]], "symbol": ["circle", "diamond"]},
-            text=[
-                f"{t('chart.risk_path_short', language)} {format_metric_value(values[0], metric, language=language)}",
-                f"{t('chart.avoidance_path_short', language)} {format_metric_value(values[1], metric, language=language)}",
-            ],
-            textposition=["bottom left", "top left"],
             customdata=np.array(
                 [
                     [
@@ -1122,20 +1218,6 @@ def _add_breakpoint_markers(
                 f"{_metric_label(metric, language)}=%{{customdata[2]}}<extra></extra>"
             ),
         )
-    )
-    diff = float(values[0]) - float(values[1])
-    fig.add_annotation(
-        x=breakpoint_month,
-        y=max(y_values),
-        text=t("chart.diff", language, value=_format_metric_difference(diff, metric, language)),
-        showarrow=True,
-        arrowhead=2,
-        ax=58,
-        ay=0,
-        bgcolor=DESIGN_TOKENS["card_background"],
-        bordercolor=DESIGN_TOKENS["border"],
-        borderwidth=1,
-        font={"size": 12, "color": DESIGN_TOKENS["text"]},
     )
 
 
@@ -1325,6 +1407,18 @@ def _display_y(values: pd.Series | Sequence[Any], metric: str, krw_unit: str | N
         unit = krw_unit or select_currency_unit(series, language)
         return series.map(lambda value: scale_currency_value(value, unit, language))
     return series.astype(float)
+
+
+def _bar_value_range(values: pd.Series | Sequence[Any]) -> list[float]:
+    """Reserve room for outside bar labels while retaining a visible zero."""
+
+    numeric = pd.to_numeric(pd.Series(values), errors="coerce").dropna()
+    if numeric.empty:
+        return [-1.0, 1.0]
+    lower = min(0.0, float(numeric.min()))
+    upper = max(0.0, float(numeric.max()))
+    span = max(upper - lower, abs(lower), abs(upper), 1.0)
+    return [lower - span * 0.08, upper + span * 0.20]
 
 
 def _combined_metric_values(target_df: pd.DataFrame, twin_df: pd.DataFrame, metric: str) -> pd.Series:

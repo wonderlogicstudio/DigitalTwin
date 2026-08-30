@@ -254,6 +254,9 @@
 
 ## RM Daily Review Status
 
+- [x] UX-07 E2E Guard: saved Snapshot query → detail → JSONL review save → rerun을 analytics 및 snapshot builder monkeypatch 차단 상태에서 검증했다.
+- [x] `오늘의 업무 조회`의 1.5~2초 read-only loading, 저장된 supporting evidence, synthetic presentation overlay, 완료 후 고객 단위 목록 갱신을 구현했다.
+
 - [x] 5,000명 synthetic analysis universe와 deterministic 300명 RM Portfolio를 분리했다.
 - [x] Portfolio의 relationship priority를 금융 데이터와 독립적인 synthetic CRM overlay로 만들었다.
 - [x] 기존 고객 분석 서비스로 월별 Snapshot과 workload report를 별도 artifact에 저장한다.

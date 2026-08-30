@@ -16,8 +16,11 @@ from src.rm_review_store import (
     REVIEW_FOLLOW_UP,
     REVIEW_MONITOR,
     append_review_event,
+    cancel_customer_review,
     create_review_event,
+    find_latest_review_event,
     load_review_events,
+    replace_customer_review,
 )
 
 
@@ -70,14 +73,24 @@ def test_appends_and_loads_jsonl_events_in_order(tmp_path: Path) -> None:
         result=REVIEW_MONITOR,
         note="다음 월별 Snapshot에서 다시 확인",
     )
+    third = create_review_event(
+        review_id="review-0003",
+        customer_id="C000003",
+        snapshot_id="monthly-2026-08",
+        reviewed_at=datetime(2026, 8, 29, 10, 30, tzinfo=timezone.utc),
+        result=REVIEW_FOLLOW_UP,
+        note="추가 상담 필요 여부를 추후 확인",
+    )
 
     assert append_review_event(first, event_path) == event_path
     assert append_review_event(second, event_path) == event_path
+    assert append_review_event(third, event_path) == event_path
 
     rows = [json.loads(line) for line in event_path.read_text(encoding="utf-8").splitlines()]
     loaded = load_review_events(event_path)
-    assert [row["review_id"] for row in rows] == ["review-0001", "review-0002"]
-    assert loaded == (first, second)
+    assert [row["review_id"] for row in rows] == ["review-0001", "review-0002", "review-0003"]
+    assert loaded == (first, second, third)
+    assert loaded[2].note == "추가 상담 필요 여부를 추후 확인"
     assert load_review_events(tmp_path / "missing.jsonl") == ()
 
 
@@ -114,6 +127,77 @@ def test_rejects_core_data_paths_and_malformed_jsonl(tmp_path: Path) -> None:
     malformed_path.write_text("not-json\n", encoding="utf-8")
     with pytest.raises(ValueError, match="line 1"):
         load_review_events(malformed_path)
+
+
+def test_review_record_can_be_updated_or_cancelled_without_touching_other_customers(
+    tmp_path: Path,
+) -> None:
+    event_path = tmp_path / "artifacts" / "rm_daily_review" / "reviews" / "review_events.jsonl"
+    original = create_review_event(
+        review_id="review-original",
+        customer_id="C000001",
+        snapshot_id="monthly-2026-08",
+        reviewed_at=_reviewed_at(),
+        result=REVIEW_COMPLETED,
+        note="original note",
+    )
+    other_customer = create_review_event(
+        review_id="review-other-customer",
+        customer_id="C000002",
+        snapshot_id="monthly-2026-08",
+        reviewed_at=_reviewed_at(),
+        result=REVIEW_MONITOR,
+        note="keep this record",
+    )
+    assert append_review_event(original, event_path) == event_path
+    assert append_review_event(other_customer, event_path) == event_path
+    assert find_latest_review_event(
+        load_review_events(event_path),
+        customer_id="C000001",
+        snapshot_id="monthly-2026-08",
+    ) == original
+
+    updated = create_review_event(
+        review_id="review-updated",
+        customer_id="C000001",
+        snapshot_id="monthly-2026-08",
+        reviewed_at=datetime(2026, 8, 29, 10, 0, tzinfo=timezone.utc),
+        result=REVIEW_FOLLOW_UP,
+        note="updated note",
+    )
+    assert replace_customer_review(updated, event_path) == event_path
+    assert load_review_events(event_path) == (other_customer, updated)
+    assert find_latest_review_event(
+        load_review_events(event_path),
+        customer_id="C000001",
+        snapshot_id="monthly-2026-08",
+    ) == updated
+
+    assert cancel_customer_review(
+        customer_id="C000001",
+        snapshot_id="monthly-2026-08",
+        output_path=event_path,
+    ) == 1
+    assert load_review_events(event_path) == (other_customer,)
+    assert cancel_customer_review(
+        customer_id="C000001",
+        snapshot_id="monthly-2026-08",
+        output_path=event_path,
+    ) == 0
+
+
+def test_cannot_update_a_review_record_that_does_not_exist(tmp_path: Path) -> None:
+    event_path = tmp_path / "artifacts" / "rm_daily_review" / "reviews" / "review_events.jsonl"
+    replacement = create_review_event(
+        review_id="review-replacement",
+        customer_id="C000001",
+        snapshot_id="monthly-2026-08",
+        reviewed_at=_reviewed_at(),
+        result=REVIEW_COMPLETED,
+    )
+
+    with pytest.raises(ValueError, match="No existing RM review record"):
+        replace_customer_review(replacement, event_path)
 
 
 def test_module_has_no_database_or_case_lifecycle_dependencies() -> None:

@@ -1,5 +1,9 @@
 # RM Daily Review timing bucket 정책
 
+## UX-07 운영 확인
+
+실제 Daily 화면은 저장된 Snapshot의 timing bucket을 읽어 오늘 먼저 확인, 곧 확인 예정, 모니터링을 표시한다. 동일 Snapshot을 다시 조회해도 날짜만으로 `months_from_current` 또는 bucket을 바꾸지 않는다. 고객관계 중요도는 독립 synthetic CRM metadata로서 곧 확인 예정의 filter와 같은 bucket 내부 정렬에만 사용한다.
+
 ## 1. 목적과 범위
 
 이 문서는 저장된 월별 분석 Snapshot을 Daily Review로 전달할 때의 세 timing

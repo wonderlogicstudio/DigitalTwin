@@ -1,5 +1,11 @@
 # Financial Path Twin
 
+> Synthetic universe v2: the project keeps 5,000 synthetic customers and the
+> existing Financial Path Twin method, while using a broader deterministic set
+> of financial-flow archetypes. See `SYNTHETIC_UNIVERSE_V2_DESIGN.md` for the
+> scope, evidence, and regeneration contract. The archetypes are not real CRM,
+> occupation, AUM, wealth, or customer classifications.
+
 ## 1. 프로젝트 소개
 
 Financial Path Twin은 고객의 최근 12개월 재무 궤적과 유사한 합성 고객 집단을 찾아, 그 집단이 이후 24개월 동안 어떤 결과를 보였는지 보여주는 해커톤 PoC입니다.
@@ -500,6 +506,10 @@ pytest -q tests\test_i18n.py
 ```
 
 ## 25. RM Daily Review
+
+### UX-07 운영 흐름
+
+RM 화면의 `오늘의 업무 조회`는 저장된 Monthly Snapshot, RM Portfolio/독립 synthetic CRM metadata, synthetic presentation overlay, JSONL review log를 읽는 1.5~2초 UX 피드백이다. 실시간 분석이나 timing의 일 단위 감소가 아니다. 고객 상세에서는 historical cohort comparison과 저장된 supporting evidence를 보며, `FOLLOW_UP`은 단순 RM 기록으로 Case를 만들지 않는다.
 
 Financial Path Twin은 월별 재무 궤적 분석으로 유사 고객의 경로가 갈라졌던 시점을 찾고,
 Daily Review가 그 저장 결과를 매일 업무로 연결해 RM이 오늘 누구를 왜 확인할지 알려준다.

@@ -16,22 +16,22 @@ CSS_PATH = ASSETS_DIR / "styles.css"
 FALLBACK_LOGO_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-labelledby="fallback-logo-title fallback-logo-desc">
   <title id="fallback-logo-title">Branching path mark</title>
   <desc id="fallback-logo-desc">A simple local fallback mark showing one financial path splitting into two outcomes.</desc>
-  <circle cx="48" cy="48" r="42" fill="#f8fafc" stroke="#cbd5e1" stroke-width="4"/>
-  <path d="M22 58 C36 58 42 48 50 48 C61 48 66 35 76 32" fill="none" stroke="#1f5f8b" stroke-width="7" stroke-linecap="round"/>
-  <path d="M50 48 C61 48 67 61 77 65" fill="none" stroke="#d95f02" stroke-width="7" stroke-linecap="round"/>
-  <circle cx="50" cy="48" r="7" fill="#ffffff" stroke="#1f5f8b" stroke-width="4"/>
+  <circle cx="48" cy="48" r="42" fill="#f7fafd" stroke="#d5dfea" stroke-width="4"/>
+  <path d="M22 58 C36 58 42 48 50 48 C61 48 66 35 76 32" fill="none" stroke="#005eb8" stroke-width="7" stroke-linecap="round"/>
+  <path d="M50 48 C61 48 67 61 77 65" fill="none" stroke="#c43d3d" stroke-width="7" stroke-linecap="round"/>
+  <circle cx="50" cy="48" r="7" fill="#ffffff" stroke="#005eb8" stroke-width="4"/>
 </svg>"""
 
 
 FALLBACK_HERO_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 300" role="img" aria-labelledby="fallback-hero-title fallback-hero-desc">
   <title id="fallback-hero-title">Financial path fallback illustration</title>
   <desc id="fallback-hero-desc">A quiet fallback illustration of one current financial path splitting into stable and risky future paths.</desc>
-  <rect width="960" height="300" rx="24" fill="#f8fafc"/>
-  <path d="M80 168 C210 168 290 150 395 150" fill="none" stroke="#1f5f8b" stroke-width="8" stroke-linecap="round"/>
-  <path d="M395 150 C520 130 635 82 820 78" fill="none" stroke="#1b9e77" stroke-width="7" stroke-linecap="round"/>
-  <path d="M395 150 C535 158 640 148 820 142" fill="none" stroke="#4daf4a" stroke-width="7" stroke-linecap="round" stroke-dasharray="14 14"/>
-  <path d="M395 150 C520 184 650 218 820 232" fill="none" stroke="#d95f02" stroke-width="7" stroke-linecap="round" stroke-dasharray="4 16"/>
-  <circle cx="395" cy="150" r="13" fill="#ffffff" stroke="#d95f02" stroke-width="5"/>
+  <rect width="960" height="300" rx="24" fill="#f4f7fb"/>
+  <path d="M80 168 C210 168 290 150 395 150" fill="none" stroke="#005eb8" stroke-width="8" stroke-linecap="round"/>
+  <path d="M395 150 C520 130 635 82 820 78" fill="none" stroke="#008a78" stroke-width="7" stroke-linecap="round"/>
+  <path d="M395 150 C535 158 640 148 820 142" fill="none" stroke="#2f855a" stroke-width="7" stroke-linecap="round" stroke-dasharray="14 14"/>
+  <path d="M395 150 C520 184 650 218 820 232" fill="none" stroke="#c43d3d" stroke-width="7" stroke-linecap="round" stroke-dasharray="4 16"/>
+  <circle cx="395" cy="150" r="13" fill="#ffffff" stroke="#c43d3d" stroke-width="5"/>
 </svg>"""
 
 

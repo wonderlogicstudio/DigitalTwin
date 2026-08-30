@@ -11,8 +11,10 @@ from src.i18n import t
 from src.visualizations import (
     create_breakpoint_comparison_chart,
     create_current_trajectory_chart,
+    create_outcome_bar_chart,
     create_twin_trajectory_chart,
     create_whatif_balance_chart,
+    create_whatif_improvement_chart,
 )
 
 
@@ -112,11 +114,6 @@ def test_english_charts_use_safe_title_and_legend_spacing() -> None:
             breakpoint_result=_breakpoint_result(),
             language="en",
         ),
-        create_breakpoint_comparison_chart(
-            _breakpoint_result(),
-            _breakpoint_comparison(),
-            language="en",
-        ),
         create_whatif_balance_chart(_whatif_results(), language="en"),
     ]
 
@@ -127,6 +124,15 @@ def test_english_charts_use_safe_title_and_legend_spacing() -> None:
         assert figure.layout.legend.title.text in ("", None)
         assert len(_plain_title(figure.layout.title.text)) <= 74
         assert figure.layout.title.y <= 0.93
+
+    single_month = create_breakpoint_comparison_chart(
+        _breakpoint_result(),
+        _breakpoint_comparison(),
+        language="en",
+    )
+    assert single_month.data[0].type == "bar"
+    assert "saved group averages" in single_month.layout.title.text
+    assert single_month.layout.margin.t >= 148
 
 
 def test_chart_annotations_use_short_non_overlapping_labels() -> None:
@@ -150,6 +156,57 @@ def test_chart_annotations_use_short_non_overlapping_labels() -> None:
     assert t("chart.future_period", "en") in annotation_text
     assert "In 1 months · Month 13" not in annotation_text
     assert all((annotation.font.size or 0) <= 11 for annotation in [*twin.layout.annotations, *breakpoint.layout.annotations])
+
+
+def test_breakpoint_comparison_keeps_value_labels_outside_the_plot_area() -> None:
+    figure = create_breakpoint_comparison_chart(
+        _breakpoint_result(),
+        pd.DataFrame(
+            {
+                "month": [12, 13, 14],
+                "metric": ["cash_balance_ratio"] * 3,
+                "risk_group_mean": [3.8, 3.6, 3.4],
+                "avoidance_group_mean": [5.8, 5.6, 5.4],
+            }
+        ),
+        language="en",
+    )
+    breakpoint_points = next(
+        trace for trace in figure.data if str(trace.name) == t("chart.breakpoint_mean", "en")
+    )
+
+    assert breakpoint_points.mode == "markers"
+    assert breakpoint_points.showlegend is False
+    assert breakpoint_points.text is None
+
+
+def test_paired_chart_frames_have_matching_heights_and_safe_bar_label_room() -> None:
+    twin = create_twin_trajectory_chart(
+        _target_monthly(),
+        _twin_monthly(),
+        metric="savings_rate",
+        breakpoint_result=_breakpoint_result(),
+        language="en",
+    )
+    outcome = create_outcome_bar_chart(
+        {
+            "matched_count": 200,
+            "outcomes": {
+                "healthy": {"count": 90, "ratio": 0.45},
+                "recovered": {"count": 40, "ratio": 0.20},
+                "stress": {"count": 60, "ratio": 0.30},
+                "delinquent": {"count": 10, "ratio": 0.05},
+            },
+        },
+        language="en",
+    )
+    balance = create_whatif_balance_chart(_whatif_results(), language="en")
+    improvement = create_whatif_improvement_chart(_whatif_results(), language="en")
+
+    assert twin.layout.height == outcome.layout.height
+    assert balance.layout.height == improvement.layout.height
+    assert outcome.data[0].cliponaxis is False
+    assert improvement.data[0].cliponaxis is False
 
 
 def test_whatif_chart_uses_compact_legend_labels_in_english() -> None:
@@ -200,4 +257,19 @@ def test_kpi_cards_have_wrapping_and_height_guards_for_english_copy() -> None:
     assert "grid-template-columns: repeat(5, minmax(190px, 1fr));" in css
     assert "overflow-wrap: anywhere;" in css
     assert "min-height: 132px;" in css
-    assert "padding: 10px 6px 2px;" in css
+    assert 'div[data-testid="stPlotlyChart"]' in css
+    assert "border: 0;" in css
+    assert "padding: 0;" in css
+
+
+def test_shared_kpi_grid_can_fill_a_four_card_rm_daily_dashboard() -> None:
+    rendered = render_kpi_cards_html(
+        [{"title": "Review now", "value": "19 customers", "tone": "danger"}],
+        language="en",
+        grid_columns=4,
+    )
+    css = load_css()
+
+    assert 'class="fpt-kpi-grid fpt-kpi-grid--4"' in rendered
+    assert "grid-template-columns: repeat(4, minmax(190px, 1fr));" in css
+    assert ".fpt-kpi-grid.fpt-kpi-grid--4" in css

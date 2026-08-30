@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
 import hashlib
 import inspect
 import json
 import os
+from contextlib import nullcontext
 from datetime import date, datetime
 from pathlib import Path
 
@@ -30,6 +32,17 @@ from src.rm_portfolio import (
     RELATIONSHIP_LABELS,
     RmPortfolio,
     RmPortfolioCustomer,
+)
+from src.rm_daily_review_loader import (
+    ControlledLoadingAdapter,
+    SavedDailyReviewLoadResult,
+    load_saved_rm_daily_review,
+)
+from src.rm_review_store import (
+    REVIEW_FOLLOW_UP,
+    append_review_event,
+    create_review_event,
+    load_review_events,
 )
 
 
@@ -83,6 +96,83 @@ def _snapshot_artifact() -> dict[str, object]:
             },
         ],
     }
+
+
+def _e2e_snapshot_artifact() -> dict[str, object]:
+    """Saved-only fixture covering today, upcoming, monitor, and detail evidence."""
+
+    snapshot = deepcopy(_snapshot_artifact())
+    records = snapshot["records"]
+    assert isinstance(records, list)
+    first = records[0]
+    second = records[1]
+    assert isinstance(first, dict)
+    assert isinstance(second, dict)
+    first["supporting_evidence"] = {
+        "available": True,
+        "evidence_status": "available",
+        "why_now": {
+            "breakpoint_status": "found",
+            "months_from_current": 1,
+            "primary_factor": "cash_balance_ratio",
+        },
+        "current_change_cards": [
+            {
+                "key": "cash_availability",
+                "value": 2,
+                "value_type": "consecutive_months",
+            }
+        ],
+        "cohort_path_chart": {
+            "available": True,
+            "metric": "cash_balance_ratio",
+            "risk_path": [{"month": 1, "mean": 0.61}, {"month": 13, "mean": 0.38}],
+            "avoidance_path": [{"month": 1, "mean": 0.60}, {"month": 13, "mean": 0.70}],
+            "group_sizes": {"risk_path": 50, "avoidance_path": 150},
+            "breakpoint_marker": {"month": 13},
+        },
+        "outcome_summary": {"matched_count": 200, "outcomes": {}},
+        "whatif_summary": {
+            "available": True,
+            "scenarios": [{"scenario_name": "baseline"}],
+        },
+    }
+    second["relationship_metadata"] = {
+        **second["relationship_metadata"],  # type: ignore[arg-type]
+        "relationship_priority": "CORE",
+        "relationship_label": "CORE",
+    }
+    records.append(
+        {
+            "customer_id": "C000003",
+            "snapshot_id": "monthly-2026-07",
+            "current_summary": {"current_status": "healthy"},
+            "matched_count": 200,
+            "breakpoint": {
+                "status": "insufficient_group_size",
+                "breakpoint_month": None,
+                "months_from_current": None,
+                "primary_factor": None,
+            },
+            "evidence": {
+                "available": False,
+                "status": "insufficient_group_size",
+                "errors": {},
+            },
+            "relationship_metadata": {
+                "source": "synthetic_crm_overlay",
+                "rm_portfolio_id": "RM-POC-001",
+                "relationship_priority": "STANDARD",
+                "relationship_label": "STANDARD",
+            },
+            "outcome_summary": {"matched_count": 200, "outcomes": {}},
+            "supporting_evidence": {
+                "available": False,
+                "evidence_status": "insufficient_group_size",
+            },
+        }
+    )
+    return snapshot
 
 
 def _fail_if_called(name: str):
@@ -293,6 +383,126 @@ def test_daily_worklist_and_views_use_saved_artifact_without_analytics_or_financ
     assert _file_digest(customer_master_path) == before_master_digest
 
 
+def test_saved_snapshot_e2e_daily_flow_never_calls_analytics_or_snapshot_build(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    """Daily query, detail, review save, and rerun operate only on saved artifacts."""
+
+    _block_live_analytics(monkeypatch)
+    monkeypatch.setattr(
+        monthly_review_snapshot,
+        "build_monthly_review_snapshot",
+        _fail_if_called("monthly snapshot builder"),
+    )
+    snapshot_directory = tmp_path / "monthly"
+    snapshot_directory.mkdir()
+    snapshot_path = snapshot_directory / "monthly-2026-07.json"
+    snapshot_path.write_text(json.dumps(_e2e_snapshot_artifact()), encoding="utf-8")
+    os.utime(snapshot_path, (datetime(2026, 7, 31).timestamp(),) * 2)
+    overlay_path = tmp_path / "presentation.json"
+    overlay_path.write_text(
+        json.dumps(
+            {
+                "customers": [
+                    {
+                        "customer_id": "C000001",
+                        "display_name": "Synthetic customer 01",
+                        "presentation_label": "Synthetic customer display information for this PoC",
+                    },
+                    {
+                        "customer_id": "C000002",
+                        "display_name": "Synthetic customer 02",
+                    },
+                    {
+                        "customer_id": "C000003",
+                        "display_name": "Synthetic customer 03",
+                    },
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    financial_data_path = tmp_path / "customer_monthly.csv"
+    financial_data_path.write_text("customer_id,month,cash_balance\nC000001,12,100\n", encoding="utf-8")
+    raw_digest_before = _file_digest(financial_data_path)
+    event_path = tmp_path / "review_events.jsonl"
+    adapter = ControlledLoadingAdapter(sleep=lambda _seconds: None, monotonic=lambda: 0.0)
+
+    initial = load_saved_rm_daily_review(
+        daily_date=date(2026, 8, 29),
+        snapshot_directory=snapshot_directory,
+        presentation_overlay_path=overlay_path,
+        review_events_loader=lambda: load_review_events(event_path),
+        loading_adapter=adapter,
+        language="en",
+    )
+    next_day = load_saved_rm_daily_review(
+        daily_date=date(2026, 8, 30),
+        snapshot_directory=snapshot_directory,
+        presentation_overlay_path=overlay_path,
+        review_events_loader=lambda: load_review_events(event_path),
+        loading_adapter=adapter,
+        language="en",
+    )
+
+    assert initial.status == "READY"
+    assert initial.worklist is not None
+    assert initial.dashboard is not None
+    assert (initial.dashboard.today_count, initial.dashboard.upcoming_count, initial.dashboard.monitor_count) == (1, 1, 1)
+    assert initial.dashboard.today_items[0].display_name == "Synthetic customer 01"
+    assert initial.dashboard.upcoming_items[0].relationship_badge == "Core"
+    assert next_day.dashboard is not None
+    assert [item.timing_months for item in initial.dashboard.customer_list] == [
+        item.timing_months for item in next_day.dashboard.customer_list
+    ]
+
+    presentation_by_customer = {
+        row.customer_id: {
+            "display_name": row.display_name,
+            "display_owner_or_team": row.display_owner_or_team,
+            "presentation_label": row.presentation_label,
+        }
+        for row in initial.dashboard.customer_list
+    }
+    detail = build_rm_customer_detail_view(
+        initial.worklist,
+        "C000001",
+        presentation_metadata_by_customer=presentation_by_customer,
+        language="en",
+    )
+    assert detail.display_name == "Synthetic customer 01"
+    assert detail.relationship_badge == "Core"
+    assert len(detail.conversation_preparation) == 3
+    assert detail.supporting_analysis.historical_cohort_chart.available is True
+
+    event = create_review_event(
+        review_id="e2e-follow-up",
+        customer_id="C000001",
+        snapshot_id="monthly-2026-07",
+        reviewed_at=datetime(2026, 8, 29, 9, tzinfo=datetime.now().astimezone().tzinfo),
+        result=REVIEW_FOLLOW_UP,
+        note="Optional RM note",
+    )
+    append_review_event(event, event_path)
+    rerun = load_saved_rm_daily_review(
+        daily_date=date(2026, 8, 29),
+        snapshot_directory=snapshot_directory,
+        presentation_overlay_path=overlay_path,
+        review_events_loader=lambda: load_review_events(event_path),
+        loading_adapter=adapter,
+        language="en",
+    )
+
+    assert rerun.dashboard is not None
+    assert rerun.worklist is not None
+    assert rerun.dashboard.today_count == 0
+    assert rerun.dashboard.completed_today_count == 1
+    assert [item.customer_id for item in rerun.worklist.completed_today] == ["C000001"]
+    assert load_review_events(event_path) == (event,)
+    assert _file_digest(financial_data_path) == raw_digest_before
+
+
 class _NoSnapshotStreamlit:
     def __init__(self) -> None:
         self.session_state: dict[str, object] = {}
@@ -313,16 +523,32 @@ class _NoSnapshotStreamlit:
     def code(self, _value: str, *, language: str) -> None:
         self.calls.append("code")
 
+    def button(self, _value: str, *, key: str) -> bool:
+        self.calls.append("button")
+        return True
+
+    def spinner(self, _value: str):
+        self.calls.append("spinner")
+        return nullcontext()
+
 
 def test_missing_snapshot_shows_cli_guidance_without_automatic_reanalysis(monkeypatch) -> None:
     _block_live_analytics(monkeypatch)
     fake_st = _NoSnapshotStreamlit()
     monkeypatch.setattr(app_module, "st", fake_st)
-    monkeypatch.setattr(app_module, "load_latest_rm_snapshot_artifact", lambda: None)
+    monkeypatch.setattr(
+        app_module,
+        "load_saved_rm_daily_review",
+        lambda **_kwargs: SavedDailyReviewLoadResult(
+            status="MISSING_SNAPSHOT",
+            message="저장된 월별 Snapshot이 없습니다.",
+            cli_command="python scripts/build_rm_monthly_snapshot.py --snapshot-id YYYY-MM",
+        ),
+    )
 
     app_module.render_rm_daily_review_mode(daily_date=date(2026, 8, 29))
 
-    assert fake_st.calls == ["title", "caption", "info", "code"]
+    assert fake_st.calls == ["title", "caption", "button", "spinner", "info", "code"]
 
 
 def test_rm_main_short_circuits_all_live_analytics_before_daily_ui(monkeypatch) -> None:

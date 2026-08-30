@@ -114,3 +114,27 @@
 - Reason: This makes the historical Breakpoint timing operationally available to an RM without changing Financial Path Twin methodology or creating a new risk model. The Daily layer remains an operational delivery cycle, not an analytics execution path.
 - Impact files: `src/customer_analysis.py`, `src/monthly_review_snapshot.py`, `src/daily_review.py`, `src/daily_worklist.py`, `src/rm_daily_review_view.py`, `src/rm_review_store.py`, `app.py`, `scripts/build_rm_monthly_snapshot.py`, and RM Daily tests.
 - Alternative: Recompute analytics whenever the RM opens the screen or derive a composite relationship-risk score. Both violate the saved Snapshot boundary and make relationship priority appear as Digital Twin risk.
+
+## DEC-019 Saved RM UX Evidence and Read-only Retrieval
+- Date: 2026-08-29
+- Status: accepted
+- Decision: Detail evidence for RM Daily is generated only when the existing Monthly Snapshot is built and saved as explicit provenance, why-now timing, observed change cards, historical cohort comparison data, minimal outcome summary, and optional What-if summary. The RM?s query action displays a 1.5?2 second read-only loading feedback while it reads the saved Snapshot, independent overlays, and review log; it does not run analytics or decrement timing by day.
+- Reason: The RM needs an understandable, screenshot-level workflow from today?s worklist through evidence, conversation preparation, result recording, and completion without turning Daily Review into an unbounded analytics screen or a hidden new prediction model.
+- Impact files: `RM_DAILY_REVIEW_UX_SPEC.md`; subsequent implementation may extend the separate Monthly Snapshot artifact, display overlays, pure Daily view model, and RM UI while preserving all core Financial Path Twin schemas and calculations.
+- Alternative: Calculate detail evidence on demand in the Daily screen or imitate a risk chart with new score/probability. Both would blur the monthly-analysis/Daily-delivery boundary and misrepresent historical comparison evidence.
+
+## DEC-020 UX-07 RM Daily E2E Guard and Manual Completion
+- Date: 2026-08-29
+- Status: accepted
+- Decision: Lock an end-to-end saved-artifact path: Monthly Snapshot build may use existing analytics, while Daily query, detail view, review save, and rerun must work with analytics and snapshot-builder entry points monkeypatched to fail. A manual review event moves only the matching customer for the same snapshot and business date to the completed area.
+- Reason: The RM workflow must demonstrate an operational loop without turning a page refresh, detail chart, or `FOLLOW_UP` result into a new analysis, Case, Alert, or automated action.
+- Impact files: `tests/test_rm_daily_analysis_boundary.py`, `src/rm_daily_review_loader.py`, `src/rm_daily_review_view.py`, `src/rm_review_store.py`, `app.py`, and the RM Daily handoff documents.
+- Alternative: Permit on-demand analytics or delegate follow-up to the existing selected/routed Case workflow. Both would blur ownership and violate the simple saved-Snapshot Daily flow.
+
+## DEC-021 Synthetic Financial Universe v2
+- Date: 2026-08-29
+- Status: accepted
+- Decision: Replace the prior deterministic 5,000-customer data-generation baseline with eight deterministic synthetic financial-flow archetypes: stable, gradual deterioration, event shock, recovery, overspending, synthetic business-income variability, synthetic liquidity resilience, and synthetic financial constraint. Keep customer count, master/monthly column schemas, month ranges, feature engineering, matching, outcome, breakpoint, and What-if implementations unchanged.
+- Reason: Read-only measurement of the prior 300-customer RM Snapshot found that 84 of 107 found breakpoints used variable expense and all found breakpoints occurred one month after the observation window. The Daily list also always displayed its static cash card first, even when that was not the actual breakpoint factor. V2 broadens deterministic starting conditions and future pressure timing without tuning a Daily workload or an outcome threshold.
+- Impact files: `SYNTHETIC_UNIVERSE_V2_DESIGN.md`, `config/settings.py`, `src/data_generator.py`, `src/models.py`, `src/labels.py`, `src/i18n.py`, data-generation tests, and regenerated local raw/processed/demo artifacts.
+- Alternative: Change matching weights, breakpoint thresholds, Daily timing thresholds, or select Portfolio customers from outcomes. All would either change analytical methodology or target an operational result instead of diversifying source paths.

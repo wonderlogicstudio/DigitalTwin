@@ -13,6 +13,7 @@ import pandas as pd
 from config import settings
 from src.assets import load_css_asset
 from src.breakpoint_analyzer import find_breakpoint
+from src.display_tones import classify_current_metric_tone
 from src.copy import (
     BREAKPOINT_INSUFFICIENT_MESSAGE,
     BREAKPOINT_NOT_FOUND_MESSAGE,
@@ -245,25 +246,7 @@ def build_kpi_cards(
 def classify_kpi_tone(metric: str, value: Any) -> str:
     """Classify display tone from documented business thresholds only."""
 
-    number = _safe_float(value)
-    if number is None:
-        return "neutral"
-    if metric == "cash_balance":
-        return "danger" if number < 0 else "neutral"
-    if metric == "dsr":
-        if number >= 0.45:
-            return "danger"
-        if number >= 0.35:
-            return "watch"
-        return "stable"
-    if metric == "savings_rate":
-        return "watch" if number < 0.05 else "neutral"
-    if metric == "fixed_expense_ratio":
-        if number >= 0.55:
-            return "danger"
-        if number >= 0.45:
-            return "watch"
-    return "neutral"
+    return classify_current_metric_tone(metric, value)
 
 
 def build_current_status_sentence(
@@ -357,8 +340,18 @@ def render_customer_identity_html(items: list[dict[str, Any]], language: str = "
     return f'<section class="fpt-customer-strip" aria-label="{aria_label}">' + "".join(chips) + "</section>"
 
 
-def render_kpi_cards_html(cards: list[dict[str, Any]], language: str = "ko") -> str:
-    """Render the first-screen KPI card grid."""
+def render_kpi_cards_html(
+    cards: list[dict[str, Any]],
+    language: str = "ko",
+    *,
+    grid_columns: int | None = None,
+) -> str:
+    """Render the shared first-screen KPI card grid.
+
+    ``grid_columns`` is a presentation-only layout hint.  It lets a screen
+    with four cards use the same card system as the five-card General and
+    Presentation screens without leaving an unused fifth column.
+    """
 
     rendered_cards = []
     for card in cards:
@@ -384,6 +377,7 @@ def render_kpi_cards_html(cards: list[dict[str, Any]], language: str = "ko") -> 
             f'<article class="fpt-kpi-card tone-{tone}">'
             '<div class="fpt-kpi-topline">'
             '<span class="fpt-kpi-title-wrap">'
+            f'<span class="fpt-kpi-state-dot tone-{tone}" aria-hidden="true"></span>'
             f'<span class="fpt-kpi-title">{escape_html(card.get("title", ""))}</span>'
             f"{help_html}"
             "</span>"
@@ -395,7 +389,12 @@ def render_kpi_cards_html(cards: list[dict[str, Any]], language: str = "ko") -> 
             "</article>"
         )
     aria_label = escape_html(t("kpi.grid_aria", language))
-    return f'<section class="fpt-kpi-grid" aria-label="{aria_label}">' + "".join(rendered_cards) + "</section>"
+    grid_class = "fpt-kpi-grid"
+    if grid_columns is not None:
+        if grid_columns <= 0:
+            raise ValueError("grid_columns must be positive when provided.")
+        grid_class += f" fpt-kpi-grid--{int(grid_columns)}"
+    return f'<section class="{grid_class}" aria-label="{aria_label}">' + "".join(rendered_cards) + "</section>"
 
 
 def render_status_summary_html(sentence: str) -> str:
@@ -692,6 +691,12 @@ def render_info_cards_html(cards: list[Mapping[str, Any]], aria_label: str = "ìš
     rendered_cards = []
     for card in cards:
         tone = escape_html(card.get("tone", "neutral"))
+        status = card.get("status")
+        status_html = (
+            f'<div class="fpt-info-card-status tone-{tone}">{escape_html(status)}</div>'
+            if status
+            else ""
+        )
         secondary = card.get("secondary")
         secondary_html = (
             f'<div class="fpt-info-card-secondary">{escape_html(secondary)}</div>' if secondary else ""
@@ -699,6 +704,7 @@ def render_info_cards_html(cards: list[Mapping[str, Any]], aria_label: str = "ìš
         rendered_cards.append(
             f'<article class="fpt-info-card tone-{tone}">'
             f'<div class="fpt-info-card-title">{escape_html(card.get("title", ""))}</div>'
+            f"{status_html}"
             f'<div class="fpt-info-card-value">{escape_html(card.get("value", ""))}</div>'
             f'<div class="fpt-info-card-detail">{escape_html(card.get("detail", ""))}</div>'
             f"{secondary_html}"
@@ -708,6 +714,70 @@ def render_info_cards_html(cards: list[Mapping[str, Any]], aria_label: str = "ìš
         f'<section class="fpt-info-card-grid" aria-label="{escape_html(aria_label)}">'
         + "".join(rendered_cards)
         + "</section>"
+    )
+
+
+def render_rm_customer_detail_header_html(
+    *,
+    display_name: str,
+    customer_id: str,
+    presentation_label: str,
+    relationship_label: str,
+    relationship_value: str,
+    relationship_note: str,
+) -> str:
+    """Render an operational identity header for the RM detail view."""
+
+    return (
+        '<section class="fpt-rm-customer-header">'
+        '<div class="fpt-rm-customer-identity">'
+        f'<span class="fpt-rm-customer-kicker">{escape_html(presentation_label)}</span>'
+        f'<h2>{escape_html(display_name)} <span>({escape_html(customer_id)})</span></h2>'
+        "</div>"
+        '<div class="fpt-rm-customer-relationship">'
+        f'<span>{escape_html(relationship_label)}</span>'
+        f'<strong>{escape_html(relationship_value)}</strong>'
+        f'<small>{escape_html(relationship_note)}</small>'
+        "</div>"
+        "</section>"
+    )
+
+
+def render_rm_review_brief_html(
+    *,
+    label: str,
+    summary: str,
+    supporting_text: str,
+    timing_title: str,
+    timing_value: str,
+    timing_detail: str,
+    focus_title: str,
+    focus_value: str,
+    focus_detail: str,
+) -> str:
+    """Render saved RM evidence as a review brief instead of generic cards."""
+
+    return (
+        '<section class="fpt-rm-review-brief" aria-label="'
+        f'{escape_html(label)}">'
+        '<div class="fpt-rm-review-brief-main">'
+        f'<span class="fpt-rm-review-brief-kicker">{escape_html(label)}</span>'
+        f'<p class="fpt-rm-review-brief-summary">{escape_html(summary)}</p>'
+        f'<p class="fpt-rm-review-brief-supporting">{escape_html(supporting_text)}</p>'
+        "</div>"
+        '<div class="fpt-rm-review-facts">'
+        '<div class="fpt-rm-review-fact fpt-rm-review-fact--timing">'
+        f'<span>{escape_html(timing_title)}</span>'
+        f'<strong>{escape_html(timing_value)}</strong>'
+        f'<small>{escape_html(timing_detail)}</small>'
+        "</div>"
+        '<div class="fpt-rm-review-fact fpt-rm-review-fact--focus">'
+        f'<span>{escape_html(focus_title)}</span>'
+        f'<strong>{escape_html(focus_value)}</strong>'
+        f'<small>{escape_html(focus_detail)}</small>'
+        "</div>"
+        "</div>"
+        "</section>"
     )
 
 

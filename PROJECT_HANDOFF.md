@@ -1,5 +1,16 @@
 # Financial Path Twin Project Handoff
 
+## Synthetic universe v2 handoff note
+
+The current deterministic 5,000-customer baseline uses eight financial-flow
+archetypes, including synthetic business-income variability, liquidity-resilient
+paths, and financially constrained paths. These are generator inputs only; do
+not interpret them as real occupations, AUM, customer wealth, CRM status, or
+relationship priority. The detailed rule and validation contract is in
+`SYNTHETIC_UNIVERSE_V2_DESIGN.md`. Rebuild core data explicitly with
+`python scripts/run_pipeline.py --force`, then explicitly create a new RM
+Monthly Snapshot; Daily Review never rebuilds analytics itself.
+
 ## 1. 문서 목적과 기준
 
 이 문서는 다음 작업자가 현재 프로젝트의 동작 범위, 검증 상태, 변경 금지 조건을 빠르게 확인할 수 있도록 정리한 인수인계 문서입니다.
@@ -130,6 +141,10 @@ DB 종류나 스키마는 위 결정이 완료되기 전까지 임의로 선택�
 새 작업은 코드 수정 전에 현재 테스트와 실제 구현을 다시 확인하고, 문서와 코드의 불일치를 먼저 보고해야 합니다.
 
 ## 12. RM Daily Review 인수인계
+
+### UX-07 사용 흐름
+
+RM은 `오늘의 업무 조회` 후 실제 Snapshot의 오늘/곧/모니터링 업무를 본다. 고객 상세에서 historical comparison 기반 확인 이유, 독립 고객관계 metadata, 대화 준비, 저장된 분석 근거를 확인한 뒤 결과와 선택 메모를 저장한다. 저장 후 해당 customer만 같은 snapshot·업무일의 완료 영역으로 이동하며, `FOLLOW_UP`은 Case 생성이 아니다.
 
 RM Daily Review는 월별 Financial Path Twin 분석을 다시 구현하지 않는다. 배치 CLI가
 기존 5,000명 universe에 대해 Portfolio 300명의 분석 결과를 월별 Snapshot으로 저장하고,

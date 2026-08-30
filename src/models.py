@@ -15,6 +15,9 @@ Persona = Literal[
     "event_shock",
     "recovery",
     "overspending",
+    "self_employed",
+    "asset_resilient",
+    "financially_constrained",
 ]
 EventType = Literal[
     "none",

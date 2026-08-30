@@ -61,8 +61,8 @@ savings_rate_formula,pass,0,0,savings_rate follows income > 0 and income = 0 rul
 fixed_expense_ratio_formula,pass,0,0,fixed_expense_ratio follows income > 0 and income = 0 rules.
 variable_expense_ratio_formula,pass,0,0,variable_expense_ratio follows income > 0 and income = 0 rules.
 dsr_formula,pass,0,0,dsr follows income > 0 and income = 0 rules.
-master_persona_values,pass,none,"stable,gradual_deterioration,event_shock,recovery,overspending",persona must only contain documented values.
-monthly_persona_values,pass,none,"stable,gradual_deterioration,event_shock,recovery,overspending",persona must only contain documented values.
+master_persona_values,pass,none,"stable,gradual_deterioration,event_shock,recovery,overspending,self_employed,asset_resilient,financially_constrained",persona must only contain documented values.
+monthly_persona_values,pass,none,"stable,gradual_deterioration,event_shock,recovery,overspending,self_employed,asset_resilient,financially_constrained",persona must only contain documented values.
 event_type_values,pass,none,"none,job_loss,job_change,childbirth,medical_cost,housing_cost_increase,interest_rate_shock,income_recovery,expense_reduction,new_loan",event_type must only contain documented values.
 primary_event_type_values,pass,none,"none,job_loss,job_change,childbirth,medical_cost,housing_cost_increase,interest_rate_shock,income_recovery,expense_reduction,new_loan",primary_event_type must only contain documented values.
 monthly_status_values,pass,none,"healthy,watch,stress,delinquent",monthly_status must only contain documented values.

@@ -1,6 +1,9 @@
 persona,count,ratio,expected_ratio,difference
-stable,1500,0.3,0.3,0.0
-gradual_deterioration,1000,0.2,0.2,0.0
-event_shock,1000,0.2,0.2,0.0
-recovery,750,0.15,0.15,0.0
-overspending,750,0.15,0.15,0.0
+stable,1000,0.2,0.2,0.0
+gradual_deterioration,750,0.15,0.15,0.0
+event_shock,750,0.15,0.15,0.0
+recovery,600,0.12,0.12,0.0
+overspending,650,0.13,0.13,0.0
+self_employed,600,0.12,0.12,0.0
+asset_resilient,400,0.08,0.08,0.0
+financially_constrained,250,0.05,0.05,0.0

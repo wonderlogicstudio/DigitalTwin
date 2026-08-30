@@ -56,14 +56,20 @@ PERSONAS = (
     "event_shock",
     "recovery",
     "overspending",
+    "self_employed",
+    "asset_resilient",
+    "financially_constrained",
 )
 
 PERSONA_DISTRIBUTION = {
-    "stable": 0.30,
-    "gradual_deterioration": 0.20,
-    "event_shock": 0.20,
-    "recovery": 0.15,
-    "overspending": 0.15,
+    "stable": 0.20,
+    "gradual_deterioration": 0.15,
+    "event_shock": 0.15,
+    "recovery": 0.12,
+    "overspending": 0.13,
+    "self_employed": 0.12,
+    "asset_resilient": 0.08,
+    "financially_constrained": 0.05,
 }
 
 EVENT_TYPES = (
@@ -151,10 +157,10 @@ TRAJECTORY_FEATURE_COLUMNS = (
     "recent_large_expense_count_12m",
 )
 
-INCOME_MIN = 2_000_000
-INCOME_MAX = 12_000_000
-CASH_BALANCE_MIN = 1_000_000
-CASH_BALANCE_MAX = 100_000_000
+INCOME_MIN = 1_500_000
+INCOME_MAX = 20_000_000
+CASH_BALANCE_MIN = 500_000
+CASH_BALANCE_MAX = 250_000_000
 NO_LOAN_PROBABILITY = 0.25
 
 MATCH_FEATURES = (

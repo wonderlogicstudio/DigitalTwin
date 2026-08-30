@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 import pandas as pd
+import plotly.graph_objects as go
 import streamlit as st
 
 
@@ -30,6 +31,7 @@ from src.demo_cache import (  # noqa: E402
 )
 from src.assets import load_hero_svg, load_logo_svg  # noqa: E402
 from src.i18n import DEFAULT_LANGUAGE, get_supported_languages, t  # noqa: E402
+from src.labels import label_metric  # noqa: E402
 from src.ui_components import (  # noqa: E402
     ANALYSIS_METRICS,
     add_balance_ratios,
@@ -51,6 +53,8 @@ from src.ui_components import (  # noqa: E402
     render_hero_html,
     render_info_cards_html,
     render_kpi_cards_html,
+    render_rm_customer_detail_header_html,
+    render_rm_review_brief_html,
     render_presentation_notice_html,
     render_presentation_scene_heading_html,
     render_status_summary_html,
@@ -65,17 +69,24 @@ from src.presentation import (  # noqa: E402
     load_presentation_payload,
     resolve_presentation_customer_id,
 )
-from src.daily_worklist import build_daily_worklist  # noqa: E402
+from src.daily_worklist import build_daily_worklist, previous_business_day  # noqa: E402
 from src.rm_daily_review_view import (  # noqa: E402
     build_rm_customer_detail_view,
-    build_rm_completed_customer_list_view,
     build_rm_daily_review_view,
 )
+from src.rm_daily_review_loader import load_saved_rm_daily_review  # noqa: E402
 from src.rm_review_store import (  # noqa: E402
+    REVIEW_COMPLETED,
+    REVIEW_FOLLOW_UP,
+    REVIEW_MONITOR,
     append_review_event,
+    cancel_customer_review,
     create_review_event,
+    find_latest_review_event,
     load_review_events,
+    replace_customer_review,
 )
+from src.theme import DESIGN_TOKENS  # noqa: E402
 from src.visualizations import (  # noqa: E402
     create_breakpoint_comparison_chart,
     create_current_trajectory_chart,
@@ -92,6 +103,28 @@ APP_CONCEPT_SUMMARY = "당신의 미래를 예측하지 않습니다"
 
 RM_DAILY_REVIEW_MODE = "RM 오늘의 업무"
 RM_DAILY_REVIEW_SNAPSHOT_DIR = PROJECT_ROOT / "artifacts" / "rm_daily_review" / "monthly"
+RM_DAILY_REVIEW_PRESENTATION_OVERLAY_PATH = (
+    PROJECT_ROOT
+    / "artifacts"
+    / "rm_daily_review"
+    / "presentation"
+    / "rm_presentation_overlay.json"
+)
+RM_DAILY_PANEL_TODAY = "today"
+RM_DAILY_PANEL_UPCOMING = "upcoming"
+RM_DAILY_PANEL_MONITOR = "monitor"
+RM_DAILY_PANEL_COMPLETED = "completed"
+RM_DAILY_PANEL_NONE = "none"
+RM_DAILY_PANEL_STATE_KEY = "rm_daily_active_panel"
+RM_DAILY_HELP_STATE_KEY = "rm_daily_help_visible"
+RM_DAILY_SELECTED_COMPLETED_CUSTOMER_STATE_KEY = "rm_selected_completed_customer_id"
+RM_DAILY_RECORD_EDIT_STATE_KEY = "rm_daily_record_edit_customer_id"
+RM_DAILY_RECORD_CANCEL_CONFIRM_STATE_KEY = "rm_daily_record_cancel_customer_id"
+RM_DAILY_VISIBLE_SNAPSHOT_STATE_KEY = "rm_daily_visible_snapshot_id"
+RM_DAILY_REVIEW_QUERY_LANGUAGE_STATE_KEY = "rm_daily_review_query_language"
+# A display-only work rhythm: Daily timing and ordering stay untouched while
+# an RM sees a manageable batch before explicitly expanding the list.
+RM_DAILY_ROW_BATCH_SIZE = 5
 
 
 st.set_page_config(
@@ -478,7 +511,12 @@ def render_sidebar(demo_df: pd.DataFrame, cache_payload: Any | None, language: s
 
     analysis_metric_options = get_analysis_metric_options(language)
     selected_metric = st.sidebar.selectbox(
-        t("sidebar.metric_selector", language),
+        t(
+            "sidebar.presentation_metric_selector"
+            if presentation_mode
+            else "sidebar.metric_selector",
+            language,
+        ),
         list(analysis_metric_options),
         index=0,
         format_func=lambda metric: analysis_metric_options[metric],
@@ -539,14 +577,337 @@ def build_rm_daily_review_worklist(
         event.customer_id
         for event in review_events
         if event.snapshot_id == snapshot_id
+    }
+    completed_today_customer_ids = {
+        event.customer_id
+        for event in review_events
+        if event.snapshot_id == snapshot_id
         and event.reviewed_at.astimezone().date() == daily_date
     }
+    previous_workday_completed_count = sum(
+        1
+        for event in review_events
+        if event.snapshot_id == snapshot_id
+        and event.reviewed_at.astimezone().date() == previous_business_day(daily_date)
+    )
     return build_daily_worklist(
         snapshot_artifact,
         daily_date=daily_date,
         completed_customer_ids=completed_customer_ids,
+        completed_today_customer_ids=completed_today_customer_ids,
+        previous_workday_completed_count=previous_workday_completed_count,
         snapshot_published_on=datetime.fromtimestamp(snapshot_path.stat().st_mtime).date(),
     )
+
+
+def _build_rm_daily_kpi_cards(
+    dashboard: Any,
+    *,
+    language: str,
+) -> list[dict[str, str]]:
+    """Build four operational cards using only the saved Daily view model."""
+
+    card_specs = (
+        (
+            t("rm.metric.today", language),
+            dashboard.today_count,
+            t("rm.summary.today", language),
+            "watch",
+        ),
+        (
+            t("rm.metric.upcoming", language),
+            dashboard.upcoming_count,
+            t("rm.summary.upcoming", language),
+            "watch",
+        ),
+        (
+            t("rm.metric.monitor", language),
+            dashboard.monitor_count,
+            t("rm.summary.monitor", language),
+            "neutral",
+        ),
+        (
+            t("rm.metric.completed", language),
+            dashboard.completed_today_count,
+            t(
+                "rm.summary.completed_on",
+                language,
+                date=_format_rm_plan_date(dashboard.freshness.daily_date, language),
+            ),
+            "stable",
+        ),
+    )
+    return [
+        {
+            "title": label,
+            "value": t("rm.people", language, count=count),
+            "description": description,
+            "detail": t("rm.kpi.snapshot_source", language),
+            "tone": tone,
+        }
+        for label, count, description, tone in card_specs
+    ]
+
+
+def _render_rm_daily_kpi_cards(
+    dashboard: Any,
+    *,
+    language: str,
+) -> str:
+    """Render one operational KPI row and its directly associated actions.
+
+    The cards deliberately use the shared General/Presentation KPI treatment.
+    Their controls open the related list below, instead of repeating the same
+    counts in a second selector-card row.
+    """
+
+    cards = _build_rm_daily_kpi_cards(dashboard, language=language)
+    st.markdown(
+        render_kpi_cards_html(cards, language=language, grid_columns=4),
+        unsafe_allow_html=True,
+    )
+    active_panel = str(
+        st.session_state.get(RM_DAILY_PANEL_STATE_KEY, RM_DAILY_PANEL_NONE)
+    )
+    action_specs = (
+        (RM_DAILY_PANEL_TODAY, t("rm.metric.today", language)),
+        (RM_DAILY_PANEL_UPCOMING, t("rm.metric.upcoming", language)),
+        (RM_DAILY_PANEL_MONITOR, t("rm.metric.monitor", language)),
+        (RM_DAILY_PANEL_COMPLETED, t("rm.metric.completed", language)),
+    )
+    for column, (panel_key, panel_label) in zip(st.columns(4), action_specs):
+        with column:
+            is_active = active_panel == panel_key
+            if st.button(
+                t("rm.panel.close", language)
+                if is_active
+                else t("rm.panel.open", language),
+                key=f"rm_daily_kpi_action_{panel_key}",
+                use_container_width=True,
+                help=panel_label,
+            ):
+                st.session_state[RM_DAILY_PANEL_STATE_KEY] = (
+                    RM_DAILY_PANEL_NONE if is_active else panel_key
+                )
+                st.session_state.pop("rm_selected_customer_id", None)
+                st.session_state.pop(RM_DAILY_SELECTED_COMPLETED_CUSTOMER_STATE_KEY, None)
+                active_panel = RM_DAILY_PANEL_NONE if is_active else panel_key
+    return active_panel
+
+
+def _render_rm_daily_planning_summary(
+    dashboard: Any,
+    *,
+    language: str,
+) -> None:
+    """Show a saved-work horizon without changing any timing bucket."""
+
+    plan = dashboard.planning
+    next_workday_label = _format_rm_plan_date(plan.next_workday, language)
+    previous_workday_label = _format_rm_plan_date(plan.previous_workday, language)
+    cards = [
+        {
+            "title": t("rm.planning.today", language),
+            "value": t("rm.people", language, count=len(plan.today_items)),
+            "detail": t(
+                "rm.planning.today.detail",
+                language,
+                date=_format_rm_plan_date(plan.effective_workday, language),
+            ),
+            "tone": "watch",
+        },
+        {
+            "title": t("rm.planning.next_workday", language),
+            "value": t("rm.people", language, count=len(plan.next_workday_items)),
+            "detail": t("rm.planning.next_workday.detail", language, date=next_workday_label),
+            "tone": "watch",
+        },
+        {
+            "title": t("rm.planning.this_month", language),
+            "value": t("rm.people", language, count=len(plan.this_month_items)),
+            "detail": t("rm.planning.this_month.detail", language),
+            "tone": "neutral",
+        },
+        {
+            "title": t("rm.planning.next_month", language),
+            "value": t("rm.people", language, count=len(plan.next_month_items)),
+            "detail": t("rm.planning.next_month.detail", language),
+            "tone": "stable",
+        },
+        {
+            "title": t("rm.planning.previous_completed", language),
+            "value": t(
+                "rm.people",
+                language,
+                count=plan.previous_workday_completed_count,
+            ),
+            "detail": t(
+                "rm.planning.previous_completed.detail",
+                language,
+                date=previous_workday_label,
+            ),
+            "tone": "neutral",
+        },
+    ]
+    heading_column, help_column = st.columns([6.0, 1.0])
+    with heading_column:
+        st.markdown(f"##### {t('rm.planning.title', language)}")
+    with help_column:
+        help_visible = bool(st.session_state.get(RM_DAILY_HELP_STATE_KEY, False))
+        if st.button(
+            f"ⓘ {t('rm.help.title', language)}",
+            key="rm_daily_help_link",
+            use_container_width=True,
+        ):
+            st.session_state[RM_DAILY_HELP_STATE_KEY] = not help_visible
+            help_visible = not help_visible
+    if help_visible:
+        _render_rm_daily_help(language)
+    if plan.effective_workday != dashboard.freshness.daily_date:
+        st.caption(
+            t(
+                "rm.planning.non_business_day_notice",
+                language,
+                workday=_format_rm_plan_date(plan.effective_workday, language),
+                record_date=_format_rm_plan_date(
+                    dashboard.freshness.daily_date,
+                    language,
+                ),
+            )
+        )
+    else:
+        st.caption(t("rm.planning.notice", language))
+    st.markdown(
+        render_info_cards_html(cards, t("rm.planning.title", language)),
+        unsafe_allow_html=True,
+    )
+
+
+def _format_rm_plan_date(value: date, language: str) -> str:
+    return value.strftime("%Y.%m.%d" if language == "ko" else "%Y-%m-%d")
+
+
+def _render_rm_daily_selected_panel(
+    active_panel: str,
+    dashboard: Any,
+    *,
+    language: str,
+) -> None:
+    """Render only the panel chosen above the detail area."""
+
+    if active_panel == RM_DAILY_PANEL_NONE:
+        return
+
+    if active_panel == RM_DAILY_PANEL_TODAY:
+        st.subheader(t("rm.list.today.title", language))
+        st.caption(
+            t(
+                "rm.planning.batch_notice",
+                language,
+                date=_format_rm_plan_date(
+                    dashboard.planning.effective_workday,
+                    language,
+                ),
+            )
+        )
+        _render_rm_customer_rows(
+            dashboard.today_items,
+            key_prefix="rm_today",
+            language=language,
+        )
+        with st.expander(
+            t(
+                "rm.planning.next_workday.list",
+                language,
+                date=_format_rm_plan_date(dashboard.planning.next_workday, language),
+                count=len(dashboard.planning.next_workday_items),
+            ),
+            expanded=False,
+        ):
+            _render_rm_customer_rows(
+                dashboard.planning.next_workday_items,
+                key_prefix="rm_next_workday",
+                language=language,
+            )
+        with st.expander(
+            t(
+                "rm.planning.this_month.list",
+                language,
+                count=len(dashboard.planning.this_month_items),
+            ),
+            expanded=False,
+        ):
+            _render_rm_customer_rows(
+                dashboard.planning.this_month_items,
+                key_prefix="rm_this_month",
+                language=language,
+            )
+        with st.expander(
+            t(
+                "rm.planning.next_month.list",
+                language,
+                count=len(dashboard.planning.next_month_items),
+            ),
+            expanded=False,
+        ):
+            _render_rm_customer_rows(
+                dashboard.planning.next_month_items,
+                key_prefix="rm_next_month",
+                language=language,
+            )
+        return
+
+    if active_panel == RM_DAILY_PANEL_UPCOMING:
+        st.subheader(t("rm.list.upcoming.title", language))
+        core_only = st.checkbox(t("rm.filter.core_only", language), key="rm_upcoming_core_only")
+        upcoming_rows = dashboard.upcoming_items
+        if core_only:
+            upcoming_rows = tuple(
+                row
+                for row in upcoming_rows
+                if row.relationship_badge == t("rm.relationship.core", language)
+            )
+        _render_rm_customer_rows(upcoming_rows, key_prefix="rm_upcoming", language=language)
+        return
+
+    if active_panel == RM_DAILY_PANEL_MONITOR:
+        st.subheader(t("rm.list.monitor.title", language))
+        st.caption(t("rm.monitor.summary", language, count=dashboard.monitor_count))
+        monitor_search = st.text_input(t("rm.monitor.search", language), key="rm_monitor_search")
+        if monitor_search.strip():
+            matches = tuple(
+                row
+                for row in dashboard.customer_list
+                if row.review_state_label == t("rm.state.monitor", language)
+                if monitor_search.strip().upper() in row.customer_id.upper()
+            )
+            _render_rm_customer_rows(matches, key_prefix="rm_monitor", language=language)
+        return
+
+    if active_panel != RM_DAILY_PANEL_COMPLETED:
+        return
+
+    st.subheader(t("rm.completed.title", language, count=dashboard.completed_today_count))
+    if not dashboard.completed_items:
+        st.caption(t("rm.completed.empty", language))
+        return
+    _render_rm_completed_customer_rows(
+        dashboard.completed_items,
+        language=language,
+    )
+
+
+def _render_rm_daily_help(language: str) -> None:
+    """Show the optional glossary beside the work-plan context."""
+
+    st.caption(t("rm.panel.help.description", language))
+    for help_key in (
+        "rm.help.breakpoint",
+        "rm.help.daily_review",
+        "rm.help.relationship",
+        "rm.help.upcoming",
+    ):
+        st.caption(t(help_key, language))
 
 
 def render_rm_daily_review_mode(
@@ -554,120 +915,122 @@ def render_rm_daily_review_mode(
     daily_date: date | None = None,
     language: str = DEFAULT_LANGUAGE,
 ) -> None:
-    """Render the simple RM work screen without loading or running analytics."""
+    """Render the saved-work first screen without loading live analytics."""
 
-    st.title(t("rm.title", language))
-    st.caption(t("rm.subtitle", language))
-    try:
-        snapshot_result = load_latest_rm_snapshot_artifact()
-    except (OSError, ValueError, json.JSONDecodeError):
-        st.warning(t("rm.snapshot.load_error", language))
-        _render_rm_snapshot_cli_guidance()
-        return
-    if snapshot_result is None:
-        st.info(t("rm.snapshot.none", language))
-        _render_rm_snapshot_cli_guidance()
-        return
-
-    snapshot_path, snapshot_artifact = snapshot_result
+    st.title(t("rm.dashboard.title", language))
+    st.caption(t("rm.dashboard.subtitle", language))
+    result_state_key = "rm_daily_review_query_result"
+    loaded_at_state_key = "rm_daily_review_last_loaded_at"
+    query_language_state_key = RM_DAILY_REVIEW_QUERY_LANGUAGE_STATE_KEY
+    query_result = st.session_state.get(result_state_key)
+    loaded_query_language = str(st.session_state.get(query_language_state_key) or "")
+    refresh_after_review = bool(
+        st.session_state.pop("rm_daily_review_refresh_after_review", False)
+    )
     current_date = daily_date or date.today()
-    try:
-        worklist = build_rm_daily_review_worklist(
-            snapshot_artifact,
-            snapshot_path=snapshot_path,
-            daily_date=current_date,
-        )
-        dashboard = build_rm_daily_review_view(worklist, language=language)
-    except (OSError, ValueError, json.JSONDecodeError):
-        st.warning(t("rm.snapshot.worklist_error", language))
-        _render_rm_snapshot_cli_guidance()
+
+    if query_result is None:
+        if not st.button(t("rm.query.button", language), key="rm_daily_review_query"):
+            return
+        st.session_state.pop(RM_DAILY_PANEL_STATE_KEY, None)
+        st.session_state.pop("rm_selected_customer_id", None)
+        st.session_state.pop(RM_DAILY_SELECTED_COMPLETED_CUSTOMER_STATE_KEY, None)
+    if query_result is None or loaded_query_language != language:
+        with st.spinner(t("rm.query.loading", language)):
+            query_result = load_saved_rm_daily_review(
+                daily_date=current_date,
+                snapshot_directory=RM_DAILY_REVIEW_SNAPSHOT_DIR,
+                presentation_overlay_path=RM_DAILY_REVIEW_PRESENTATION_OVERLAY_PATH,
+                language=language,
+            )
+        st.session_state[result_state_key] = query_result
+        st.session_state[loaded_at_state_key] = datetime.now().astimezone().strftime("%Y-%m-%d %H:%M")
+        st.session_state[query_language_state_key] = language
+    if getattr(query_result, "status", None) == "READY":
+        header_action, header_status = st.columns([1.2, 4.8])
+        with header_action:
+            refresh_requested = st.button(t("rm.refresh", language), key="rm_daily_review_refresh")
+        with header_status:
+            last_loaded_at = str(st.session_state.get(loaded_at_state_key) or "-")
+            st.caption(t("rm.loaded_at", language, time=last_loaded_at))
+        if refresh_requested or refresh_after_review:
+            with st.spinner(t("rm.query.loading", language)):
+                query_result = load_saved_rm_daily_review(
+                    daily_date=current_date,
+                    snapshot_directory=RM_DAILY_REVIEW_SNAPSHOT_DIR,
+                    presentation_overlay_path=RM_DAILY_REVIEW_PRESENTATION_OVERLAY_PATH,
+                    language=language,
+            )
+            st.session_state[result_state_key] = query_result
+            st.session_state[loaded_at_state_key] = datetime.now().astimezone().strftime("%Y-%m-%d %H:%M")
+            st.session_state[query_language_state_key] = language
+
+    assert query_result is not None
+    if query_result.status != "READY":
+        if query_result.status == "MISSING_SNAPSHOT":
+            st.info(query_result.message)
+        else:
+            st.warning(query_result.message)
+        st.code(query_result.cli_command, language="bash")
         return
+
+    assert query_result.worklist is not None
+    assert query_result.dashboard is not None
+    worklist = query_result.worklist
+    dashboard = query_result.dashboard
+    _reset_rm_daily_row_batches_for_snapshot(dashboard.snapshot_id)
 
     completion_message = st.session_state.pop("rm_daily_review_completion_message", None)
     if completion_message:
-        st.success(str(completion_message))
-    with st.expander(t("rm.help.title", language), expanded=False):
-        for help_key in (
-            "rm.help.breakpoint",
-            "rm.help.daily_review",
-            "rm.help.relationship",
-            "rm.help.upcoming",
-        ):
-            st.caption(t(help_key, language))
+        st.success(t("rm.done.title", language))
+        st.caption(str(completion_message))
+        st.caption(t("rm.done.remaining", language, count=dashboard.today_count))
+        if st.button(t("rm.done.back", language), key="rm_daily_review_done_back"):
+            st.session_state.pop("rm_selected_customer_id", None)
     st.caption(f"{dashboard.analysis_as_of_label} · {dashboard.snapshot_freshness_label}")
-    summary_columns = st.columns(4)
-    for column, label, count in zip(
-        summary_columns,
-        (
-            t("rm.metric.today", language),
-            t("rm.metric.upcoming", language),
-            t("rm.metric.monitor", language),
-            t("rm.metric.completed", language),
-        ),
-        (
-            dashboard.today_count,
-            dashboard.upcoming_count,
-            dashboard.monitor_count,
-            dashboard.completed_today_count,
-        ),
-    ):
-        with column:
-            st.metric(label, t("rm.people", language, count=count))
-
-    rows_by_state: dict[str, list[Any]] = {
-        t("rm.state.review_now", language): [],
-        t("rm.state.upcoming", language): [],
-        t("rm.state.monitor", language): [],
-    }
-    for row in dashboard.customer_list:
-        rows_by_state.setdefault(row.review_state_label, []).append(row)
-    today_tab, upcoming_tab, monitor_tab = st.tabs(
-        [
-            f"{t('rm.metric.today', language)} ({dashboard.today_count})",
-            f"{t('rm.metric.upcoming', language)} ({dashboard.upcoming_count})",
-            f"{t('rm.metric.monitor', language)} ({dashboard.monitor_count})",
-        ]
-    )
-    with today_tab:
-        _render_rm_customer_rows(
-            rows_by_state[t("rm.state.review_now", language)],
-            key_prefix="rm_today",
-            language=language,
+    st.caption(
+        t(
+            "rm.date_context",
+            language,
+            record_date=_format_rm_plan_date(dashboard.freshness.daily_date, language),
+            work_date=_format_rm_plan_date(
+                dashboard.planning.effective_workday,
+                language,
+            ),
         )
-    with upcoming_tab:
-        core_only = st.checkbox(t("rm.filter.core_only", language), key="rm_upcoming_core_only")
-        upcoming_rows = rows_by_state[t("rm.state.upcoming", language)]
-        if core_only:
-            upcoming_rows = [
-                row
-                for row in upcoming_rows
-                if row.relationship_badge == t("rm.relationship.core", language)
-            ]
-        _render_rm_customer_rows(upcoming_rows, key_prefix="rm_upcoming", language=language)
-    with monitor_tab:
-        st.caption(t("rm.monitor.summary", language, count=dashboard.monitor_count))
-        monitor_search = st.text_input(t("rm.monitor.search", language), key="rm_monitor_search")
-        if monitor_search.strip():
-            matches = [
-                row
-                for row in rows_by_state[t("rm.state.monitor", language)]
-                if monitor_search.strip().upper() in row.customer_id.upper()
-            ]
-            _render_rm_customer_rows(matches, key_prefix="rm_monitor", language=language)
-
-    if dashboard.completed_today_count:
-        with st.expander(
-            t("rm.completed.title", language, count=dashboard.completed_today_count),
-            expanded=False,
-        ):
-            _render_rm_completed_customer_rows(
-                build_rm_completed_customer_list_view(worklist, language=language),
-                language=language,
-            )
+    )
+    st.caption(t("rm.today_review_criterion", language))
+    st.markdown(f"##### {t('rm.status.title', language)}")
+    active_panel = _render_rm_daily_kpi_cards(dashboard, language=language)
 
     selected_customer_id = st.session_state.get("rm_selected_customer_id")
-    if selected_customer_id:
-        _render_rm_customer_detail(worklist, str(selected_customer_id), language=language)
+    if selected_customer_id and active_panel in {
+        RM_DAILY_PANEL_TODAY,
+        RM_DAILY_PANEL_UPCOMING,
+        RM_DAILY_PANEL_MONITOR,
+    }:
+        _render_rm_customer_detail(
+            worklist,
+            dashboard,
+            str(selected_customer_id),
+            language=language,
+        )
+    if active_panel != RM_DAILY_PANEL_NONE:
+        st.divider()
+        _render_rm_daily_selected_panel(active_panel, dashboard, language=language)
+    selected_completed_customer_id = st.session_state.get(
+        RM_DAILY_SELECTED_COMPLETED_CUSTOMER_STATE_KEY
+    )
+    if selected_completed_customer_id and active_panel == RM_DAILY_PANEL_COMPLETED:
+        _render_rm_completed_record(
+            dashboard,
+            str(selected_completed_customer_id),
+            language=language,
+        )
+
+    st.divider()
+    _render_rm_daily_planning_summary(dashboard, language=language)
+
 
 
 def _render_rm_snapshot_cli_guidance() -> None:
@@ -675,7 +1038,7 @@ def _render_rm_snapshot_cli_guidance() -> None:
 
 
 def _render_rm_customer_rows(
-    rows: list[Any],
+    rows: tuple[Any, ...],
     *,
     key_prefix: str,
     language: str = DEFAULT_LANGUAGE,
@@ -683,17 +1046,110 @@ def _render_rm_customer_rows(
     if not rows:
         st.info(t("rm.list.empty", language))
         return
-    for row in rows:
-        columns = st.columns([1.0, 1.0, 4.3, 1.0])
+    visible_count_key = f"{key_prefix}_visible_count"
+    visible_count = _rm_daily_visible_row_count(
+        st.session_state.get(visible_count_key),
+        total_rows=len(rows),
+    )
+    visible_rows = _visible_rm_daily_rows(rows, visible_count=visible_count)
+    column_widths = [1.65, 1.15, 2.4, 1.05, 1.55, 0.8]
+    header_columns = st.columns(column_widths)
+    for column, label in zip(
+        header_columns,
+        (
+            t("rm.row.customer", language),
+            t("rm.row.relationship", language),
+            t("rm.row.reason", language),
+            t("rm.row.timing", language),
+            t("rm.row.change", language),
+            t("rm.row.action", language),
+        ),
+    ):
+        with column:
+            st.caption(label)
+    for row in visible_rows:
+        columns = st.columns(column_widths)
         with columns[0]:
-            st.markdown(f"**{row.customer_id}**")
+            st.markdown(f"**{row.display_name}**")
+            st.caption(row.customer_id)
         with columns[1]:
             st.caption(row.relationship_badge)
+            st.caption(t("rm.relationship.overlay_notice", language))
         with columns[2]:
             st.write(row.why_today)
         with columns[3]:
+            st.caption(_format_rm_timing(row.timing_months, language))
+        with columns[4]:
+            st.caption(" · ".join(row.current_change_summary))
+        with columns[5]:
             if st.button(t("rm.customer.open", language), key=f"{key_prefix}_{row.customer_id}"):
                 st.session_state["rm_selected_customer_id"] = row.customer_id
+                st.rerun()
+    st.caption(
+        t(
+            "rm.list.visible_count",
+            language,
+            shown=len(visible_rows),
+            total=len(rows),
+        )
+    )
+    if len(visible_rows) < len(rows):
+        next_batch_count = min(RM_DAILY_ROW_BATCH_SIZE, len(rows) - len(visible_rows))
+        if st.button(
+            t("rm.list.show_more", language, count=next_batch_count),
+            key=f"{key_prefix}_show_more",
+        ):
+            st.session_state[visible_count_key] = len(visible_rows) + RM_DAILY_ROW_BATCH_SIZE
+            st.rerun()
+    elif len(rows) > RM_DAILY_ROW_BATCH_SIZE:
+        if st.button(
+            t("rm.list.collapse", language, count=RM_DAILY_ROW_BATCH_SIZE),
+            key=f"{key_prefix}_collapse",
+        ):
+            st.session_state[visible_count_key] = RM_DAILY_ROW_BATCH_SIZE
+            st.rerun()
+
+
+def _rm_daily_visible_row_count(value: object, *, total_rows: int) -> int:
+    """Normalize the session-only display count without changing the worklist."""
+
+    try:
+        requested_count = int(value) if value is not None else RM_DAILY_ROW_BATCH_SIZE
+    except (TypeError, ValueError):
+        requested_count = RM_DAILY_ROW_BATCH_SIZE
+    return min(total_rows, max(RM_DAILY_ROW_BATCH_SIZE, requested_count))
+
+
+def _reset_rm_daily_row_batches_for_snapshot(snapshot_id: str) -> None:
+    """Return a new saved Snapshot to the first five-customer display batch."""
+
+    if st.session_state.get(RM_DAILY_VISIBLE_SNAPSHOT_STATE_KEY) == snapshot_id:
+        return
+    st.session_state[RM_DAILY_VISIBLE_SNAPSHOT_STATE_KEY] = snapshot_id
+    for key_prefix in (
+        "rm_today",
+        "rm_next_workday",
+        "rm_this_month",
+        "rm_next_month",
+        "rm_upcoming",
+    ):
+        st.session_state.pop(f"{key_prefix}_visible_count", None)
+
+
+def _visible_rm_daily_rows(rows: tuple[Any, ...], *, visible_count: int) -> tuple[Any, ...]:
+    """Return the deterministic display slice; it never filters or ranks work."""
+
+    return rows[:max(0, int(visible_count))]
+
+
+def _format_rm_timing(timing_months: int | None, language: str) -> str:
+    """Format the saved breakpoint timing without adjusting it by calendar day."""
+
+    if timing_months == 1:
+        return t("rm.timing.within_month", language)
+    if isinstance(timing_months, int) and timing_months > 1:
+        return t("rm.timing.within_months", language, months=timing_months)
+    return t("rm.timing.check_needed", language)
 
 
 def _render_rm_completed_customer_rows(
@@ -707,44 +1163,260 @@ def _render_rm_completed_customer_rows(
     for row in rows:
         columns = st.columns([1.2, 1.2, 3.8, 1.0])
         with columns[0]:
-            st.markdown(f"**{row.customer_id}**")
+            st.markdown(f"**{row.display_name}**")
+            st.caption(row.customer_id)
         with columns[1]:
             st.caption(row.relationship_badge)
         with columns[2]:
-            st.caption(row.completion_label)
+            st.caption(t("rm.completed.row", language))
         with columns[3]:
             if st.button(t("rm.completed.open", language), key=f"rm_completed_{row.customer_id}"):
-                st.session_state["rm_selected_customer_id"] = row.customer_id
+                st.session_state[RM_DAILY_SELECTED_COMPLETED_CUSTOMER_STATE_KEY] = row.customer_id
+
+
+def _render_rm_completed_record(
+    dashboard: Any,
+    customer_id: str,
+    *,
+    language: str = DEFAULT_LANGUAGE,
+) -> None:
+    """Show and maintain one saved RM review record without analytics or Cases."""
+
+    completed_item = next(
+        (
+            item
+            for item in dashboard.completed_items
+            if item.customer_id == customer_id
+        ),
+        None,
+    )
+    if completed_item is None:
+        st.session_state.pop(RM_DAILY_SELECTED_COMPLETED_CUSTOMER_STATE_KEY, None)
+        st.warning(t("rm.record.not_found", language))
+        return
+    try:
+        review_event = find_latest_review_event(
+            load_review_events(),
+            customer_id=customer_id,
+            snapshot_id=dashboard.snapshot_id,
+        )
+    except (OSError, ValueError):
+        review_event = None
+    if review_event is None:
+        st.warning(t("rm.record.not_found", language))
+        return
+
+    st.divider()
+    st.subheader(t("rm.record.title", language))
+    st.markdown(f"**{completed_item.display_name}** ({completed_item.customer_id})")
+    st.caption(completed_item.relationship_badge)
+    st.caption(
+        t(
+            "rm.record.saved_at",
+            language,
+            time=_format_rm_recorded_at(review_event.reviewed_at, language),
+        )
+    )
+    result_labels = _rm_review_result_labels(language)
+    st.markdown(f"**{t('rm.record.result', language)}**")
+    st.write(result_labels[review_event.result])
+    st.markdown(f"**{t('rm.record.note', language)}**")
+    st.write(review_event.note or t("rm.record.no_note", language))
+
+    is_editing = (
+        st.session_state.get(RM_DAILY_RECORD_EDIT_STATE_KEY) == customer_id
+    )
+    is_confirming_cancel = (
+        st.session_state.get(RM_DAILY_RECORD_CANCEL_CONFIRM_STATE_KEY) == customer_id
+    )
+    if is_editing:
+        _render_rm_review_record_editor(
+            review_event,
+            result_labels=result_labels,
+            language=language,
+        )
+        return
+    if is_confirming_cancel:
+        st.warning(t("rm.record.cancel_confirm", language))
+        confirm_column, back_column = st.columns(2)
+        with confirm_column:
+            if st.button(
+                t("rm.record.cancel_confirm_button", language),
+                key=f"rm_record_confirm_cancel_{customer_id}",
+                type="primary",
+            ):
+                try:
+                    cancelled_count = cancel_customer_review(
+                        customer_id=customer_id,
+                        snapshot_id=dashboard.snapshot_id,
+                    )
+                except (OSError, ValueError):
+                    st.warning(t("rm.record.save_error", language))
+                    return
+                if cancelled_count:
+                    _finish_rm_review_record_change(
+                        customer_id,
+                        message=t("rm.record.cancelled", language),
+                    )
+                else:
+                    st.warning(t("rm.record.not_found", language))
+        with back_column:
+            if st.button(t("rm.record.back", language), key=f"rm_record_cancel_back_{customer_id}"):
+                st.session_state.pop(RM_DAILY_RECORD_CANCEL_CONFIRM_STATE_KEY, None)
+                st.rerun()
+        return
+
+    edit_column, cancel_column, back_column = st.columns(3)
+    with edit_column:
+        if st.button(t("rm.record.edit", language), key=f"rm_record_edit_{customer_id}"):
+            st.session_state[RM_DAILY_RECORD_EDIT_STATE_KEY] = customer_id
+            st.rerun()
+    with cancel_column:
+        if st.button(t("rm.record.cancel", language), key=f"rm_record_cancel_{customer_id}"):
+            st.session_state[RM_DAILY_RECORD_CANCEL_CONFIRM_STATE_KEY] = customer_id
+            st.rerun()
+    with back_column:
+        if st.button(t("rm.record.back", language), key=f"rm_record_back_{customer_id}"):
+            st.session_state.pop(RM_DAILY_SELECTED_COMPLETED_CUSTOMER_STATE_KEY, None)
+            st.rerun()
+
+
+def _render_rm_review_record_editor(
+    review_event: Any,
+    *,
+    result_labels: dict[str, str],
+    language: str,
+) -> None:
+    """Edit the selected standalone RM record in place before saving once."""
+
+    result_values = tuple(result_labels)
+    current_index = result_values.index(review_event.result)
+    selected_result = st.selectbox(
+        t("rm.record.edit_result", language),
+        result_values,
+        index=current_index,
+        format_func=lambda value: result_labels[value],
+        key=f"rm_record_edit_result_{review_event.customer_id}",
+    )
+    updated_note = st.text_area(
+        t("rm.record.edit_note", language),
+        value=review_event.note or "",
+        key=f"rm_record_edit_note_{review_event.customer_id}",
+    )
+    save_column, close_column = st.columns(2)
+    with save_column:
+        if st.button(
+            t("rm.record.update_save", language),
+            key=f"rm_record_update_{review_event.customer_id}",
+            type="primary",
+        ):
+            updated_event = create_review_event(
+                customer_id=review_event.customer_id,
+                snapshot_id=review_event.snapshot_id,
+                reviewed_at=datetime.now().astimezone(),
+                result=selected_result,
+                note=updated_note,
+            )
+            try:
+                replace_customer_review(updated_event)
+            except (OSError, ValueError):
+                st.warning(t("rm.record.save_error", language))
+                return
+            _finish_rm_review_record_change(
+                review_event.customer_id,
+                message=t("rm.record.updated", language),
+            )
+    with close_column:
+        if st.button(
+            t("rm.record.close_edit", language),
+            key=f"rm_record_close_edit_{review_event.customer_id}",
+        ):
+            st.session_state.pop(RM_DAILY_RECORD_EDIT_STATE_KEY, None)
+            st.rerun()
+
+
+def _rm_review_result_labels(language: str) -> dict[str, str]:
+    return {
+        REVIEW_COMPLETED: t("rm.result.completed", language),
+        REVIEW_FOLLOW_UP: t("rm.result.follow_up", language),
+        REVIEW_MONITOR: t("rm.result.monitor", language),
+    }
+
+
+def _format_rm_recorded_at(value: datetime, language: str) -> str:
+    localized = value.astimezone()
+    return localized.strftime("%Y.%m.%d %H:%M" if language == "ko" else "%Y-%m-%d %H:%M")
+
+
+def _finish_rm_review_record_change(customer_id: str, *, message: str) -> None:
+    """Clear record-editor state and reload only the saved Daily projection."""
+
+    st.session_state.pop(RM_DAILY_SELECTED_COMPLETED_CUSTOMER_STATE_KEY, None)
+    st.session_state.pop(RM_DAILY_RECORD_EDIT_STATE_KEY, None)
+    st.session_state.pop(RM_DAILY_RECORD_CANCEL_CONFIRM_STATE_KEY, None)
+    st.session_state.pop(f"rm_record_edit_result_{customer_id}", None)
+    st.session_state.pop(f"rm_record_edit_note_{customer_id}", None)
+    st.session_state["rm_daily_review_completion_message"] = message
+    st.session_state["rm_daily_review_refresh_after_review"] = True
+    st.rerun()
 
 
 def _render_rm_customer_detail(
     worklist: Any,
+    dashboard: Any,
     customer_id: str,
     *,
     language: str = DEFAULT_LANGUAGE,
 ) -> None:
     try:
-        detail = build_rm_customer_detail_view(worklist, customer_id, language=language)
+        detail = build_rm_customer_detail_view(
+            worklist,
+            customer_id,
+            presentation_metadata_by_customer=_presentation_metadata_from_dashboard(dashboard),
+            language=language,
+        )
     except ValueError:
         st.session_state.pop("rm_selected_customer_id", None)
         return
     st.divider()
-    st.subheader(t("rm.detail.title", language, customer_id=detail.customer_id))
-    st.caption(t("rm.detail.flow", language))
-    st.markdown(f"#### {t('rm.detail.why', language)}")
-    st.write(detail.why_today)
+    header_column, action_column = st.columns([5.0, 0.9])
+    with header_column:
+        st.markdown(
+            render_rm_customer_detail_header_html(
+                display_name=detail.display_name,
+                customer_id=detail.customer_id,
+                presentation_label=detail.presentation_label or t("rm.detail.identity", language),
+                relationship_label=t("rm.detail.relationship_badge", language),
+                relationship_value=detail.relationship_badge,
+                relationship_note=t("rm.detail.relationship_badge_notice", language),
+            ),
+            unsafe_allow_html=True,
+        )
+    with action_column:
+        st.caption(t("rm.detail.flow", language))
+        if st.button(
+            t("rm.detail.back_to_list", language),
+            key=f"rm_detail_back_{detail.customer_id}",
+            use_container_width=True,
+        ):
+            st.session_state.pop("rm_selected_customer_id", None)
+            st.rerun()
+    _render_rm_detail_evidence_at_a_glance(detail, language=language)
     st.markdown(f"#### {t('rm.detail.relationship', language)}")
-    st.caption(f"{detail.relationship_badge} · {detail.relationship_context}")
+    st.write(detail.relationship_badge)
+    st.caption(detail.relationship_context)
     st.caption(t("rm.detail.relationship_separate", language))
     st.markdown(f"#### {t('rm.detail.conversation', language)}")
-    for point in detail.conversation_preparation:
-        st.markdown(f"- {point}")
+    _render_rm_conversation_steps(detail, language=language)
     with st.expander(t("rm.detail.analysis", language), expanded=False):
+        st.caption(detail.supporting_analysis.evidence_status_message)
         for summary in detail.supporting_analysis.current_summary:
             st.caption(summary)
         for outcome in detail.supporting_analysis.matched_outcome_summary:
             st.caption(outcome)
         st.caption(detail.supporting_analysis.breakpoint_summary)
+        _render_rm_outcome_distribution_chart(detail, language=language)
+        _render_rm_whatif_summary(detail, language=language)
         st.caption(detail.supporting_analysis.additional_analysis_notice)
     st.markdown(f"#### {t('rm.detail.result', language)}")
     if detail.completed_today:
@@ -772,7 +1444,262 @@ def _render_rm_customer_detail(
         append_review_event(event)
         st.session_state.pop("rm_selected_customer_id", None)
         st.session_state["rm_daily_review_completion_message"] = t("rm.completed.message", language)
+        st.session_state["rm_daily_review_refresh_after_review"] = True
         st.rerun()
+
+
+def _presentation_metadata_from_dashboard(dashboard: Any) -> dict[str, dict[str, object]]:
+    """Reuse the loaded synthetic display overlay; never derive it from finance data."""
+
+    return {
+        row.customer_id: {
+            "display_name": row.display_name,
+            "display_owner_or_team": row.display_owner_or_team,
+            "presentation_label": row.presentation_label,
+        }
+        for row in (*dashboard.customer_list, *dashboard.completed_items)
+    }
+
+
+def _render_rm_conversation_steps(detail: Any, *, language: str) -> None:
+    """Reveal optional neutral prompts without predicting a customer response."""
+
+    st.caption(t("rm.conversation.optional_intro", language))
+    for step in detail.conversation_steps:
+        with st.expander(f"{step.number}. {step.title}", expanded=False):
+            st.caption(step.context)
+            st.markdown(f"**{t('rm.conversation.question', language)}**")
+            st.write(step.question)
+            if step.saved_observations:
+                st.markdown(f"**{t('rm.conversation.observations', language)}**")
+                for observation in step.saved_observations:
+                    st.caption(f"• {observation}")
+
+
+def _render_rm_detail_evidence_at_a_glance(detail: Any, *, language: str) -> None:
+    """Render a compact, saved-evidence briefing before the full review flow."""
+
+    st.markdown(f"#### {t('rm.detail.brief.title', language)}")
+    st.caption(t("rm.detail.brief.subtitle", language))
+    why_column, chart_column = st.columns([0.9, 1.1])
+    with why_column:
+        evidence_summary = (
+            detail.supporting_analysis_evidence[0]
+            if detail.supporting_analysis_evidence
+            else detail.why_today
+        )
+        st.markdown(
+            render_rm_review_brief_html(
+                label=t("rm.detail.why", language),
+                summary=evidence_summary,
+                supporting_text=detail.why_today,
+                timing_title=t("rm.detail.brief.timing", language),
+                timing_value=_format_rm_timing(detail.timing_months, language),
+                timing_detail=t("rm.detail.brief.timing_detail", language),
+                focus_title=t("rm.detail.brief.change", language),
+                focus_value=detail.primary_change,
+                focus_detail=t("rm.detail.brief.change_detail", language),
+            ),
+            unsafe_allow_html=True,
+        )
+    with chart_column:
+        _render_rm_historical_cohort_chart(
+            detail,
+            language=language,
+            show_heading=True,
+            chart_height=330,
+        )
+
+    changes_column, prompt_column = st.columns([1.35, 0.85])
+    with changes_column:
+        with st.container(border=True):
+            _render_rm_current_change_cards(detail, language=language)
+    with prompt_column:
+        with st.container(border=True):
+            st.markdown(f"**{t('rm.detail.brief.prompts', language)}**")
+            if not detail.conversation_steps:
+                st.caption(t("rm.detail.brief.prompts_empty", language))
+            else:
+                for step in detail.conversation_steps[:3]:
+                    st.caption(f"{step.number}. {step.question}")
+
+
+def _render_rm_current_change_cards(detail: Any, *, language: str) -> None:
+    """Present saved current observations with text and semantic display tones."""
+
+    change_cards = detail.supporting_analysis.current_change_card_views[:3]
+    st.markdown(f"**{t('rm.detail.change_cards', language)}**")
+    if not change_cards:
+        st.caption(detail.supporting_analysis.evidence_status_message)
+        return
+    cards = [
+        {
+            "title": change_card.label,
+            "value": change_card.value,
+            "detail": t("rm.detail.saved_change", language),
+            "status": change_card.status_label,
+            "tone": change_card.tone,
+        }
+        for change_card in change_cards
+    ]
+    st.markdown(
+        render_info_cards_html(cards, t("rm.detail.change_cards", language)),
+        unsafe_allow_html=True,
+    )
+
+
+def _render_rm_historical_cohort_chart(
+    detail: Any,
+    *,
+    language: str,
+    show_heading: bool = True,
+    chart_height: int = 300,
+) -> None:
+    """Render only historical aggregates saved in the Monthly Snapshot."""
+
+    chart = detail.supporting_analysis.historical_cohort_chart
+    if show_heading:
+        st.markdown(f"**{t('rm.detail.cohort_chart', language)}**")
+    if not chart.available:
+        st.info(chart.unavailable_message or t("rm.evidence.chart_unavailable", language))
+        return
+
+    figure = go.Figure()
+    figure.add_trace(
+        go.Scatter(
+            x=[point.month for point in chart.risk_path],
+            y=[point.mean for point in chart.risk_path],
+            mode="lines+markers",
+            name=t("chart.risk_path_mean", language),
+            line={"color": DESIGN_TOKENS["stress"], "width": 2.5},
+            marker={"symbol": "circle", "size": 6},
+        )
+    )
+    figure.add_trace(
+        go.Scatter(
+            x=[point.month for point in chart.avoidance_path],
+            y=[point.mean for point in chart.avoidance_path],
+            mode="lines+markers",
+            name=t("chart.avoidance_path_mean", language),
+            line={"color": DESIGN_TOKENS["stable"], "width": 2.5, "dash": "dash"},
+            marker={"symbol": "diamond", "size": 6},
+        )
+    )
+    # The full Breakpoint help text belongs below the chart, not inside its
+    # plotting area. A dotted line is sufficient context here; the saved
+    # month and historical-comparison explanation are rendered nearby.
+    figure.add_vline(
+        x=chart.breakpoint_month,
+        line_dash="dot",
+        line_color=DESIGN_TOKENS["primary_dark"],
+    )
+    figure.update_layout(
+        height=chart_height,
+        margin={"l": 72, "r": 48, "t": 84, "b": 64},
+        legend={
+            "orientation": "h",
+            "yanchor": "bottom",
+            "y": 1.08,
+            "xanchor": "left",
+            "x": 0,
+            "font": {"size": 10},
+        },
+        legend_title_text=None,
+        paper_bgcolor="#ffffff",
+        plot_bgcolor="#ffffff",
+        font={"family": DESIGN_TOKENS["font_family"], "color": DESIGN_TOKENS["text"]},
+        xaxis_title=t("chart.month_axis", language),
+        yaxis_title=label_metric(chart.metric_key, language),
+    )
+    figure.update_xaxes(
+        gridcolor="#e2eaf2",
+        zerolinecolor="#e2eaf2",
+        automargin=True,
+        title_standoff=10,
+    )
+    figure.update_yaxes(
+        gridcolor="#e2eaf2",
+        zerolinecolor="#e2eaf2",
+        automargin=True,
+        title_standoff=12,
+    )
+    _render_framed_plotly_chart(
+        figure,
+        chart_key=f"rm_cohort_{detail.customer_id}",
+    )
+    st.caption(t("rm.detail.cohort_caption", language))
+    st.caption(
+        t(
+            "rm.detail.cohort_groups",
+            language,
+            risk_count=chart.risk_group_size if chart.risk_group_size is not None else "-",
+            avoidance_count=(
+                chart.avoidance_group_size if chart.avoidance_group_size is not None else "-"
+            ),
+            month=chart.breakpoint_month if chart.breakpoint_month is not None else "-",
+        )
+    )
+
+
+def _render_rm_outcome_distribution_chart(detail: Any, *, language: str) -> None:
+    """Render saved similar-customer counts, never a prediction or new outcome."""
+
+    bars = detail.supporting_analysis.outcome_distribution
+    st.markdown(f"**{t('rm.detail.outcome_chart', language)}**")
+    if not bars:
+        st.caption(t("rm.outcome.unavailable", language))
+        return
+    color_by_tone = {
+        "stable": DESIGN_TOKENS["stable"],
+        "recovered": DESIGN_TOKENS["recovered"],
+        "stress": DESIGN_TOKENS["stress"],
+        "delinquent": DESIGN_TOKENS["delinquent"],
+    }
+    figure = go.Figure(
+        go.Bar(
+            x=[bar.count for bar in bars],
+            y=[bar.label for bar in bars],
+            orientation="h",
+            marker_color=[color_by_tone.get(bar.tone, DESIGN_TOKENS["baseline"]) for bar in bars],
+            text=[f"{bar.count:,}" for bar in bars],
+            textposition="outside",
+            cliponaxis=False,
+        )
+    )
+    figure.update_layout(
+        height=300,
+        margin={"l": 72, "r": 54, "t": 56, "b": 56},
+        paper_bgcolor="#ffffff",
+        plot_bgcolor="#ffffff",
+        font={"family": DESIGN_TOKENS["font_family"], "color": DESIGN_TOKENS["text"]},
+        showlegend=False,
+    )
+    figure.update_xaxes(
+        showgrid=True,
+        gridcolor="#e2eaf2",
+        title=None,
+        rangemode="tozero",
+        automargin=True,
+    )
+    figure.update_yaxes(autorange="reversed", title=None, automargin=True)
+    _render_framed_plotly_chart(
+        figure,
+        chart_key=f"rm_outcome_{detail.customer_id}",
+    )
+    st.caption(t("rm.detail.outcome_caption", language))
+
+
+def _render_rm_whatif_summary(detail: Any, *, language: str) -> None:
+    """Show only names of saved scenario summaries, never a full time series."""
+
+    whatif_summary = detail.supporting_analysis.whatif_summary
+    st.markdown(f"**{t('rm.detail.whatif', language)}**")
+    if not whatif_summary.available:
+        st.caption(whatif_summary.unavailable_message or t("rm.evidence.whatif_unavailable", language))
+        return
+    for scenario_label in whatif_summary.scenario_labels:
+        st.caption(f"- {scenario_label}")
+    st.caption(t("rm.detail.whatif_general", language))
 
 
 def render_presentation_mode(
@@ -936,6 +1863,8 @@ def render_presentation_peer_scene(
 
     st.markdown(render_presentation_scene_heading_html(scene), unsafe_allow_html=True)
     st.markdown(render_info_cards_html(view_model["similarity_cards"], t("card.similar_summary", language)), unsafe_allow_html=True)
+    metric_label = get_analysis_metric_options(language).get(selected_metric, selected_metric)
+    st.caption(t("presentation.metric.active", language, metric=metric_label))
     chart_cols = st.columns([1.35, 1.0])
     with chart_cols[0]:
         render_chart_or_table(
@@ -950,9 +1879,9 @@ def render_presentation_peer_scene(
             twin_trajectory.head(30),
             presentation_mode=True,
             language=language,
+            chart_key=f"presentation_future_trajectory_{selected_metric}",
         )
     with chart_cols[1]:
-        st.markdown(f'<p class="fpt-inline-summary">{view_model["outcome_sentence"]}</p>', unsafe_allow_html=True)
         render_chart_or_table(
             lambda: create_outcome_bar_chart(analysis["outcome_summary"], language=language),
             pd.DataFrame([analysis["outcome_summary"]]),
@@ -1178,7 +2107,6 @@ def render_section_peer_outcomes(
             language=language,
         )
     with chart_cols[1]:
-        st.markdown(f'<p class="fpt-inline-summary">{view_model["outcome_sentence"]}</p>', unsafe_allow_html=True)
         render_chart_or_table(
             lambda: create_outcome_bar_chart(analysis["outcome_summary"], language=language),
             pd.DataFrame([analysis["outcome_summary"]]),
@@ -1348,20 +2276,39 @@ def build_twin_trajectory_frames(
     return target_history, twin_trajectory
 
 
+def _render_framed_plotly_chart(
+    figure: Any,
+    *,
+    presentation_mode: bool = False,
+    chart_key: str | None = None,
+) -> None:
+    """Render every Plotly chart inside one consistent visual frame."""
+
+    chart_arguments: dict[str, Any] = {
+        "width": "stretch",
+        "config": {"displayModeBar": not presentation_mode, "responsive": True},
+    }
+    if chart_key is not None:
+        chart_arguments["key"] = chart_key
+    with st.container(border=True):
+        st.plotly_chart(figure, **chart_arguments)
+
+
 def render_chart_or_table(
     figure_factory: Callable[[], Any],
     fallback_df: pd.DataFrame | None = None,
     *,
     presentation_mode: bool = False,
     language: str = "ko",
+    chart_key: str | None = None,
 ) -> None:
     """Render a Plotly figure, falling back to a compact table."""
 
     try:
-        st.plotly_chart(
+        _render_framed_plotly_chart(
             figure_factory(),
-            width="stretch",
-            config={"displayModeBar": not presentation_mode, "responsive": True},
+            presentation_mode=presentation_mode,
+            chart_key=chart_key,
         )
     except Exception:  # noqa: BLE001
         st.warning(t("ui.chart_fallback", language))

@@ -26,6 +26,8 @@ from src.ui_components import (
     render_customer_identity_html,
     render_info_cards_html,
     render_kpi_cards_html,
+    render_rm_customer_detail_header_html,
+    render_rm_review_brief_html,
     render_status_summary_html,
 )
 
@@ -103,6 +105,7 @@ def test_kpi_help_tooltips_are_rendered_and_escaped() -> None:
     )
 
     assert 'class="fpt-kpi-help"' in rendered
+    assert 'class="fpt-kpi-state-dot tone-watch"' in rendered
     assert "월소득 < 대출상환 부담" not in rendered
     assert "월소득 &lt; 대출상환 부담" in rendered
 
@@ -111,6 +114,53 @@ def test_dsr_status_bands() -> None:
     assert classify_kpi_tone("dsr", 0.34) == "stable"
     assert classify_kpi_tone("dsr", 0.35) == "watch"
     assert classify_kpi_tone("dsr", 0.45) == "danger"
+
+
+def test_info_cards_can_show_a_textual_status_with_a_semantic_tone() -> None:
+    html = render_info_cards_html(
+        [
+            {
+                "title": "Debt-payment burden",
+                "value": "23.0%",
+                "detail": "Saved current change",
+                "status": "Within the documented range",
+                "tone": "stable",
+            }
+        ],
+        "Current changes",
+    )
+
+    assert "fpt-info-card-status tone-stable" in html
+    assert "Within the documented range" in html
+
+
+def test_rm_detail_uses_a_distinct_review_brief_and_customer_header() -> None:
+    header = render_rm_customer_detail_header_html(
+        display_name="Synthetic customer 가람-43",
+        customer_id="C001546",
+        presentation_label="PoC synthetic customer display information",
+        relationship_label="Relationship priority",
+        relationship_value="Priority",
+        relationship_note="Synthetic CRM metadata",
+    )
+    brief = render_rm_review_brief_html(
+        label="Why review now?",
+        summary="Historical paths began to diverge near this timing.",
+        supporting_text="Saved Monthly Snapshot evidence",
+        timing_title="Breakpoint timing",
+        timing_value="Within 1 month",
+        timing_detail="Saved historical breakpoint",
+        focus_title="Current review focus",
+        focus_value="Cash capacity",
+        focus_detail="Saved current change",
+    )
+    css = load_css()
+
+    assert 'class="fpt-rm-customer-header"' in header
+    assert 'class="fpt-rm-review-brief"' in brief
+    assert 'class="fpt-rm-review-facts"' in brief
+    assert "fpt-rm-review-brief" in css
+    assert "fpt-rm-customer-header" in css
 
 
 def test_savings_rate_status_band() -> None:
@@ -214,6 +264,12 @@ def test_design_tokens_include_required_keys() -> None:
     }
 
     assert required.issubset(DESIGN_TOKENS)
+
+
+def test_design_tokens_keep_a_clear_blue_primary_and_teal_secondary_accent() -> None:
+    assert DESIGN_TOKENS["primary"] == "#005eb8"
+    assert DESIGN_TOKENS["accent"] == "#008a78"
+    assert DESIGN_TOKENS["primary"] != DESIGN_TOKENS["accent"]
 
 
 def _demo_roles_df() -> pd.DataFrame:
